@@ -1,0 +1,3 @@
+skinparam roundcorner 12
+skinparam shadowing false
+skinparam defaultFontName "SansSerif"

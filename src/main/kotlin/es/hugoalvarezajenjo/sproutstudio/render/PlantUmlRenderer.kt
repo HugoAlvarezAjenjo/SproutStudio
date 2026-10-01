@@ -1,0 +1,145 @@
+package es.hugoalvarezajenjo.sproutstudio.render
+
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
+import net.sourceforge.plantuml.FileFormat
+import net.sourceforge.plantuml.FileFormatOption
+import net.sourceforge.plantuml.SourceStringReader
+import net.sourceforge.plantuml.error.PSystemError
+import net.sourceforge.plantuml.preproc.Defines
+import net.sourceforge.plantuml.security.SFile
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.util.concurrent.Executors
+
+/** What the user can export to. PDF needs extra libraries that are out of scope for v1. */
+enum class ExportFormat(val label: String, val extension: String, internal val plantUml: FileFormat) {
+    SVG("SVG (vector)", "svg", FileFormat.SVG),
+    PNG("PNG (image)", "png", FileFormat.PNG),
+}
+
+data class RenderError(
+    /** 1-based line in the editor text, or null when PlantUML could not pin it down. */
+    val line: Int?,
+    val message: String,
+)
+
+data class RenderResult(
+    /** Image bytes (SVG or PNG, per request); present even for errors (PlantUML draws an error image). */
+    val bytes: ByteArray?,
+    /** Number of @startxxx/@endxxx blocks found in the file (0 when none). */
+    val diagramCount: Int,
+    /** Index actually rendered (clamped into range). */
+    val index: Int,
+    val error: RenderError?,
+    /** Pixel scale the image was rendered at (PNG only; 1.0 for SVG). */
+    val scale: Double = 1.0,
+) {
+    val svg: ByteArray? get() = bytes
+}
+
+/**
+ * Renders PlantUML text fully in-process.
+ *
+ * - Layout engine is forced to Smetana (pure Java) so no Graphviz/dot binary is ever needed.
+ * - The security profile is ALLOWLIST with an empty URL allowlist: no network access.
+ * - All PlantUML calls go through one dedicated thread; PlantUML keeps global state and is
+ *   not safe to call concurrently.
+ */
+object PlantUmlRenderer {
+
+    private val thread: ExecutorCoroutineDispatcher =
+        Executors.newSingleThreadExecutor { r -> Thread(r, "plantuml-render").apply { isDaemon = true } }
+            .asCoroutineDispatcher()
+
+    /** Prepended to every diagram as configuration; does not shift user line numbers. */
+    private val config = listOf("!pragma layout smetana")
+
+    init {
+        configureOffline()
+    }
+
+    /** Must run before PlantUML reads its security settings; idempotent. */
+    fun configureOffline() {
+        System.setProperty("PLANTUML_SECURITY_PROFILE", "ALLOWLIST")
+        System.setProperty("plantuml.allowlist.url", "")
+        System.setProperty("java.awt.headless", System.getProperty("java.awt.headless") ?: "false")
+    }
+
+    suspend fun render(source: String, baseDir: File?, index: Int = 0): RenderResult =
+        withContext(thread) { renderBlocking(source, baseDir, index) }
+
+    /**
+     * Preview render: a PNG drawn by PlantUML itself at [scale]x, so text uses real fonts.
+     * (Skia's SVG renderer has no font manager on desktop and would drop all text.)
+     */
+    suspend fun renderPreview(source: String, baseDir: File?, index: Int, scale: Double): RenderResult =
+        withContext(thread) { renderBlocking(source, baseDir, index, FileFormat.PNG, scale) }
+
+    suspend fun export(source: String, baseDir: File?, index: Int, format: ExportFormat, target: File) =
+        withContext(thread) {
+            OfflineGuard.check(source)?.let { throw IllegalStateException(it.message) }
+            val reader = reader(source, baseDir)
+            target.outputStream().use { out ->
+                reader.outputImage(out, index, FileFormatOption(format.plantUml))
+            }
+        }
+
+    /** PNG bytes of one diagram, e.g. for copying to the clipboard. */
+    suspend fun renderPng(source: String, baseDir: File?, index: Int): ByteArray =
+        withContext(thread) {
+            OfflineGuard.check(source)?.let { throw IllegalStateException(it.message) }
+            val out = ByteArrayOutputStream()
+            reader(source, baseDir).outputImage(out, index, FileFormatOption(FileFormat.PNG))
+            out.toByteArray()
+        }
+
+    fun renderBlocking(
+        source: String,
+        baseDir: File?,
+        index: Int = 0,
+        format: FileFormat = FileFormat.SVG,
+        scale: Double = 1.0,
+    ): RenderResult {
+        OfflineGuard.check(source)?.let { v ->
+            return RenderResult(bytes = null, diagramCount = countBlocks(source), index = 0,
+                error = RenderError(v.line, v.message))
+        }
+        if (source.isBlank()) return RenderResult(null, 0, 0, null)
+
+        val reader = reader(source, baseDir)
+        val blocks = reader.blocks
+        if (blocks.isEmpty()) {
+            return RenderResult(null, 0, 0,
+                RenderError(null, "No diagram found yet. Start with @startuml and end with @enduml."))
+        }
+        val i = index.coerceIn(0, blocks.size - 1)
+
+        val error = (blocks[i].diagram as? PSystemError)?.let { err ->
+            val first = err.firstError
+            val pos = runCatching { err.lineLocation?.position }.getOrNull()
+            RenderError(line = pos?.let { it + 1 }, message = first?.error ?: "Syntax error")
+        }
+
+        val out = ByteArrayOutputStream()
+        val scaled = if (scale != 1.0) reader(source, baseDir, config + "scale $scale") else reader
+        val option = FileFormatOption(format)
+        runCatching { scaled.outputImage(out, i, option) }
+            .onFailure { t ->
+                return RenderResult(null, blocks.size, i,
+                    error ?: RenderError(null, t.message ?: t.javaClass.simpleName), scale)
+            }
+        return RenderResult(out.toByteArray(), blocks.size, i, error, scale)
+    }
+
+    private fun reader(source: String, baseDir: File?, configLines: List<String> = config): SourceStringReader {
+        // Local includes are resolved relative to the file's folder and only from there.
+        val dir = baseDir ?: File(System.getProperty("user.home"))
+        System.setProperty("plantuml.include.path", dir.absolutePath)
+        return SourceStringReader(Defines.createEmpty(), source, Charsets.UTF_8, configLines, SFile.fromFile(dir))
+    }
+
+    private val startLine = Regex("""^\s*@start\w+""", RegexOption.MULTILINE)
+    private fun countBlocks(source: String) = startLine.findAll(source).count()
+}

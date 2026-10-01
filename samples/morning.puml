@@ -1,0 +1,11 @@
+@startuml
+start
+:Wake up;
+if (Is it Saturday?) then (yes)
+  :Pancakes 🥞;
+else (no)
+  :Coffee ☕;
+endif
+:Go play;
+stop
+@enduml
