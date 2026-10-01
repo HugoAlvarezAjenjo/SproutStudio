@@ -99,7 +99,25 @@ class ProjectState {
     val docs = mutableStateListOf<Document>()
     var activeIndex by mutableStateOf(0)
     var previewVisible by mutableStateOf(true)
-    var sidebarVisible by mutableStateOf(true)
+    var sidebarVisible by mutableStateOf(LayoutPrefs.sidebarVisible)
+        private set
+    /** Project panel width in dp; dragged by the user, remembered across launches. */
+    var sidebarWidth by mutableStateOf(LayoutPrefs.sidebarWidth)
+        private set
+
+    fun showSidebar(show: Boolean) {
+        sidebarVisible = show
+        LayoutPrefs.sidebarVisible = show
+    }
+
+    fun resizeSidebar(widthDp: Float) {
+        sidebarWidth = widthDp.coerceIn(SIDEBAR_MIN, SIDEBAR_MAX)
+    }
+
+    /** Called when a drag ends, so we don't write preferences on every pixel. */
+    fun persistSidebarWidth() {
+        LayoutPrefs.sidebarWidth = sidebarWidth
+    }
     var previewFraction by mutableStateOf(0.5f)
     val expanded = mutableStateListOf<File>()
     var tree by mutableStateOf<List<TreeNode>>(emptyList())
@@ -175,6 +193,21 @@ class ProjectState {
     }
 
     companion object {
+        const val SIDEBAR_MIN = 160f
+        const val SIDEBAR_MAX = 560f
         private val IGNORED = setOf("node_modules", "build", "target", "out", "dist", ".git", ".gradle")
     }
+}
+
+/** Window layout the user tuned, persisted. */
+object LayoutPrefs {
+    private val prefs = Preferences.userRoot().node("es/hugoalvarezajenjo/sproutstudio")
+
+    var sidebarVisible: Boolean
+        get() = prefs.getBoolean("sidebarVisible", true)
+        set(v) = prefs.putBoolean("sidebarVisible", v)
+
+    var sidebarWidth: Float
+        get() = prefs.getFloat("sidebarWidth", 240f).coerceIn(ProjectState.SIDEBAR_MIN, ProjectState.SIDEBAR_MAX)
+        set(v) = prefs.putFloat("sidebarWidth", v)
 }

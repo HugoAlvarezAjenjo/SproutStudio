@@ -41,6 +41,9 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Remove
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.outlined.Schema
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -134,7 +137,7 @@ fun ProjectWindow(win: AppWindow.Project) {
             }
             Menu("View") {
                 CheckboxItem("Show Preview", checked = p.previewVisible, shortcut = shortcut(Key.P)) { p.previewVisible = it }
-                CheckboxItem("Show Project Panel", checked = p.sidebarVisible, shortcut = shortcut(Key.One)) { p.sidebarVisible = it }
+                CheckboxItem("Show Project Panel", checked = p.sidebarVisible, shortcut = shortcut(Key.One)) { p.showSidebar(it) }
                 CheckboxItem("Dark Theme", checked = ThemePrefs.dark) { ThemePrefs.toggle() }
                 Separator()
                 Item("Refresh Files", shortcut = shortcut(Key.R)) { p.refreshTree() }
@@ -255,9 +258,13 @@ internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: 
 
     Column(Modifier.fillMaxSize().background(c.panel)) {
         Row(Modifier.weight(1f)) {
-            if (p.root != null && p.sidebarVisible) {
-                Sidebar(p)
+            if (p.root != null) {
+                ToolStripe(p)
                 VLine()
+                if (p.sidebarVisible) {
+                    Sidebar(p)
+                    SidebarSplitter(p)
+                }
             }
             Column(Modifier.weight(1f).fillMaxHeight().background(c.editor)) {
                 TabsBar(p, onCloseTab)
@@ -339,10 +346,46 @@ private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalv
     }
 }
 
+/**
+ * JetBrains-style tool window stripe: always visible on the left, its button toggles the
+ * Project panel, so a collapsed panel is one click (or ⌘1) away.
+ */
+@Composable
+private fun ToolStripe(p: ProjectState) {
+    Column(
+        Modifier.width(40.dp).fillMaxHeight().background(ide.panel).padding(top = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ToolButton(
+            Icons.Outlined.Folder,
+            if (p.sidebarVisible) "Hide Project (⌘1)" else "Show Project (⌘1)",
+            selected = p.sidebarVisible,
+        ) { p.showSidebar(!p.sidebarVisible) }
+    }
+}
+
+/** 1px border with a wide invisible grab area; drag to resize, double-click to collapse. */
+@Composable
+private fun SidebarSplitter(p: ProjectState) {
+    val density = LocalDensity.current
+    val drag = rememberDraggableState { deltaPx -> p.resizeSidebar(p.sidebarWidth + with(density) { deltaPx.toDp() }.value) }
+    Box(Modifier.width(1.dp).fillMaxHeight().background(ide.border)) {
+        Box(
+            Modifier
+                .width(7.dp)
+                .fillMaxHeight()
+                .offset(x = (-3).dp)
+                .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                .draggable(drag, Orientation.Horizontal, onDragStopped = { p.persistSidebarWidth() })
+                .pointerInput(Unit) { detectTapGestures(onDoubleTap = { p.showSidebar(false) }) },
+        )
+    }
+}
+
 @Composable
 private fun Sidebar(p: ProjectState) {
     val c = ide
-    Column(Modifier.width(240.dp).fillMaxHeight().background(c.panel)) {
+    Column(Modifier.width(p.sidebarWidth.dp).fillMaxHeight().background(c.panel)) {
         // Tool window header: title + actions, 36dp like IntelliJ.
         Row(
             Modifier.fillMaxWidth().height(36.dp).padding(start = 12.dp, end = 6.dp),
@@ -351,6 +394,7 @@ private fun Sidebar(p: ProjectState) {
             Text("Project", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
             ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New diagram (⌘N)") { p.newDocument() }
             ToolButton(Icons.Outlined.Refresh, "Refresh (⌘R)") { p.refreshTree() }
+            ToolButton(Icons.Outlined.Remove, "Hide (⌘1)") { p.showSidebar(false) }
         }
         // Root row.
         Row(

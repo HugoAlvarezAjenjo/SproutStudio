@@ -44,6 +44,12 @@ class UiSnapshotTest {
     }
 
     @Test
+    fun workspaceWideSidebar() {
+        val p = pizzaProject().apply { resizeSidebar(380f) }
+        shoot("workspace-wide-sidebar", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
+    }
+
+    @Test
     fun workspaceLight() {
         val p = pizzaProject()
         shoot("workspace-light", listOf(400, 800, 800, 400), dark = false) { Workspace(p, onSave = {}, onCloseTab = {}) }

@@ -1,0 +1,32 @@
+@startuml
+!include common/style.iuml
+title Ordering a pizza 🍕
+
+actor Customer
+participant "Pizza App" as App
+database Kitchen
+
+Customer -> App: choose pizza
+activate App
+App -> Kitchen: send order
+Kitchen --> App: ready in 15 min
+App --> Customer: on its way!
+deactivate App
+@enduml
+
+@startuml
+title Pizza model
+class Pizza {
+  +size: Size
+  +toppings: List<Topping>
+  +price(): Money
+}
+class Topping
+enum Size {
+  SMALL
+  MEDIUM
+  LARGE
+}
+Pizza "1" *-- "many" Topping
+Pizza --> Size
+@enduml

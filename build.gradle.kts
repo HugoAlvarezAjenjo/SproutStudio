@@ -24,7 +24,7 @@ dependencies {
     implementation("net.sourceforge.plantuml:plantuml-mit:1.2026.8")
 
     testImplementation(kotlin("test"))
-    testImplementation(compose.desktop.uiTestJUnit4)
+    testImplementation("org.jetbrains.compose.ui:ui-test-junit4:1.12.1")
 }
 
 tasks.test {
