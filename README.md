@@ -31,6 +31,13 @@ The app is unsigned, so the first launch needs right-click → Open.
 
 For a `.dmg` installer: `./gradlew packageDmg`.
 
+## App icon
+
+Put your logo at `src/main/resources/icon.png` (square PNG, ideally 1024×1024, transparent
+background). It is used for the Dock in `./gradlew run`, the window icon, and — converted to
+`.icns` automatically by `./gradlew createDistributable` — the `.app` icon in Finder and the Dock.
+No file there → default icon.
+
 ## Editor tricks
 
 | Keys | What it does |

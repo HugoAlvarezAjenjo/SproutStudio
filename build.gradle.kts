@@ -31,6 +31,46 @@ tasks.test {
     useJUnitPlatform()
 }
 
+// Finder litter in src/main/resources must not end up inside the app jar.
+tasks.processResources { exclude("**/.DS_Store") }
+
+// ---- App icon -------------------------------------------------------------------------------
+// Single source of truth: src/main/resources/icon.png (square, ideally 1024x1024).
+// At runtime it is the Dock/window icon; for the packaged .app we turn it into an .icns
+// with the macOS built-ins `sips` + `iconutil` (no download, no extra tool).
+val iconPng = layout.projectDirectory.file("src/main/resources/icon.png")
+val iconIcns = layout.buildDirectory.file("generated/icon/SproutStudio.icns")
+
+val generateMacIcon by tasks.registering {
+    description = "Builds SproutStudio.icns from src/main/resources/icon.png"
+    val src = iconPng.asFile
+    val out = iconIcns.get().asFile
+    inputs.file(src).optional()
+    outputs.file(out)
+    onlyIf { src.exists() }
+    doLast {
+        fun run(vararg cmd: String) {
+            val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+            val log = p.inputStream.bufferedReader().readText()
+            check(p.waitFor() == 0) { "${cmd.first()} failed:\n$log" }
+        }
+        val set = File(temporaryDir, "SproutStudio.iconset").apply { deleteRecursively(); mkdirs() }
+        for (size in listOf(16, 32, 128, 256, 512)) {
+            for (scale in listOf(1, 2)) {
+                val px = size * scale
+                val name = if (scale == 1) "icon_${size}x${size}.png" else "icon_${size}x${size}@2x.png"
+                run("sips", "-s", "format", "png", "-z", "$px", "$px", src.absolutePath, "--out", File(set, name).absolutePath)
+            }
+        }
+        out.parentFile.mkdirs()
+        run("iconutil", "-c", "icns", set.absolutePath, "-o", out.absolutePath)
+    }
+}
+
+// Every native packaging task needs the .icns first.
+tasks.matching { it.name.startsWith("createDistributable") || it.name.startsWith("package") }
+    .configureEach { dependsOn(generateMacIcon) }
+
 compose.desktop {
     application {
         mainClass = "es.hugoalvarezajenjo.sproutstudio.MainKt"
@@ -67,6 +107,8 @@ compose.desktop {
             macOS {
                 bundleID = "es.hugoalvarezajenjo.sproutstudio"
                 appCategory = "public.app-category.developer-tools"
+                // Generated from src/main/resources/icon.png; without it, the default icon.
+                if (iconPng.asFile.exists()) iconFile.set(iconIcns)
             }
         }
     }

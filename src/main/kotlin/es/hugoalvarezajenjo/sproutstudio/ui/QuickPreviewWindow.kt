@@ -53,6 +53,7 @@ fun QuickPreviewWindow(win: AppWindow.QuickPreview) {
     Window(
         onCloseRequest = { AppState.close(win) },
         title = "${file.name} — SproutStudio",
+        icon = AppIcon.painter,
         state = rememberWindowState(size = DpSize(980.dp, 720.dp)),
     ) {
         MenuBar {

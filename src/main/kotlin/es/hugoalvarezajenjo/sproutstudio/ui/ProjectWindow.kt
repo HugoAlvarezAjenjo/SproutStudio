@@ -118,6 +118,7 @@ fun ProjectWindow(win: AppWindow.Project) {
     Window(
         onCloseRequest = { closeDocs(p.docs.toList()) { AppState.close(win) } },
         title = title,
+        icon = AppIcon.painter,
         state = rememberWindowState(size = DpSize(1320.dp, 840.dp)),
         visible = win.revealed,
     ) {

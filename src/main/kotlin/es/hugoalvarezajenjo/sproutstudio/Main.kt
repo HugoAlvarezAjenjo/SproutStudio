@@ -25,6 +25,9 @@ fun main(args: Array<String>) {
         if (es.hugoalvarezajenjo.sproutstudio.ui.ThemePrefs.dark) "NSAppearanceNameDarkAqua" else "NSAppearanceNameAqua",
     )
 
+    // Our logo in the Dock instead of the Java/Kotlin one (matters for `./gradlew run`).
+    es.hugoalvarezajenjo.sproutstudio.ui.AppIcon.installInDock()
+
     // macOS delivers Finder double-clicks as an "open file" event, not as argv.
     // Register before the UI starts so a cold-start double-click is not lost.
     if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_OPEN_FILE)) {
