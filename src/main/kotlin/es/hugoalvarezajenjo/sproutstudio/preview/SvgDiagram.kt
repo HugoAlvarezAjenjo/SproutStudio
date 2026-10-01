@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -104,6 +105,9 @@ fun DiagramView(image: DiagramImage, zoom: ZoomState, dimmed: Boolean = false, m
     Canvas(
         modifier
             .fillMaxSize()
+            // Compose doesn't clip drawing to a Canvas' bounds: without this a zoomed or panned
+            // diagram paints over the toolbar, the editor and the status bar.
+            .clipToBounds()
             .onSizeChanged { zoom.viewport = it }
             .onPointerEvent(PointerEventType.Scroll) { ev ->
                 val change = ev.changes.first()

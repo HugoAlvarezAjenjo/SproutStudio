@@ -46,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -191,7 +192,7 @@ fun PreviewPane(
 
         // ── Canvas: edge to edge, painted with the diagram's own background ───
         val img = preview.image
-        Box(Modifier.weight(1f).fillMaxWidth().background(img?.background ?: c.editor)) {
+        Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(img?.background ?: c.editor)) {
             when {
                 img != null -> DiagramView(img, zoom, dimmed = preview.stale)
                 !preview.firstDone -> EmptyState(Icons.Outlined.Draw, "Rendering…", "Your diagram is on its way", Modifier.align(Alignment.Center))
