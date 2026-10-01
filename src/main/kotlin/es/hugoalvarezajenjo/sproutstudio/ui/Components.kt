@@ -4,7 +4,17 @@ import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
+import java.awt.Cursor
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -111,6 +121,55 @@ fun ToolSeparator() {
 /** 1px separator line. */
 @Composable
 fun HLine() = Box(Modifier.fillMaxWidth().height(1.dp).background(ide.border))
+
+/** Width of the invisible grab zone around a [Splitter]'s 1px line. */
+val SplitterGrab = 10.dp
+
+/**
+ * Draggable divider between two panels. Takes 1dp in the layout but grabs [SplitterGrab] of
+ * pointer area centred on the line ([requiredWidth] escapes the 1dp constraint, [zIndex] puts it
+ * above the neighbour that is drawn later). The line lights up on hover / drag so you can see
+ * you've caught it, like IntelliJ.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun Splitter(
+    onDrag: (deltaPx: Float) -> Unit,
+    onDragStopped: () -> Unit = {},
+    onDoubleClick: (() -> Unit)? = null,
+) {
+    val c = ide
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    var dragging by remember { mutableStateOf(false) }
+    val state = rememberDraggableState(onDrag)
+    Box(
+        Modifier.width(1.dp).fillMaxHeight().zIndex(1f).background(c.border),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .requiredWidth(SplitterGrab)
+                .fillMaxHeight()
+                .hoverable(interaction)
+                .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                .draggable(
+                    state,
+                    Orientation.Horizontal,
+                    interactionSource = interaction,
+                    onDragStarted = { dragging = true },
+                    onDragStopped = { dragging = false; onDragStopped() },
+                )
+                .then(
+                    if (onDoubleClick != null) Modifier.pointerInput(Unit) { detectTapGestures(onDoubleTap = { onDoubleClick() }) }
+                    else Modifier,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (hovered || dragging) Box(Modifier.width(2.dp).fillMaxHeight().background(c.accent.copy(alpha = if (dragging) 1f else 0.7f)))
+        }
+    }
+}
 
 @Composable
 fun VLine(width: Dp = 1.dp) = Box(Modifier.width(width).fillMaxHeight().background(ide.border))

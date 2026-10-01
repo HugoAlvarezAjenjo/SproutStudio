@@ -309,21 +309,10 @@ private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalv
                 onCaretMoved = onCaret,
             )
             if (p.previewVisible) {
-                val dragState = rememberDraggableState { deltaPx ->
+                Splitter(onDrag = { deltaPx ->
                     val deltaFrac = with(density) { deltaPx.toDp() } / total
                     p.previewFraction = (p.previewFraction - deltaFrac).coerceIn(0.2f, 0.8f)
-                }
-                // 1px visible splitter with a wider invisible grab area.
-                Box(Modifier.width(1.dp).fillMaxHeight().background(c.border)) {
-                    Box(
-                        Modifier
-                            .width(7.dp)
-                            .fillMaxHeight()
-                            .offset(x = (-3).dp)
-                            .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
-                            .draggable(dragState, Orientation.Horizontal),
-                    )
-                }
+                })
                 PreviewPane(
                     preview = preview,
                     text = doc.text,
@@ -364,22 +353,15 @@ private fun ToolStripe(p: ProjectState) {
     }
 }
 
-/** 1px border with a wide invisible grab area; drag to resize, double-click to collapse. */
+/** Drag to resize the Project panel, double-click to collapse it. */
 @Composable
 private fun SidebarSplitter(p: ProjectState) {
     val density = LocalDensity.current
-    val drag = rememberDraggableState { deltaPx -> p.resizeSidebar(p.sidebarWidth + with(density) { deltaPx.toDp() }.value) }
-    Box(Modifier.width(1.dp).fillMaxHeight().background(ide.border)) {
-        Box(
-            Modifier
-                .width(7.dp)
-                .fillMaxHeight()
-                .offset(x = (-3).dp)
-                .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
-                .draggable(drag, Orientation.Horizontal, onDragStopped = { p.persistSidebarWidth() })
-                .pointerInput(Unit) { detectTapGestures(onDoubleTap = { p.showSidebar(false) }) },
-        )
-    }
+    Splitter(
+        onDrag = { deltaPx -> p.resizeSidebar(p.sidebarWidth + with(density) { deltaPx.toDp() }.value) },
+        onDragStopped = { p.persistSidebarWidth() },
+        onDoubleClick = { p.showSidebar(false) },
+    )
 }
 
 @Composable
