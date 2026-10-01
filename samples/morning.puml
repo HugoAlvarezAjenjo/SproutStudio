@@ -3,6 +3,7 @@ start
 :Wake up;
 if (Is it Saturday?) then (yes)
   :Pancakes 🥞;
+  :Go out;
 else (no)
   :Coffee ☕;
 endif

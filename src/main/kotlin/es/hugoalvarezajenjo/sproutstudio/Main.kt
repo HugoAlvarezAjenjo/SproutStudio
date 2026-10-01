@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.window.application
 import es.hugoalvarezajenjo.sproutstudio.model.AppState
 import es.hugoalvarezajenjo.sproutstudio.model.AppWindow
+import es.hugoalvarezajenjo.sproutstudio.model.AutoSave
 import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
 import es.hugoalvarezajenjo.sproutstudio.ui.ProjectWindow
 import es.hugoalvarezajenjo.sproutstudio.ui.QuickPreviewWindow
@@ -25,9 +26,6 @@ fun main(args: Array<String>) {
         if (es.hugoalvarezajenjo.sproutstudio.ui.ThemePrefs.dark) "NSAppearanceNameDarkAqua" else "NSAppearanceNameAqua",
     )
 
-    // Our logo in the Dock instead of the Java/Kotlin one (matters for `./gradlew run`).
-    es.hugoalvarezajenjo.sproutstudio.ui.AppIcon.installInDock()
-
     // macOS delivers Finder double-clicks as an "open file" event, not as argv.
     // Register before the UI starts so a cold-start double-click is not lost.
     if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_OPEN_FILE)) {
@@ -36,12 +34,28 @@ fun main(args: Array<String>) {
         }
     }
 
-    // Command line: `sproutstudio diagram.puml` -> quick preview, `sproutstudio folder/` -> project.
-    args.map(::File).filter { it.exists() }.forEach { AppState.openFile(it) }
+    // ⌘Q quits without closing windows one by one, so flush autosave first (no edit lost).
+    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
+        Desktop.getDesktop().setQuitHandler { _, response ->
+            AutoSave.flush(AppState.windows.filterIsInstance<AppWindow.Project>().flatMap { it.state.docs.toList() })
+            response.performQuit()
+        }
+    }
 
-    // Compose ends the application if its first composition has no window, so a plain launch
-    // composes the welcome window right away, but hidden (see AppState.openBootWelcome).
-    if (AppState.windows.isEmpty()) AppState.openBootWelcome()
+    // Our logo in the Dock instead of the Java/Kotlin one (matters for `./gradlew run`).
+    // MUST come after the Desktop handlers: touching Taskbar finishes AppKit's launch, and an
+    // "open file" event that arrives before setOpenFileHandler is dropped (double-click lost).
+    es.hugoalvarezajenjo.sproutstudio.ui.AppIcon.installInDock()
+
+    // Command line: `sproutstudio diagram.puml` -> quick preview, `sproutstudio folder/` -> project.
+    // Run on the UI thread, like the Finder "open file" handler, so the two can't interleave
+    // (a file landing between the isEmpty() check and openBootWelcome() gave two windows).
+    SwingUtilities.invokeAndWait {
+        args.map(::File).filter { it.exists() }.forEach { AppState.openFile(it) }
+        // Compose ends the application if its first composition has no window, so a plain launch
+        // composes the welcome window right away, but hidden (see AppState.openBootWelcome).
+        if (AppState.windows.isEmpty()) AppState.openBootWelcome()
+    }
 
     application {
         // No file arrived while we started up: this was a plain launch, show the welcome.

@@ -54,6 +54,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import es.hugoalvarezajenjo.sproutstudio.model.AutoSave
+import es.hugoalvarezajenjo.sproutstudio.model.AutoSavePrefs
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -101,9 +107,14 @@ fun ProjectWindow(win: AppWindow.Project) {
     var pending by remember { mutableStateOf<PendingClose?>(null) }
 
     fun closeDocs(docs: List<Document>, then: () -> Unit) {
+        AutoSave.flush(docs) // with autosave on, only untitled diagrams still need the question
         val dirty = docs.filter { it.dirty }
         if (dirty.isEmpty()) then() else pending = PendingClose(dirty, then)
     }
+
+    // Autosave: 1 s after you stop typing, and whenever you switch tab (see below).
+    LaunchedEffect(p) { AutoSave.watch({ p.docs.toList() }) }
+    LaunchedEffect(p.activeIndex) { AutoSave.flush(p.docs.toList()) }
 
     fun save(doc: Document?) {
         doc ?: return
@@ -122,6 +133,14 @@ fun ProjectWindow(win: AppWindow.Project) {
         state = rememberWindowState(size = DpSize(1320.dp, 840.dp)),
         visible = win.revealed,
     ) {
+        // ...and when the window loses focus (you go to another app), like IntelliJ.
+        DisposableEffect(window) {
+            val l = object : WindowAdapter() {
+                override fun windowLostFocus(e: WindowEvent?) = AutoSave.flush(p.docs.toList())
+            }
+            window.addWindowFocusListener(l)
+            onDispose { window.removeWindowFocusListener(l) }
+        }
         MenuBar {
             Menu("File") {
                 Item("New Diagram", shortcut = shortcut(Key.N)) { p.newDocument() }
@@ -130,6 +149,10 @@ fun ProjectWindow(win: AppWindow.Project) {
                 Item("New Window") { AppState.newProjectWindow() }
                 Separator()
                 Item("Save", shortcut = shortcut(Key.S), enabled = p.active != null) { save(p.active) }
+                CheckboxItem("Save Automatically", checked = AutoSavePrefs.enabled) {
+                    AutoSavePrefs.enabled = it
+                    if (it) AutoSave.flush(p.docs.toList())
+                }
                 Item("Save As…", shortcut = shortcut(Key.S, shift = true), enabled = p.active != null) {
                     p.active?.let { d -> Dialogs.saveAs(d.name, d.dir ?: p.root)?.let { d.save(it); p.refreshTree() } }
                 }
@@ -499,7 +522,11 @@ private fun StatusBar(p: ProjectState, line: Int, col: Int, info: StatusInfo?) {
                 StatusText(if (it.diagrams > 1) "${it.kind} · ${it.diagrams} diagrams" else it.kind)
             }
             StatusText("$line:$col")
-            StatusText(if (doc.dirty) "Modified" else "Saved")
+            when {
+                doc.saveError != null -> StatusText("Save failed: ${doc.saveError}", c.error, Icons.Outlined.ErrorOutline)
+                doc.dirty -> StatusText(if (doc.file == null) "Not saved yet" else "Modified")
+                else -> StatusText(if (AutoSavePrefs.enabled) "Saved automatically" else "Saved")
+            }
         }
         StatusText("Offline", icon = Icons.Outlined.Lock)
     }
