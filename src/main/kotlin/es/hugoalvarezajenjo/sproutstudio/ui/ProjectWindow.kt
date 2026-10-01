@@ -119,6 +119,7 @@ fun ProjectWindow(win: AppWindow.Project) {
         onCloseRequest = { closeDocs(p.docs.toList()) { AppState.close(win) } },
         title = title,
         state = rememberWindowState(size = DpSize(1320.dp, 840.dp)),
+        visible = win.revealed,
     ) {
         MenuBar {
             Menu("File") {

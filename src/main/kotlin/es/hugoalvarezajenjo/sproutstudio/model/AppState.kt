@@ -13,7 +13,10 @@ sealed class AppWindow {
     val id: Long = nextId++
 
     class QuickPreview(val file: File) : AppWindow()
-    class Project(val state: ProjectState) : AppWindow()
+    class Project(val state: ProjectState, revealed: Boolean = true) : AppWindow() {
+        /** False while composed-but-hidden (the boot welcome waiting to see if a file arrives). */
+        var revealed by mutableStateOf(revealed)
+    }
 
     private companion object { var nextId = 1L }
 }
@@ -21,23 +24,31 @@ sealed class AppWindow {
 object AppState {
     val windows = mutableStateListOf<AppWindow>()
 
-    /** Welcome window opened on a plain launch, replaceable by an early open-file event. */
+    /**
+     * Welcome window for a plain launch. Compose quits if its first composition has no window,
+     * so it is composed at once but kept HIDDEN: a Finder double-click on a cold start reaches us
+     * as an Apple "open file" event that can arrive seconds after main(). If it does, the hidden
+     * welcome is discarded and only the preview ever appears; otherwise [revealBootWelcome] shows it.
+     */
     private var bootWelcome: AppWindow.Project? = null
-    private var bootAt = 0L
 
     fun openBootWelcome() {
-        val w = AppWindow.Project(ProjectState())
+        val w = AppWindow.Project(ProjectState(), revealed = false)
         bootWelcome = w
-        bootAt = System.currentTimeMillis()
         windows += w
     }
 
-    /** Drop the boot welcome window if the user hasn't touched it and it's only just appeared. */
+    /** Called once the app has settled with no file to open: show the welcome after all. */
+    fun revealBootWelcome() {
+        bootWelcome?.revealed = true
+    }
+
+    /** A file arrived: the boot welcome isn't wanted, unless the user already started using it. */
     private fun dropBootWelcome() {
         val w = bootWelcome ?: return
         bootWelcome = null
         val untouched = w.state.root == null && w.state.docs.isEmpty()
-        if (untouched && System.currentTimeMillis() - bootAt < 3000) windows.remove(w)
+        if (untouched) windows.remove(w)
     }
 
     /** Double-click / single file: open the lightweight preview, or focus an open tab. */
@@ -55,7 +66,12 @@ object AppState {
         windows.filterIsInstance<AppWindow.Project>().firstOrNull { it.state.root == d }?.let { return }
         // Reuse an empty welcome window if there is one.
         val empty = windows.filterIsInstance<AppWindow.Project>().firstOrNull { it.state.root == null && it.state.docs.isEmpty() }
-        if (empty != null) empty.state.openRoot(d) else windows += AppWindow.Project(ProjectState().apply { openRoot(d) })
+        if (empty != null) {
+            empty.state.openRoot(d)
+            empty.revealed = true
+        } else {
+            windows += AppWindow.Project(ProjectState().apply { openRoot(d) })
+        }
     }
 
     fun newProjectWindow() {

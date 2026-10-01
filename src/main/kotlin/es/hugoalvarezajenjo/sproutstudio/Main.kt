@@ -10,6 +10,7 @@ import es.hugoalvarezajenjo.sproutstudio.model.AppWindow
 import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
 import es.hugoalvarezajenjo.sproutstudio.ui.ProjectWindow
 import es.hugoalvarezajenjo.sproutstudio.ui.QuickPreviewWindow
+import kotlinx.coroutines.delay
 import java.awt.Desktop
 import java.io.File
 import javax.swing.SwingUtilities
@@ -36,11 +37,15 @@ fun main(args: Array<String>) {
     args.map(::File).filter { it.exists() }.forEach { AppState.openFile(it) }
 
     // Compose ends the application if its first composition has no window, so a plain launch
-    // must open the welcome window right away. If a Finder double-click arrives a moment later
-    // (cold start), AppState swaps this untouched welcome window for the file's preview.
+    // composes the welcome window right away, but hidden (see AppState.openBootWelcome).
     if (AppState.windows.isEmpty()) AppState.openBootWelcome()
 
     application {
+        // No file arrived while we started up: this was a plain launch, show the welcome.
+        LaunchedEffect(Unit) {
+            delay(1200)
+            AppState.revealBootWelcome()
+        }
         val sawWindow = remember { mutableStateOf(false) }
         LaunchedEffect(AppState.windows.size) {
             if (AppState.windows.isNotEmpty()) sawWindow.value = true
