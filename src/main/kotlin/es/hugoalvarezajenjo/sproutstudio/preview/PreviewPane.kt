@@ -146,7 +146,7 @@ fun PreviewPane(
             if (preview.rendering && preview.firstDone) {
                 Text("Rendering…", fontSize = 11.sp, color = c.textMuted, modifier = Modifier.padding(end = 6.dp))
             }
-            ToolButton(Icons.Outlined.Remove, "Zoom out (⌘ + scroll)") { zoom.zoomBy(1 / 1.25f) }
+            ToolButton(Icons.Outlined.Remove, "Zoom out (mouse wheel)") { zoom.zoomBy(1 / 1.25f) }
             Text(
                 "${(zoom.scale * 100).toInt()}%",
                 style = MaterialTheme.typography.labelMedium,
@@ -154,7 +154,7 @@ fun PreviewPane(
                 modifier = Modifier.width(40.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
-            ToolButton(Icons.Outlined.Add, "Zoom in (⌘ + scroll)") { zoom.zoomBy(1.25f) }
+            ToolButton(Icons.Outlined.Add, "Zoom in (mouse wheel)") { zoom.zoomBy(1.25f) }
             ToolButton(Icons.Outlined.FitScreen, "Fit to window (double-click)", selected = zoom.autoFit) {
                 preview.image?.let { zoom.fit(it.width, it.height) }
             }

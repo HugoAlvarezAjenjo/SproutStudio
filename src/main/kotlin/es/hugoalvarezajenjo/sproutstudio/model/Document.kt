@@ -18,8 +18,19 @@ fun File.isDiagram() = isFile && extension.lowercase() in DiagramExtensions
 /** One open file (or an unsaved new diagram). */
 @Stable
 class Document(file: File?, initialText: String) {
+    /** Folded blocks; declared first because the [value] setter uses it. */
+    val folds = es.hugoalvarezajenjo.sproutstudio.editor.FoldState()
+
     var file by mutableStateOf(file)
-    var value by mutableStateOf(TextFieldValue(initialText))
+    private var current by mutableStateOf(TextFieldValue(initialText))
+
+    /** Every writer goes through here, so folds follow edits and never hide the caret. */
+    var value: TextFieldValue
+        get() = current
+        set(v) {
+            folds.onEdit(current.text, v.text)
+            current = folds.adjust(current, v)
+        }
     var savedText by mutableStateOf(initialText)
         private set
 

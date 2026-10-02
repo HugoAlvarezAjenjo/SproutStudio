@@ -114,7 +114,29 @@ class ProjectState {
         private set
     val docs = mutableStateListOf<Document>()
     var activeIndex by mutableStateOf(0)
-    var previewVisible by mutableStateOf(true)
+    /** Editor only / editor + preview / preview only, like IntelliJ's split-editor switcher. */
+    var layout by mutableStateOf(LayoutPrefs.editorLayout)
+        private set
+
+    val previewVisible: Boolean get() = layout != EditorLayout.EDITOR
+    val editorVisible: Boolean get() = layout != EditorLayout.PREVIEW
+
+    fun changeLayout(l: EditorLayout) {
+        layout = l
+        LayoutPrefs.editorLayout = l
+    }
+
+    /** ⌘P: show the preview next to the code, or hide it. */
+    fun togglePreview() = changeLayout(if (layout == EditorLayout.EDITOR) EditorLayout.SPLIT else EditorLayout.EDITOR)
+
+    /**
+     * Something needs the code on screen (find, fold, jump to an error): from preview-only,
+     * bring the editor back next to the preview rather than taking the preview away.
+     */
+    fun revealEditor() {
+        if (layout == EditorLayout.PREVIEW) changeLayout(EditorLayout.SPLIT)
+    }
+
     var sidebarVisible by mutableStateOf(LayoutPrefs.sidebarVisible)
         private set
     /** Project panel width in dp; dragged by the user, remembered across launches. */
@@ -226,4 +248,15 @@ object LayoutPrefs {
     var sidebarWidth: Float
         get() = prefs.getFloat("sidebarWidth", 240f).coerceIn(ProjectState.SIDEBAR_MIN, ProjectState.SIDEBAR_MAX)
         set(v) = prefs.putFloat("sidebarWidth", v)
+
+    var editorLayout: EditorLayout
+        get() = runCatching { EditorLayout.valueOf(prefs.get("editorLayout", EditorLayout.SPLIT.name)) }.getOrDefault(EditorLayout.SPLIT)
+        set(v) = prefs.put("editorLayout", v.name)
+}
+
+/** How the active tab is shown. */
+enum class EditorLayout(val label: String) {
+    EDITOR("Editor Only"),
+    SPLIT("Editor and Preview"),
+    PREVIEW("Preview Only"),
 }

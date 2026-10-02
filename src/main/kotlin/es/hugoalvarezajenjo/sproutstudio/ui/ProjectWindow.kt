@@ -1,5 +1,9 @@
 package es.hugoalvarezajenjo.sproutstudio.ui
 
+import es.hugoalvarezajenjo.sproutstudio.editor.foldAll
+import es.hugoalvarezajenjo.sproutstudio.editor.foldAtCaret
+import es.hugoalvarezajenjo.sproutstudio.editor.unfoldAll
+import es.hugoalvarezajenjo.sproutstudio.editor.unfoldAtCaret
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -45,8 +49,10 @@ import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.outlined.Schema
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.VerticalSplit
+import es.hugoalvarezajenjo.sproutstudio.model.EditorLayout
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -164,13 +170,28 @@ fun ProjectWindow(win: AppWindow.Project) {
             }
             Menu("Edit") {
                 val d = p.active
-                Item("Find…", shortcut = shortcut(Key.F), enabled = d != null) { d?.let { it.find.open(replace = false, seed = it.selectedText()) } }
-                Item("Replace…", shortcut = shortcut(Key.R), enabled = d != null) { d?.let { it.find.open(replace = true, seed = it.selectedText()) } }
-                Item("Find Next", shortcut = shortcut(Key.G), enabled = d != null) { d?.findNext(true) }
-                Item("Find Previous", shortcut = shortcut(Key.G, shift = true), enabled = d != null) { d?.findNext(false) }
+                Item("Find…", shortcut = shortcut(Key.F), enabled = d != null) { d?.let { p.revealEditor(); it.find.open(replace = false, seed = it.selectedText()) } }
+                Item("Replace…", shortcut = shortcut(Key.R), enabled = d != null) { d?.let { p.revealEditor(); it.find.open(replace = true, seed = it.selectedText()) } }
+                Item("Find Next", shortcut = shortcut(Key.G), enabled = d != null) { p.revealEditor(); d?.findNext(true) }
+                Item("Find Previous", shortcut = shortcut(Key.G, shift = true), enabled = d != null) { p.revealEditor(); d?.findNext(false) }
+            }
+            Menu("Code") {
+                val d = p.active
+                Item("Fold Block", shortcut = shortcut(Key.Minus), enabled = d != null) { p.revealEditor(); d?.foldAtCaret() }
+                Item("Unfold Block", shortcut = shortcut(Key.Equals), enabled = d != null) { p.revealEditor(); d?.unfoldAtCaret() }
+                Item("Fold All", shortcut = shortcut(Key.Minus, shift = true), enabled = d != null) { p.revealEditor(); d?.foldAll() }
+                Item("Unfold All", shortcut = shortcut(Key.Equals, shift = true), enabled = d != null) { p.revealEditor(); d?.unfoldAll() }
             }
             Menu("View") {
-                CheckboxItem("Show Preview", checked = p.previewVisible, shortcut = shortcut(Key.P)) { p.previewVisible = it }
+                EditorLayout.entries.forEach { l ->
+                    RadioButtonItem(
+                        l.label,
+                        selected = p.layout == l,
+                        shortcut = KeyShortcut(l.shortcutKey, meta = Dialogs.isMac, ctrl = !Dialogs.isMac, alt = true),
+                    ) { p.changeLayout(l) }
+                }
+                CheckboxItem("Show Preview", checked = p.previewVisible, shortcut = shortcut(Key.P)) { p.togglePreview() }
+                Separator()
                 CheckboxItem("Show Project Panel", checked = p.sidebarVisible, shortcut = shortcut(Key.One)) { p.showSidebar(it) }
                 CheckboxItem("Dark Theme", checked = ThemePrefs.dark) { ThemePrefs.toggle() }
                 Separator()
@@ -335,35 +356,35 @@ private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalv
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val total = maxWidth
         val density = LocalDensity.current
+        val split = p.layout == EditorLayout.SPLIT
         Row(Modifier.fillMaxSize()) {
-            CodeEditor(
-                doc,
-                errorLine = preview.error?.line,
-                modifier = Modifier.weight(if (p.previewVisible) 1f - p.previewFraction else 1f).fillMaxHeight(),
-                onCaretMoved = onCaret,
-            )
-            if (p.previewVisible) {
+            if (p.editorVisible) {
+                CodeEditor(
+                    doc,
+                    errorLine = preview.error?.line,
+                    modifier = Modifier.weight(if (split) 1f - p.previewFraction else 1f).fillMaxHeight(),
+                    onCaretMoved = onCaret,
+                )
+            }
+            if (split) {
                 Splitter(onDrag = { deltaPx ->
                     val deltaFrac = with(density) { deltaPx.toDp() } / total
                     p.previewFraction = (p.previewFraction - deltaFrac).coerceIn(0.2f, 0.8f)
                 })
+            }
+            if (p.previewVisible) {
                 PreviewPane(
                     preview = preview,
                     text = doc.text,
                     baseDir = doc.dir,
                     baseName = doc.baseName,
-                    modifier = Modifier.weight(p.previewFraction).fillMaxHeight(),
-                    onJumpToLine = { doc.jumpRequest = it },
+                    modifier = Modifier.weight(if (split) p.previewFraction else 1f).fillMaxHeight(),
+                    // An error link needs the code: from preview-only, open the editor beside it.
+                    onJumpToLine = { p.revealEditor(); doc.jumpRequest = it },
                     leadingTools = {
                         Text("Preview", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.padding(start = 6.dp, end = 4.dp))
-                        ToolButton(Icons.Outlined.VisibilityOff, "Hide preview (⌘P)") { p.previewVisible = false }
                     },
                 )
-            }
-        }
-        if (!p.previewVisible) {
-            Box(Modifier.align(Alignment.TopEnd).padding(top = 42.dp, end = 10.dp)) {
-                ToolButton(Icons.Outlined.Visibility, "Show preview (⌘P)", label = "Preview") { p.previewVisible = true }
             }
         }
     }
@@ -470,7 +491,8 @@ private fun TabsBar(p: ProjectState, onCloseTab: (Document) -> Unit) {
     if (p.docs.isEmpty()) return
     val c = ide
     Column {
-        Row(Modifier.fillMaxWidth().height(36.dp).background(c.panel).horizontalScroll(rememberScrollState())) {
+        Row(Modifier.fillMaxWidth().height(36.dp).background(c.panel), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState())) {
             p.docs.forEachIndexed { i, d ->
                 val active = i == p.activeIndex
                 val interaction = remember { MutableInteractionSource() }
@@ -505,9 +527,33 @@ private fun TabsBar(p: ProjectState, onCloseTab: (Document) -> Unit) {
                 VLine()
             }
         }
+            LayoutSwitcher(p)
+        }
         HLine()
     }
 }
+
+/** IntelliJ's top-right editor switcher: code only, code + preview, preview only. */
+@Composable
+private fun LayoutSwitcher(p: ProjectState) {
+    Row(Modifier.padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        LAYOUT_BUTTONS.forEach { (l, icon) ->
+            ToolButton(icon, "${l.label} (${l.shortcutHint})", selected = p.layout == l) { p.changeLayout(l) }
+        }
+    }
+}
+
+private val LAYOUT_BUTTONS = listOf(
+    EditorLayout.EDITOR to Icons.Outlined.Code,
+    EditorLayout.SPLIT to Icons.Outlined.VerticalSplit,
+    EditorLayout.PREVIEW to Icons.Outlined.Image,
+)
+
+private val EditorLayout.shortcutKey: Key
+    get() = when (this) { EditorLayout.EDITOR -> Key.One; EditorLayout.SPLIT -> Key.Two; EditorLayout.PREVIEW -> Key.Three }
+
+private val EditorLayout.shortcutHint: String
+    get() = (if (Dialogs.isMac) "⌥⌘" else "Ctrl+Alt+") + (ordinal + 1)
 
 @Composable
 private fun StatusBar(p: ProjectState, line: Int, col: Int, info: StatusInfo?) {

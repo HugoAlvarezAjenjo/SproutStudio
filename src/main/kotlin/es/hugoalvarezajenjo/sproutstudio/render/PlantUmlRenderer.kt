@@ -75,11 +75,42 @@ object PlantUmlRenderer {
      * (Skia's SVG renderer has no font manager on desktop and would drop all text.)
      */
     suspend fun renderPreview(source: String, baseDir: File?, index: Int, scale: Double): RenderResult =
-        withContext(thread) { renderBlocking(source, baseDir, index, FileFormat.PNG, scale) }
+        withContext(thread) {
+            limitSize(PREVIEW_LIMIT)
+            val r = renderBlocking(source, baseDir, index, FileFormat.PNG, scale)
+            val size = r.bytes?.let { pngSize(it) } ?: return@withContext r
+            if (size.first < PREVIEW_LIMIT && size.second < PREVIEW_LIMIT) return@withContext r
+            // Too big for [scale]x: measure the natural size and render at the largest scale that fits.
+            limitSize(EXPORT_LIMIT)
+            val natural = renderBlocking(source, baseDir, index, FileFormat.PNG, 1.0).bytes?.let { pngSize(it) }
+                ?: return@withContext r
+            val fit = (PREVIEW_LIMIT - 64.0) / maxOf(natural.first, natural.second)
+            limitSize(PREVIEW_LIMIT)
+            renderBlocking(source, baseDir, index, FileFormat.PNG, minOf(scale, fit))
+        }
+
+    /**
+     * PlantUML silently CROPS images at PLANTUML_LIMIT_SIZE (4096 px by default), which cut
+     * big diagrams in the preview (rendered at 3x) and in PNG exports. The preview is capped at
+     * the GPU texture size and lowers its scale instead; exports are effectively unlimited.
+     */
+    private const val PREVIEW_LIMIT = 16384
+    private const val EXPORT_LIMIT = 65536
+
+    private fun limitSize(px: Int) { System.setProperty("PLANTUML_LIMIT_SIZE", px.toString()) }
+
+    /** Width/height from the PNG IHDR header, without decoding the image. */
+    private fun pngSize(b: ByteArray): Pair<Int, Int>? {
+        if (b.size < 24) return null
+        fun int(o: Int) = ((b[o].toInt() and 0xff) shl 24) or ((b[o + 1].toInt() and 0xff) shl 16) or
+            ((b[o + 2].toInt() and 0xff) shl 8) or (b[o + 3].toInt() and 0xff)
+        return int(16) to int(20)
+    }
 
     suspend fun export(source: String, baseDir: File?, index: Int, format: ExportFormat, target: File) =
         withContext(thread) {
             OfflineGuard.check(source)?.let { throw IllegalStateException(it.message) }
+            limitSize(EXPORT_LIMIT)
             val reader = reader(source, baseDir)
             target.outputStream().use { out ->
                 reader.outputImage(out, index, FileFormatOption(format.plantUml))
@@ -90,6 +121,7 @@ object PlantUmlRenderer {
     suspend fun renderPng(source: String, baseDir: File?, index: Int): ByteArray =
         withContext(thread) {
             OfflineGuard.check(source)?.let { throw IllegalStateException(it.message) }
+            limitSize(EXPORT_LIMIT)
             val out = ByteArrayOutputStream()
             reader(source, baseDir).outputImage(out, index, FileFormatOption(FileFormat.PNG))
             out.toByteArray()

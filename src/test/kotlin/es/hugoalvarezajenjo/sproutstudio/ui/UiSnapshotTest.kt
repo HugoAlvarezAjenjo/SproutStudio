@@ -44,6 +44,17 @@ class UiSnapshotTest {
     }
 
     @Test
+    fun workspacePreviewOnly() {
+        val saved = es.hugoalvarezajenjo.sproutstudio.model.LayoutPrefs.editorLayout
+        try {
+            val p = pizzaProject().apply { changeLayout(es.hugoalvarezajenjo.sproutstudio.model.EditorLayout.PREVIEW) }
+            shoot("workspace-preview-only", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
+        } finally {
+            es.hugoalvarezajenjo.sproutstudio.model.LayoutPrefs.editorLayout = saved
+        }
+    }
+
+    @Test
     fun workspaceWideSidebar() {
         val p = pizzaProject().apply { resizeSidebar(380f) }
         shoot("workspace-wide-sidebar", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
@@ -63,6 +74,15 @@ class UiSnapshotTest {
         d.find.query = es.hugoalvarezajenjo.sproutstudio.editor.FindQuery("pizza")
         d.find.replacement = "pie"
         shoot("workspace-find", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
+    }
+
+    @Test
+    fun workspaceFolded() {
+        val p = pizzaProject()
+        val d = p.active!!
+        val rs = es.hugoalvarezajenjo.sproutstudio.editor.Folding.regions(d.text)
+        d.folds.set(listOf(rs.first(), rs.first { it.kind == es.hugoalvarezajenjo.sproutstudio.editor.FoldRegion.Kind.BRACES }))
+        shoot("workspace-folded", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
     }
 
     @Test

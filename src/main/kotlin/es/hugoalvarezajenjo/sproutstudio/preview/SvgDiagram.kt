@@ -1,7 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.preview
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -22,6 +21,9 @@ import androidx.compose.ui.graphics.skiaCanvas
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.isShiftPressed
+import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -109,17 +111,39 @@ fun DiagramView(image: DiagramImage, zoom: ZoomState, dimmed: Boolean = false, m
             // diagram paints over the toolbar, the editor and the status bar.
             .clipToBounds()
             .onSizeChanged { zoom.viewport = it }
+            // Wheel = zoom at the pointer (like image viewers). A sideways scroll (trackpad, tilt
+            // wheel) or ⇧+wheel pans instead, so a trackpad can still move around.
             .onPointerEvent(PointerEventType.Scroll) { ev ->
                 val change = ev.changes.first()
                 val d = change.scrollDelta
                 val mods = ev.keyboardModifiers
-                if (mods.isMetaPressed || mods.isCtrlPressed) {
-                    zoom.zoomBy(exp(-d.y * 0.12f), change.position)
-                } else {
-                    zoom.panBy(Offset(-d.x * 24f, -d.y * 24f))
+                when {
+                    mods.isShiftPressed -> zoom.panBy(Offset(-(d.x + d.y) * 24f, 0f))
+                    d.x != 0f && !mods.isMetaPressed && !mods.isCtrlPressed -> zoom.panBy(Offset(-d.x * 24f, -d.y * 24f))
+                    else -> zoom.zoomBy(exp(-d.y * 0.12f), change.position)
+                }
+                change.consume()
+            }
+            // Drag with the left OR the middle button (wheel pressed) pans.
+            .pointerInput(image) {
+                awaitPointerEventScope {
+                    var last: Offset? = null
+                    while (true) {
+                        val ev = awaitPointerEvent()
+                        val ch = ev.changes.first()
+                        val panning = ev.buttons.isPrimaryPressed || ev.buttons.isTertiaryPressed
+                        when {
+                            !panning -> last = null
+                            last == null -> last = ch.position
+                            else -> {
+                                zoom.panBy(ch.position - last!!)
+                                last = ch.position
+                                ch.consume()
+                            }
+                        }
+                    }
                 }
             }
-            .pointerInput(image) { detectDragGestures { change, drag -> change.consume(); zoom.panBy(drag) } }
             .pointerInput(image) { detectTapGestures(onDoubleTap = { zoom.fit(image.width, image.height) }) },
     ) {
         // The canvas IS the diagram's paper: no frame, no shadow, no wasted margin around a card.

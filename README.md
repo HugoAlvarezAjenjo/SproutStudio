@@ -50,13 +50,15 @@ No file there → default icon.
 | ⌘/ | comment / uncomment lines |
 | ⌘D | duplicate line |
 | ⌘F, ⌘R | find, find & replace (Cc match case, W whole words, .* regex with `$1` groups) |
+| ⌘-, ⌘= / ⇧⌘-, ⇧⌘= | fold / unfold the block at the caret / all blocks (or click the ▾ ▸ chevrons in the gutter) |
 | ⏎ / ⇧⏎ (or ⌘G / ⇧⌘G) | next / previous match; Esc closes the bar |
 | ⌘S, ⇧⌘S | save, save as (autosave is on: File → Save Automatically) |
 | ⌘N, ⌘O, ⇧⌘O | new diagram, open folder, open diagram |
 | ⌘P, ⌘1 | show / hide the preview, the project panel |
+| ⌥⌘1 / ⌥⌘2 / ⌥⌘3 | editor only / editor and preview / preview only (also the three buttons at the right of the tab bar) |
 | ⌥⌘Y | refresh the file tree |
 
-Preview: scroll to pan, ⌘+scroll to zoom, double-click to fit. Export to SVG or PNG, or copy
+Preview: mouse wheel to zoom at the pointer, drag with the left or middle button to pan (⇧+wheel or a sideways trackpad swipe also pans), double-click to fit. Export to SVG or PNG, or copy
 the picture to the clipboard (📋) to paste straight into a doc.
 
 ## Layout

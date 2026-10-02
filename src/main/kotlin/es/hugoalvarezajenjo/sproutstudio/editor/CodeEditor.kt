@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,9 +53,12 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.input.OffsetMapping
@@ -108,6 +112,24 @@ fun CodeEditor(
     val value = doc.value
     val caret = value.selection.start
 
+    val highlighted = remember(value.text, errorLine, caret, c) {
+        Highlighter.highlight(value.text, c.syntax, errorLine, caret)
+    }
+    // ── folding: the field shows the folded view; layout offsets go through [toT] ──
+    val activeFolds = Folding.topLevel(doc.folds.active(value.text))
+    val folded = remember(highlighted, activeFolds, c) {
+        Folding.transform(highlighted, activeFolds, SpanStyle(color = c.textMuted, background = c.hover))
+    }
+    val mapping = folded.second
+    fun toT(o: Int) = mapping.originalToTransformed(o.coerceIn(0, value.text.length))
+    val lineStarts = remember(value.text) { Folding.lineStarts(value.text) }
+    val transformation = remember(folded) {
+        VisualTransformation { TransformedText(folded.first, folded.second) }
+    }
+    // Effects outlive one composition; they read the mapping of the latest one.
+    val currentMapping by rememberUpdatedState(mapping)
+    fun liveT(o: Int) = currentMapping.originalToTransformed(o.coerceIn(0, doc.text.length))
+
     // Focus the editor when it appears / when the document changes.
     LaunchedEffect(doc) { delay(50); runCatching { focus.requestFocus() } }
 
@@ -121,18 +143,13 @@ fun CodeEditor(
     LaunchedEffect(doc.jumpRequest, layout) {
         val line = doc.jumpRequest ?: return@LaunchedEffect
         val l = layout ?: return@LaunchedEffect
-        doc.value = doc.value.copy(selection = EditOps.selectLine(doc.text, line))
-        val idx = (line - 1).coerceIn(0, l.lineCount - 1)
-        vScroll.animateScrollTo((l.getLineTop(idx) - 120f).toInt().coerceAtLeast(0))
+        doc.value = doc.value.copy(selection = EditOps.selectLine(doc.text, line)) // unfolds if hidden
         doc.jumpRequest = null
+        delay(16) // layout of the unfolded text
+        val l2 = layout ?: l
+        val idx = l2.getLineForOffset(l2.safeOffset(liveT(doc.value.selection.min)))
+        vScroll.animateScrollTo((l2.getLineTop(idx) - 120f).toInt().coerceAtLeast(0))
         runCatching { focus.requestFocus() }
-    }
-
-    val highlighted = remember(value.text, errorLine, caret, c) {
-        Highlighter.highlight(value.text, c.syntax, errorLine, caret)
-    }
-    val transformation = remember(highlighted) {
-        VisualTransformation { TransformedText(highlighted, OffsetMapping.Identity) }
     }
 
     // ── find / replace ──
@@ -152,14 +169,14 @@ fun CodeEditor(
         if (find.revealTick == 0) return@LaunchedEffect
         delay(16) // let the layout catch up with a Replace that changed the text
         val l = layout ?: return@LaunchedEffect
-        val line = l.getLineForOffset(l.safeOffset(doc.value.selection.min))
+        val line = l.getLineForOffset(l.safeOffset(liveT(doc.value.selection.min)))
         val top = l.getLineTop(line).toInt()
         val bottom = l.getLineBottom(line).toInt()
         val margin = with(density) { 40.dp.toPx() }.toInt()
         if (top < vScroll.value + margin || bottom > vScroll.value + viewportPx - margin) {
             vScroll.animateScrollTo((top - viewportPx / 3).coerceAtLeast(0))
         }
-        val x = l.getHorizontalPosition(l.safeOffset(doc.value.selection.min), true).toInt()
+        val x = l.getHorizontalPosition(l.safeOffset(liveT(doc.value.selection.min)), true).toInt()
         val viewW = hScroll.viewportSize
         if (viewW > 0 && (x < hScroll.value || x > hScroll.value + viewW - margin)) {
             hScroll.animateScrollTo((x - viewW / 3).coerceAtLeast(0))
@@ -194,7 +211,7 @@ fun CodeEditor(
         val viewportW = maxWidth
         val viewportH = maxHeight
         Row(Modifier.fillMaxSize().verticalScroll(vScroll)) {
-            Gutter(c, layout, value.text, errorLine, caret, measurer, density, fieldHeightPx)
+            Gutter(c, doc, layout, mapping, lineStarts, errorLine, caret, measurer, density, fieldHeightPx)
             Box(Modifier.weight(1f).horizontalScroll(hScroll)) {
                 BasicTextField(
                     value = value,
@@ -220,11 +237,13 @@ fun CodeEditor(
                                 val top = l.getLineTop(line0); val bottom = l.getLineBottom(line0)
                                 drawRect(color, Offset(-12.dp.toPx(), top), Size(size.width + 36.dp.toPx(), bottom - top))
                             }
-                            band(l.getLineForOffset(l.safeOffset(caret)), c.currentLine)
-                            errorLine?.let { band(it - 1, c.errorBg) }
+                            band(l.getLineForOffset(l.safeOffset(toT(caret))), c.currentLine)
+                            errorLine?.let { e ->
+                                if (e - 1 in lineStarts.indices) band(l.getLineForOffset(l.safeOffset(toT(lineStarts[e - 1]))), c.errorBg)
+                            }
                             // Find hits: draw at most what's reasonable, current one stronger.
                             findResult.matches.asSequence().take(2000).forEachIndexed { i, m ->
-                                val s = l.safeOffset(m.first); val e = l.safeOffset(m.last + 1)
+                                val s = l.safeOffset(toT(m.first)); val e = l.safeOffset(toT(m.last + 1))
                                 if (e > s) drawPath(l.getPathForRange(s, e), if (i == currentMatch) c.findCurrent else c.findMatch)
                             }
                         }
@@ -257,7 +276,7 @@ fun CodeEditor(
                 val req = completion
                 val l = layout
                 if (req != null && l != null) {
-                    val rect = l.getCursorRect(l.safeOffset(caret))
+                    val rect = l.getCursorRect(l.safeOffset(toT(caret)))
                     val pad = with(density) { 12.dp.toPx() }
                     val top = with(density) { 10.dp.toPx() }
                     Popup(
@@ -277,8 +296,10 @@ fun CodeEditor(
 @Composable
 private fun Gutter(
     c: IdeColors,
+    doc: Document,
     layout: TextLayoutResult?,
-    text: String,
+    mapping: OffsetMapping,
+    lineStarts: IntArray,
     errorLine: Int?,
     caret: Int,
     measurer: androidx.compose.ui.text.TextMeasurer,
@@ -286,21 +307,45 @@ private fun Gutter(
     fieldHeightPx: Int,
 ) {
     val topPad = with(density) { 10.dp.toPx() }
-    val currentLine = text.substring(0, caret.coerceIn(0, text.length)).count { it == '\n' } + 1
+    val text = doc.text
+    val currentLine = Folding.lineOf(lineStarts, caret.coerceIn(0, text.length)) + 1
+    val regions = doc.folds.regions(text)
+    val byStart = remember(regions) { regions.groupBy { it.startLine } }
+    val markerW = with(density) { 14.dp.toPx() }
+
+    /** Real 0-based line shown on visual line [i] (folds merge several real lines into one). */
+    fun realLine(l: TextLayoutResult, i: Int): Int {
+        // Compose reports the empty line after a trailing '\n' as starting on the previous line.
+        if (i == l.lineCount - 1 && i > 0 && text.endsWith('\n')) return lineStarts.size - 1
+        val o = mapping.transformedToOriginal(l.getLineStart(i).coerceIn(0, l.layoutInput.text.length))
+        return Folding.lineOf(lineStarts, o.coerceIn(0, text.length))
+    }
+
     Box(
         Modifier
             .width(GUTTER_DP.dp)
             .height(with(density) { fieldHeightPx.toDp() })
             .background(c.editor)
+            .pointerInput(doc, layout, mapping, regions) {
+                detectTapGestures { pos ->
+                    val l = layout ?: return@detectTapGestures
+                    if (pos.x < size.width - markerW - 4f) return@detectTapGestures
+                    val i = l.getLineForVerticalPosition(pos.y - topPad)
+                    val r = byStart[realLine(l, i)]?.maxByOrNull { it.endLine } ?: return@detectTapGestures
+                    if (doc.folds.isFolded(r)) doc.folds.unfold(r) else doc.foldRegion(r)
+                }
+            }
             .drawBehind {
                 val l = layout ?: return@drawBehind
                 val lines = if (text.isEmpty()) 1 else l.lineCount
                 for (i in 0 until lines) {
                     val y = topPad + l.getLineTop(i)
-                    val lineNo = i + 1
+                    val lineH = l.getLineBottom(i) - l.getLineTop(i)
+                    val real = realLine(l, i)
+                    val lineNo = real + 1
                     val isErr = lineNo == errorLine
                     val isCur = lineNo == currentLine
-                    if (isErr) drawCircle(c.error, 4f, Offset(10f, y + (l.getLineBottom(i) - l.getLineTop(i)) / 2))
+                    if (isErr) drawCircle(c.error, 4f, Offset(8f, y + lineH / 2))
                     val label = measurer.measure(
                         lineNo.toString(),
                         editorTextStyle.copy(
@@ -308,8 +353,23 @@ private fun Gutter(
                             color = when { isErr -> c.error; isCur -> c.lineNumberActive; else -> c.lineNumber },
                         ),
                     )
-                    val lineH = l.getLineBottom(i) - l.getLineTop(i)
-                    drawText(label, topLeft = Offset(size.width - label.size.width - 12f, y + (lineH - label.size.height) / 2))
+                    drawText(label, topLeft = Offset(size.width - markerW - label.size.width - 4f, y + (lineH - label.size.height) / 2))
+                    // Fold marker: ▾ open / ▸ folded, IntelliJ-style chevron next to the number.
+                    val r = byStart[real]?.maxByOrNull { it.endLine } ?: continue
+                    val cx = size.width - markerW / 2 - 2f
+                    val cy = y + lineH / 2
+                    val h = 3.5f * density.density
+                    val path = androidx.compose.ui.graphics.Path().apply {
+                        if (doc.folds.isFolded(r)) {
+                            moveTo(cx - h / 2, cy - h); lineTo(cx + h / 2, cy); lineTo(cx - h / 2, cy + h)
+                        } else {
+                            moveTo(cx - h, cy - h / 2); lineTo(cx, cy + h / 2); lineTo(cx + h, cy - h / 2)
+                        }
+                    }
+                    drawPath(
+                        path, if (doc.folds.isFolded(r)) c.lineNumberActive else c.lineNumber,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.4f * density.density),
+                    )
                 }
             },
     )
