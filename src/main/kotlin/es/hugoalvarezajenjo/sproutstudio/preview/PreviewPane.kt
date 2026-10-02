@@ -30,6 +30,8 @@ import androidx.compose.material.icons.outlined.ImageSearch
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Draw
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -55,6 +57,7 @@ import es.hugoalvarezajenjo.sproutstudio.model.PreviewAction
 import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
 import es.hugoalvarezajenjo.sproutstudio.render.RenderError
 import es.hugoalvarezajenjo.sproutstudio.ui.EmptyState
+import es.hugoalvarezajenjo.sproutstudio.ui.DiagramPrefs
 import es.hugoalvarezajenjo.sproutstudio.ui.HLine
 import es.hugoalvarezajenjo.sproutstudio.ui.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.ToolSeparator
@@ -77,6 +80,8 @@ class PreviewState {
     var index by mutableStateOf(0)
     var rendering by mutableStateOf(false)
     var firstDone by mutableStateOf(false)
+    /** Colour mode of the last render, so toggling it skips the typing debounce. */
+    internal var renderedDark: Boolean? = null
 }
 
 /**
@@ -84,12 +89,19 @@ class PreviewState {
  * which cancels the pending delay — that's the debounce.
  */
 @Composable
-fun rememberLivePreview(text: String, baseDir: File?, debounceMs: Long = 300): PreviewState {
+fun rememberLivePreview(
+    text: String,
+    baseDir: File?,
+    debounceMs: Long = 300,
+    darkDiagram: Boolean = DiagramPrefs.dark,
+): PreviewState {
     val state = remember { PreviewState() }
-    LaunchedEffect(text, baseDir, state.index) {
-        if (state.firstDone) delay(debounceMs)
+    LaunchedEffect(text, baseDir, state.index, darkDiagram) {
+        // A colour toggle re-renders at once; only typing is debounced.
+        if (state.firstDone && state.renderedDark == darkDiagram) delay(debounceMs)
         state.rendering = true
-        val r = PlantUmlRenderer.renderPreview(text, baseDir, state.index, PREVIEW_SCALE)
+        val r = PlantUmlRenderer.renderPreview(text, baseDir, state.index, PREVIEW_SCALE, darkDiagram)
+        state.renderedDark = darkDiagram
         state.diagramCount = r.diagramCount
         if (r.index != state.index) state.index = r.index
         state.error = r.error
@@ -186,6 +198,13 @@ fun PreviewPane(
                 preview.image?.let { zoom.fit(it.width, it.height) }
             }
             ToolButton(Icons.Outlined.ImageSearch, "Actual size") { preview.image?.let { zoom.actualSize(it.width, it.height) } }
+            ToolSeparator()
+            ToolButton(
+                if (DiagramPrefs.dark) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
+                if (DiagramPrefs.dark) "Dark diagram (exports keep original colours) — click for light"
+                else "Light diagram — click for dark",
+                selected = DiagramPrefs.dark,
+            ) { DiagramPrefs.toggle() }
             ToolSeparator()
             ToolButton(Icons.Outlined.ContentCopy, "Copy image to clipboard", enabled = preview.image != null) {
                 copyImage()

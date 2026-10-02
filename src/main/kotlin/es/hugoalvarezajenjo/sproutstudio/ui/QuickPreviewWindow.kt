@@ -68,6 +68,7 @@ fun QuickPreviewWindow(win: AppWindow.QuickPreview) {
             }
             Menu("View") {
                 CheckboxItem("Dark Theme", checked = ThemePrefs.dark) { ThemePrefs.toggle() }
+                CheckboxItem("Dark Diagram Preview", checked = DiagramPrefs.dark) { DiagramPrefs.toggle() }
             }
         }
         PumlTheme {

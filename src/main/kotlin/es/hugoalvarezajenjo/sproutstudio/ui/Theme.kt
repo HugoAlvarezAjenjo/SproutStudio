@@ -153,6 +153,21 @@ object ThemePrefs {
     }
 }
 
+/**
+ * Whether the PREVIEW recolours diagrams dark. Independent of [ThemePrefs]: a dark editor with
+ * a light diagram is the default. Exports and copied images always keep the original colours.
+ */
+object DiagramPrefs {
+    private val prefs = Preferences.userRoot().node("es/hugoalvarezajenjo/sproutstudio")
+    var dark by mutableStateOf(prefs.getBoolean("darkDiagram", false))
+        private set
+
+    fun toggle() {
+        dark = !dark
+        prefs.putBoolean("darkDiagram", dark)
+    }
+}
+
 val LocalIde = staticCompositionLocalOf { DarkIde }
 
 /** Shorthand for the current IDE colours. */

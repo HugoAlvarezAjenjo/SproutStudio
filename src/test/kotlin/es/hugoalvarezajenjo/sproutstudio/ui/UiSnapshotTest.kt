@@ -61,6 +61,20 @@ class UiSnapshotTest {
     }
 
     @Test
+    fun workspaceDarkDiagram() {
+        val wasDark = DiagramPrefs.dark
+        val savedLayout = es.hugoalvarezajenjo.sproutstudio.model.LayoutPrefs.editorLayout
+        if (!wasDark) DiagramPrefs.toggle()
+        try {
+            val p = pizzaProject().apply { changeLayout(es.hugoalvarezajenjo.sproutstudio.model.EditorLayout.SPLIT) }
+            shoot("workspace-dark-diagram", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
+        } finally {
+            if (DiagramPrefs.dark != wasDark) DiagramPrefs.toggle() // leave the user's choice as it was
+            es.hugoalvarezajenjo.sproutstudio.model.LayoutPrefs.editorLayout = savedLayout
+        }
+    }
+
+    @Test
     fun workspaceLight() {
         val p = pizzaProject()
         shoot("workspace-light", listOf(400, 800, 800, 400), dark = false) { Workspace(p, onSave = {}, onCloseTab = {}) }

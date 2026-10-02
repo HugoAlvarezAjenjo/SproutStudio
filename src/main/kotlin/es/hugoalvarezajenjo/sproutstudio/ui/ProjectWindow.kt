@@ -213,6 +213,7 @@ fun ProjectWindow(win: AppWindow.Project) {
                 Separator()
                 CheckboxItem("Show Project Panel", checked = p.sidebarVisible, shortcut = shortcut(Key.One)) { p.showSidebar(it) }
                 CheckboxItem("Dark Theme", checked = ThemePrefs.dark) { ThemePrefs.toggle() }
+                CheckboxItem("Dark Diagram Preview", checked = DiagramPrefs.dark) { DiagramPrefs.toggle() }
                 Separator()
                 Item("Refresh Files", shortcut = KeyShortcut(Key.Y, meta = Dialogs.isMac, ctrl = !Dialogs.isMac, alt = true)) { p.refreshTree() }
             }

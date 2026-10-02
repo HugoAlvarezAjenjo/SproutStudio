@@ -31,6 +31,24 @@ The app is unsigned, so the first launch needs right-click → Open.
 
 For a `.dmg` installer: `./gradlew packageDmg`.
 
+## Releases
+
+CI (`.github/workflows/ci.yml`) runs the tests on every push and pull request; it publishes nothing.
+To publish a version, push a tag:
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+`.github/workflows/release.yml` then tests, builds `SproutStudio-1.2.0.dmg` (version taken from the
+tag) and attaches it to a GitHub Release. Versions must be `MAJOR.MINOR.PATCH` with MAJOR ≥ 1 (macOS
+rule). Local builds default to 1.0.0; override with `-PappVersion=1.2.0`.
+
+Installing the downloaded, unsigned app on another Mac: drag it to Applications, then right-click →
+Open the first time (or `xattr -dr com.apple.quarantine /Applications/SproutStudio.app`). Nothing else
+needs to be installed: the app ships its own Java runtime.
+
 ## App icon
 
 Put your logo at `src/main/resources/icon.png` (square PNG, ideally 1024×1024, transparent
@@ -61,6 +79,9 @@ No file there → default icon.
 
 Preview: mouse wheel to zoom at the pointer, drag with the left or middle button to pan (⇧+wheel or a sideways trackpad swipe also pans), double-click to fit. Export to SVG or PNG, or copy
 the picture to the clipboard (📋) to paste straight into a doc.
+
+The sun/moon button in the preview toolbar (or View -> Dark Diagram Preview) recolours the diagram
+dark. It is independent of the editor theme, and exports/copies always keep the original colours.
 
 ## Layout
 

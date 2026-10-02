@@ -87,6 +87,7 @@ internal fun projectCommands(
         cmd("view.refresh", "Refresh Files", "View", shortcutHint("Y", alt = true)) { p.refreshTree() }
     }
     cmd("view.theme", if (ThemePrefs.dark) "Switch to Light Theme" else "Switch to Dark Theme", "View") { ThemePrefs.toggle() }
+    cmd("view.diagramDark", if (DiagramPrefs.dark) "Light Diagram Preview" else "Dark Diagram Preview", "Preview") { DiagramPrefs.toggle() }
 
     // Preview: export goes through the preview pane (it knows which diagram is showing).
     fun previewCmd(id: String, title: String, a: PreviewAction) = cmd(id, title, "Preview", enabled = has) {

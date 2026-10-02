@@ -7,6 +7,7 @@ import net.sourceforge.plantuml.FileFormat
 import net.sourceforge.plantuml.FileFormatOption
 import net.sourceforge.plantuml.SourceStringReader
 import net.sourceforge.plantuml.error.PSystemError
+import net.sourceforge.plantuml.klimt.color.ColorMapper
 import net.sourceforge.plantuml.preproc.Defines
 import net.sourceforge.plantuml.security.SFile
 import java.io.ByteArrayOutputStream
@@ -74,10 +75,18 @@ object PlantUmlRenderer {
      * Preview render: a PNG drawn by PlantUML itself at [scale]x, so text uses real fonts.
      * (Skia's SVG renderer has no font manager on desktop and would drop all text.)
      */
-    suspend fun renderPreview(source: String, baseDir: File?, index: Int, scale: Double): RenderResult =
+    suspend fun renderPreview(
+        source: String,
+        baseDir: File?,
+        index: Int,
+        scale: Double,
+        /** Recolour with PlantUML's own dark mode (as `-darkmode`). Preview only; exports stay original. */
+        darkDiagram: Boolean = false,
+    ): RenderResult =
         withContext(thread) {
+            val mapper = if (darkDiagram) ColorMapper.DARK_MODE else ColorMapper.IDENTITY
             limitSize(PREVIEW_LIMIT)
-            val r = renderBlocking(source, baseDir, index, FileFormat.PNG, scale)
+            val r = renderBlocking(source, baseDir, index, FileFormat.PNG, scale, mapper)
             val size = r.bytes?.let { pngSize(it) } ?: return@withContext r
             if (size.first < PREVIEW_LIMIT && size.second < PREVIEW_LIMIT) return@withContext r
             // Too big for [scale]x: measure the natural size and render at the largest scale that fits.
@@ -86,7 +95,7 @@ object PlantUmlRenderer {
                 ?: return@withContext r
             val fit = (PREVIEW_LIMIT - 64.0) / maxOf(natural.first, natural.second)
             limitSize(PREVIEW_LIMIT)
-            renderBlocking(source, baseDir, index, FileFormat.PNG, minOf(scale, fit))
+            renderBlocking(source, baseDir, index, FileFormat.PNG, minOf(scale, fit), mapper)
         }
 
     /**
@@ -133,6 +142,7 @@ object PlantUmlRenderer {
         index: Int = 0,
         format: FileFormat = FileFormat.SVG,
         scale: Double = 1.0,
+        colorMapper: ColorMapper = ColorMapper.IDENTITY,
     ): RenderResult {
         OfflineGuard.check(source)?.let { v ->
             return RenderResult(bytes = null, diagramCount = countBlocks(source), index = 0,
@@ -156,7 +166,7 @@ object PlantUmlRenderer {
 
         val out = ByteArrayOutputStream()
         val scaled = if (scale != 1.0) reader(source, baseDir, config + "scale $scale") else reader
-        val option = FileFormatOption(format)
+        val option = FileFormatOption(format).withColorMapper(colorMapper)
         runCatching { scaled.outputImage(out, i, option) }
             .onFailure { t ->
                 return RenderResult(null, blocks.size, i,
