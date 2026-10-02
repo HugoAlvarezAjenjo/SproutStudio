@@ -121,6 +121,19 @@ object EditOps {
         }
     }
 
+    /**
+     * Inserts a template at the caret (on its own line), with the caret where the
+     * template's `$0` marker was.
+     */
+    fun insertSnippet(v: TextFieldValue, snippet: String): TextFieldValue {
+        val marker = snippet.indexOf("\$0")
+        val body = snippet.replace("\$0", "")
+        val at = v.selection.min
+        val prefix = if (at > 0 && v.text[at - 1] != '\n') "\n" else ""
+        val t = v.text.substring(0, at) + prefix + body + v.text.substring(v.selection.max)
+        return TextFieldValue(t, TextRange(at + prefix.length + if (marker >= 0) marker else body.length))
+    }
+
     private fun replaceSelection(v: TextFieldValue, insert: String): TextFieldValue {
         val t = v.text.substring(0, v.selection.min) + insert + v.text.substring(v.selection.max)
         return TextFieldValue(t, TextRange(v.selection.min + insert.length))

@@ -50,6 +50,7 @@ No file there → default icon.
 | ⌘/ | comment / uncomment lines |
 | ⌘D | duplicate line |
 | ⌘F, ⌘R | find, find & replace (Cc match case, W whole words, .* regex with `$1` groups) |
+| ⇧⌘P, ⇧⌘A, Shift Shift | command palette: every action, templates, the project's diagrams and recent projects |
 | ⌘-, ⌘= / ⇧⌘-, ⇧⌘= | fold / unfold the block at the caret / all blocks (or click the ▾ ▸ chevrons in the gutter) |
 | ⏎ / ⇧⏎ (or ⌘G / ⇧⌘G) | next / previous match; Esc closes the bar |
 | ⌘S, ⇧⌘S | save, save as (autosave is on: File → Save Automatically) |

@@ -79,6 +79,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyShortcut
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
@@ -124,6 +130,9 @@ fun ProjectWindow(win: AppWindow.Project) {
     LaunchedEffect(p) { AutoSave.watch({ p.docs.toList() }) }
     LaunchedEffect(p.activeIndex) { AutoSave.flush(p.docs.toList()) }
 
+    var paletteOpen by remember { mutableStateOf(false) }
+    val doubleShift = remember { DoubleShiftDetector() }
+
     fun save(doc: Document?) {
         doc ?: return
         if (doc.file == null) Dialogs.saveAs(doc.name, p.root)?.let { doc.save(it); p.refreshTree() } else doc.save()
@@ -140,6 +149,16 @@ fun ProjectWindow(win: AppWindow.Project) {
         icon = AppIcon.painter,
         state = rememberWindowState(size = DpSize(1320.dp, 840.dp)),
         visible = win.revealed,
+        onPreviewKeyEvent = { e ->
+            val isShift = e.key == Key.ShiftLeft || e.key == Key.ShiftRight
+            when {
+                doubleShift.onKey(isShift, down = e.type == KeyEventType.KeyDown) -> { paletteOpen = true; true }
+                // ⇧⌘A (IntelliJ's Find Action) as a second way in; ⇧⌘P is on the menu item.
+                e.type == KeyEventType.KeyDown && e.key == Key.A && e.isShiftPressed &&
+                    (if (Dialogs.isMac) e.isMetaPressed else e.isCtrlPressed) -> { paletteOpen = true; true }
+                else -> false
+            }
+        },
     ) {
         // ...and when the window loses focus (you go to another app), like IntelliJ.
         DisposableEffect(window) {
@@ -197,15 +216,40 @@ fun ProjectWindow(win: AppWindow.Project) {
                 Separator()
                 Item("Refresh Files", shortcut = KeyShortcut(Key.Y, meta = Dialogs.isMac, ctrl = !Dialogs.isMac, alt = true)) { p.refreshTree() }
             }
+            Menu("Help") {
+                Item("Find Action…", shortcut = shortcut(Key.P, shift = true)) { paletteOpen = true }
+            }
         }
 
         PumlTheme {
+            Box(Modifier.fillMaxSize()) {
             Surface(color = ide.panel) {
                 if (p.root == null && p.docs.isEmpty()) {
                     Welcome(p)
                 } else {
                     Workspace(p, onSave = { save(it) }, onCloseTab = { d -> closeDocs(listOf(d)) { p.closeDoc(d) } })
                 }
+            }
+
+            if (paletteOpen) {
+                val commands = projectCommands(
+                    p,
+                    onSave = { save(p.active) },
+                    onSaveAs = { p.active?.let { d -> Dialogs.saveAs(d.name, d.dir ?: p.root)?.let { d.save(it); p.refreshTree() } } },
+                    onCloseTab = { p.active?.let { d -> closeDocs(listOf(d)) { p.closeDoc(d) } } },
+                )
+                CommandPalette(
+                    commands,
+                    onDismiss = { paletteOpen = false; p.active?.let { it.focusTick++ } },
+                    onRun = { cmd ->
+                        paletteOpen = false
+                        PaletteRecents.add(cmd.id)
+                        cmd.run()
+                        // Hand the keyboard back to the (possibly new) active editor.
+                        if (cmd.restoresFocus) p.active?.let { it.focusTick++ }
+                    },
+                )
+            }
             }
 
             pending?.let { pc ->
@@ -381,6 +425,8 @@ private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalv
                     modifier = Modifier.weight(if (split) p.previewFraction else 1f).fillMaxHeight(),
                     // An error link needs the code: from preview-only, open the editor beside it.
                     onJumpToLine = { p.revealEditor(); doc.jumpRequest = it },
+                    request = doc.previewRequest,
+                    onRequestHandled = { doc.previewRequest = null },
                     leadingTools = {
                         Text("Preview", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.padding(start = 6.dp, end = 4.dp))
                     },

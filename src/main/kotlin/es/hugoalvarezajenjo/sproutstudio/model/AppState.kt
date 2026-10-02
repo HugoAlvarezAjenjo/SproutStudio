@@ -223,6 +223,21 @@ class ProjectState {
         tree = out
     }
 
+    /** Every diagram under the root, expanded or not (for the command palette's "go to file"). */
+    fun allDiagrams(limit: Int = 2000): List<File> {
+        val r = root ?: return emptyList()
+        val out = ArrayList<File>()
+        fun walk(dir: File, depth: Int) {
+            if (depth > 8 || out.size >= limit) return
+            for (f in dir.listFiles().orEmpty().sortedBy { it.name.lowercase() }) {
+                if (f.name.startsWith(".") || f.name in IGNORED) continue
+                if (f.isDirectory) walk(f, depth + 1) else if (f.isDiagram() && out.size < limit) out += f.absoluteFile
+            }
+        }
+        walk(r, 0)
+        return out
+    }
+
     private fun containsDiagrams(dir: File, depth: Int = 0): Boolean {
         if (depth > 6) return false
         return dir.listFiles().orEmpty().any { f ->

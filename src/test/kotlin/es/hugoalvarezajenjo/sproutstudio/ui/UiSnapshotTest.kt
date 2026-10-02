@@ -76,6 +76,22 @@ class UiSnapshotTest {
         shoot("workspace-find", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
     }
 
+    private fun withPalette(name: String, query: String) {
+        val p = pizzaProject()
+        shoot(name, listOf(400, 800, 800, 400)) {
+            androidx.compose.foundation.layout.Box {
+                Workspace(p, onSave = {}, onCloseTab = {})
+                CommandPalette(projectCommands(p, {}, {}, {}), onDismiss = {}, onRun = {}, recentIds = listOf("view.theme", "preview.png"), initialQuery = query)
+            }
+        }
+    }
+
+    @Test fun commandPalette() = withPalette("command-palette", "")
+
+    @Test fun commandPaletteSearch() = withPalette("command-palette-search", "exp")
+
+    @Test fun commandPaletteFile() = withPalette("command-palette-file", "morn")
+
     @Test
     fun workspaceFolded() {
         val p = pizzaProject()

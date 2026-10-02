@@ -132,6 +132,8 @@ fun CodeEditor(
 
     // Focus the editor when it appears / when the document changes.
     LaunchedEffect(doc) { delay(50); runCatching { focus.requestFocus() } }
+    // ...and when asked to (the command palette closing hands the keyboard back).
+    LaunchedEffect(doc.focusTick) { if (doc.focusTick > 0) { delay(16); runCatching { focus.requestFocus() } } }
 
     // Report caret position for the status bar.
     LaunchedEffect(caret, value.text) {

@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.render.ExportFormat
+import es.hugoalvarezajenjo.sproutstudio.model.PreviewAction
 import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
 import es.hugoalvarezajenjo.sproutstudio.render.RenderError
 import es.hugoalvarezajenjo.sproutstudio.ui.EmptyState
@@ -116,6 +117,9 @@ fun PreviewPane(
     modifier: Modifier = Modifier,
     onJumpToLine: ((Int) -> Unit)? = null,
     leadingTools: @Composable RowScope.() -> Unit = {},
+    /** Copy/export asked for from elsewhere (the command palette); [onRequestHandled] clears it. */
+    request: PreviewAction? = null,
+    onRequestHandled: () -> Unit = {},
 ) {
     val c = ide
     val zoom = rememberZoomState()
@@ -124,6 +128,29 @@ fun PreviewPane(
     var exportMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(toast) { if (toast != null) { delay(2200); toast = null } }
+
+    fun copyImage() = scope.launch {
+        toast = runCatching { Export.copyPngToClipboard(text, baseDir, preview.index); "Image copied to clipboard" }
+            .getOrElse { "Couldn't copy: ${it.message}" }
+    }
+    fun export(f: ExportFormat) = scope.launch {
+        val name = if (preview.diagramCount > 1) "$baseName-${preview.index + 1}" else baseName
+        toast = runCatching { Export.exportWithDialog(text, baseDir, preview.index, f, name) }
+            .fold({ it?.let { file -> "Saved ${file.name}" } }, { "Export failed: ${it.message}" })
+    }
+
+    // Requests wait for the first render, so "export" right after opening a file still works.
+    LaunchedEffect(request, preview.image, preview.firstDone) {
+        val r = request ?: return@LaunchedEffect
+        if (preview.image == null && !preview.firstDone) return@LaunchedEffect
+        onRequestHandled()
+        if (preview.image == null) { toast = "Nothing to export: fix the diagram first"; return@LaunchedEffect }
+        when (r) {
+            PreviewAction.COPY_IMAGE -> copyImage()
+            PreviewAction.EXPORT_SVG -> export(ExportFormat.SVG)
+            PreviewAction.EXPORT_PNG -> export(ExportFormat.PNG)
+        }
+    }
 
     Column(modifier.background(c.panel)) {
         // ── Toolbar: one compact 36dp strip, JetBrains tool-window style ──────────
@@ -161,10 +188,7 @@ fun PreviewPane(
             ToolButton(Icons.Outlined.ImageSearch, "Actual size") { preview.image?.let { zoom.actualSize(it.width, it.height) } }
             ToolSeparator()
             ToolButton(Icons.Outlined.ContentCopy, "Copy image to clipboard", enabled = preview.image != null) {
-                scope.launch {
-                    toast = runCatching { Export.copyPngToClipboard(text, baseDir, preview.index); "Image copied to clipboard" }
-                        .getOrElse { "Couldn't copy: ${it.message}" }
-                }
+                copyImage()
             }
             Box {
                 ToolButton(Icons.Outlined.FileDownload, "Export…", enabled = preview.image != null) { exportMenu = true }
@@ -172,11 +196,7 @@ fun PreviewPane(
                     ExportFormat.entries.forEach { f ->
                         DropdownMenuItem(text = { Text(f.label, style = MaterialTheme.typography.bodyMedium) }, onClick = {
                             exportMenu = false
-                            scope.launch {
-                                val name = if (preview.diagramCount > 1) "$baseName-${preview.index + 1}" else baseName
-                                toast = runCatching { Export.exportWithDialog(text, baseDir, preview.index, f, name) }
-                                    .fold({ it?.let { file -> "Saved ${file.name}" } }, { "Export failed: ${it.message}" })
-                            }
+                            export(f)
                         })
                     }
                 }

@@ -37,6 +37,12 @@ class Document(file: File?, initialText: String) {
     /** Line the editor should scroll to and select; consumed by the editor. */
     var jumpRequest by mutableStateOf<Int?>(null)
 
+    /** Bumped to give the editor the keyboard back (e.g. after the command palette closes). */
+    var focusTick by mutableStateOf(0)
+
+    /** A copy/export asked for from outside the preview (the command palette); consumed by the preview. */
+    var previewRequest by mutableStateOf<PreviewAction?>(null)
+
     /** The editor's ⌘F / ⌘R bar. */
     val find = es.hugoalvarezajenjo.sproutstudio.editor.FindState()
 
@@ -105,3 +111,6 @@ class Document(file: File?, initialText: String) {
         const val NEW_TEMPLATE = "@startuml\n' 👋 Welcome! Start typing — suggestions pop up as you go.\n\nactor Me\nparticipant Idea\n\nMe -> Idea: let's draw!\nIdea --> Me: ✨\n@enduml\n"
     }
 }
+
+/** Preview actions that can be triggered without clicking the preview toolbar. */
+enum class PreviewAction { COPY_IMAGE, EXPORT_SVG, EXPORT_PNG }
