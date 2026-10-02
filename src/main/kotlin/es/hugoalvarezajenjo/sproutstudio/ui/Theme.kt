@@ -55,6 +55,9 @@ data class IdeColors(
     val popupBorder: Color,
     val tooltip: Color,
     val onTooltip: Color,
+    /** Find: every match / the selected one (IntelliJ search-result colours). */
+    val findMatch: Color,
+    val findCurrent: Color,
     val syntax: SyntaxColors,
 )
 
@@ -81,6 +84,8 @@ val DarkIde = IdeColors(
     popupBorder = Color(0xFF43454A),
     tooltip = Color(0xFF393B40),
     onTooltip = Color(0xFFDFE1E5),
+    findMatch = Color(0xFF2E4A36),
+    findCurrent = Color(0xFF3F6E4A),
     syntax = SyntaxColors(
         keyword = Color(0xFFCF8E6D),
         directive = Color(0xFFC77DBB),
@@ -119,6 +124,8 @@ val LightIde = IdeColors(
     popupBorder = Color(0xFFDFE1E5),
     tooltip = Color(0xFF27282E),
     onTooltip = Color(0xFFDFE1E5),
+    findMatch = Color(0xFFFCEFB4),
+    findCurrent = Color(0xFFF5D76E),
     syntax = SyntaxColors(
         keyword = Color(0xFF0033B3),
         directive = Color(0xFF871094),

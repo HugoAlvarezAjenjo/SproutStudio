@@ -49,9 +49,12 @@ No file there → default icon.
 | ⇥ / ⇧⇥ | indent / outdent lines |
 | ⌘/ | comment / uncomment lines |
 | ⌘D | duplicate line |
-| ⌘S, ⇧⌘S | save, save as |
+| ⌘F, ⌘R | find, find & replace (Cc match case, W whole words, .* regex with `$1` groups) |
+| ⏎ / ⇧⏎ (or ⌘G / ⇧⌘G) | next / previous match; Esc closes the bar |
+| ⌘S, ⇧⌘S | save, save as (autosave is on: File → Save Automatically) |
 | ⌘N, ⌘O, ⇧⌘O | new diagram, open folder, open diagram |
-| ⌘P | show / hide the preview |
+| ⌘P, ⌘1 | show / hide the preview, the project panel |
+| ⌥⌘Y | refresh the file tree |
 
 Preview: scroll to pan, ⌘+scroll to zoom, double-click to fit. Export to SVG or PNG, or copy
 the picture to the clipboard (📋) to paste straight into a doc.

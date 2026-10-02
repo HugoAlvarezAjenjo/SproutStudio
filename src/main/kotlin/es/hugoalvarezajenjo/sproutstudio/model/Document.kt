@@ -26,6 +26,9 @@ class Document(file: File?, initialText: String) {
     /** Line the editor should scroll to and select; consumed by the editor. */
     var jumpRequest by mutableStateOf<Int?>(null)
 
+    /** The editor's ⌘F / ⌘R bar. */
+    val find = es.hugoalvarezajenjo.sproutstudio.editor.FindState()
+
     val text: String get() = value.text
     val dirty: Boolean get() = text != savedText
     val name: String get() = file?.name ?: "Untitled.puml"

@@ -84,6 +84,8 @@ import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
 import es.hugoalvarezajenjo.sproutstudio.editor.CodeEditor
+import es.hugoalvarezajenjo.sproutstudio.editor.findNext
+import es.hugoalvarezajenjo.sproutstudio.editor.selectedText
 import es.hugoalvarezajenjo.sproutstudio.lang.PlantUmlLanguage
 import es.hugoalvarezajenjo.sproutstudio.model.AppState
 import es.hugoalvarezajenjo.sproutstudio.model.AppWindow
@@ -160,12 +162,19 @@ fun ProjectWindow(win: AppWindow.Project) {
                     p.active?.let { d -> closeDocs(listOf(d)) { p.closeDoc(d) } }
                 }
             }
+            Menu("Edit") {
+                val d = p.active
+                Item("Find…", shortcut = shortcut(Key.F), enabled = d != null) { d?.let { it.find.open(replace = false, seed = it.selectedText()) } }
+                Item("Replace…", shortcut = shortcut(Key.R), enabled = d != null) { d?.let { it.find.open(replace = true, seed = it.selectedText()) } }
+                Item("Find Next", shortcut = shortcut(Key.G), enabled = d != null) { d?.findNext(true) }
+                Item("Find Previous", shortcut = shortcut(Key.G, shift = true), enabled = d != null) { d?.findNext(false) }
+            }
             Menu("View") {
                 CheckboxItem("Show Preview", checked = p.previewVisible, shortcut = shortcut(Key.P)) { p.previewVisible = it }
                 CheckboxItem("Show Project Panel", checked = p.sidebarVisible, shortcut = shortcut(Key.One)) { p.showSidebar(it) }
                 CheckboxItem("Dark Theme", checked = ThemePrefs.dark) { ThemePrefs.toggle() }
                 Separator()
-                Item("Refresh Files", shortcut = shortcut(Key.R)) { p.refreshTree() }
+                Item("Refresh Files", shortcut = KeyShortcut(Key.Y, meta = Dialogs.isMac, ctrl = !Dialogs.isMac, alt = true)) { p.refreshTree() }
             }
         }
 
@@ -400,7 +409,7 @@ private fun Sidebar(p: ProjectState) {
         ) {
             Text("Project", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
             ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New diagram (⌘N)") { p.newDocument() }
-            ToolButton(Icons.Outlined.Refresh, "Refresh (⌘R)") { p.refreshTree() }
+            ToolButton(Icons.Outlined.Refresh, "Refresh (⌥⌘Y)") { p.refreshTree() }
             ToolButton(Icons.Outlined.Remove, "Hide (⌘1)") { p.showSidebar(false) }
         }
         // Root row.

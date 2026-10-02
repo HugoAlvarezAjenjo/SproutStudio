@@ -56,6 +56,16 @@ class UiSnapshotTest {
     }
 
     @Test
+    fun workspaceFindReplace() {
+        val p = pizzaProject()
+        val d = p.active!!
+        d.find.open(replace = true, seed = null)
+        d.find.query = es.hugoalvarezajenjo.sproutstudio.editor.FindQuery("pizza")
+        d.find.replacement = "pie"
+        shoot("workspace-find", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
+    }
+
+    @Test
     fun workspaceWithError() {
         val p = ProjectState().apply {
             openRoot(File("samples").absoluteFile)

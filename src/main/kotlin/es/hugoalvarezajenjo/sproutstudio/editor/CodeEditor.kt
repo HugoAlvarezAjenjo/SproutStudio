@@ -135,6 +135,41 @@ fun CodeEditor(
         VisualTransformation { TransformedText(highlighted, OffsetMapping.Identity) }
     }
 
+    // ── find / replace ──
+    val find = doc.find
+    val findResult = remember(value.text, find.query, find.visible) {
+        if (find.visible) FindReplace.find(value.text, find.query) else FindResult.Empty
+    }
+    val currentMatch = currentMatchIndex(value, findResult.matches)
+    var viewportPx by remember { mutableStateOf(0) }
+    // Typing in the find field (or flipping a toggle) jumps to the first hit from the caret.
+    LaunchedEffect(find.query, find.visible) {
+        if (!find.visible || find.query.text.isEmpty()) return@LaunchedEffect
+        findIncremental(doc.value, find.query)?.let { doc.value = it; find.revealTick++ }
+    }
+    // Scroll the selected match into view after any find action.
+    LaunchedEffect(find.revealTick) {
+        if (find.revealTick == 0) return@LaunchedEffect
+        delay(16) // let the layout catch up with a Replace that changed the text
+        val l = layout ?: return@LaunchedEffect
+        val line = l.getLineForOffset(l.safeOffset(doc.value.selection.min))
+        val top = l.getLineTop(line).toInt()
+        val bottom = l.getLineBottom(line).toInt()
+        val margin = with(density) { 40.dp.toPx() }.toInt()
+        if (top < vScroll.value + margin || bottom > vScroll.value + viewportPx - margin) {
+            vScroll.animateScrollTo((top - viewportPx / 3).coerceAtLeast(0))
+        }
+        val x = l.getHorizontalPosition(l.safeOffset(doc.value.selection.min), true).toInt()
+        val viewW = hScroll.viewportSize
+        if (viewW > 0 && (x < hScroll.value || x > hScroll.value + viewW - margin)) {
+            hScroll.animateScrollTo((x - viewW / 3).coerceAtLeast(0))
+        }
+    }
+    fun closeFind() {
+        find.close()
+        runCatching { focus.requestFocus() }
+    }
+
     fun update(newValue: TextFieldValue, typed: Boolean) {
         doc.value = newValue
         if (typed) {
@@ -150,7 +185,12 @@ fun CodeEditor(
         completion = null
     }
 
-    BoxWithConstraints(modifier.background(c.editor)) {
+    Column(modifier.background(c.editor)) {
+    if (find.visible) {
+        FindBar(doc, findResult, currentMatch, onClose = { closeFind() })
+        Box(Modifier.fillMaxWidth().height(1.dp).background(c.border))
+    }
+    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().onSizeChanged { viewportPx = it.height }) {
         val viewportW = maxWidth
         val viewportH = maxHeight
         Row(Modifier.fillMaxSize().verticalScroll(vScroll)) {
@@ -182,6 +222,11 @@ fun CodeEditor(
                             }
                             band(l.getLineForOffset(l.safeOffset(caret)), c.currentLine)
                             errorLine?.let { band(it - 1, c.errorBg) }
+                            // Find hits: draw at most what's reasonable, current one stronger.
+                            findResult.matches.asSequence().take(2000).forEachIndexed { i, m ->
+                                val s = l.safeOffset(m.first); val e = l.safeOffset(m.last + 1)
+                                if (e > s) drawPath(l.getPathForRange(s, e), if (i == currentMatch) c.findCurrent else c.findMatch)
+                            }
                         }
                         .onPreviewKeyEvent { ev ->
                             if (ev.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -193,6 +238,7 @@ fun CodeEditor(
                                 req != null && ev.key == Key.DirectionUp -> { selected = (selected - 1 + req.items.size) % req.items.size; true }
                                 req != null && (ev.key == Key.Enter || ev.key == Key.Tab) -> { accept(req.items[selected]); true }
                                 req != null && ev.key == Key.Escape -> { completion = null; true }
+                                ev.key == Key.Escape && find.visible -> { closeFind(); true }
                                 // ── editing shortcuts ──
                                 ev.isCtrlPressed && ev.key == Key.Spacebar -> {
                                     completion = CompletionEngine.complete(doc.text, doc.value.selection.start, force = true); selected = 0; true
@@ -224,6 +270,7 @@ fun CodeEditor(
                 }
             }
         }
+    }
     }
 }
 

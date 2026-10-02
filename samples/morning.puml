@@ -1,6 +1,6 @@
 @startuml
 start
-:Wake up;
+:Good morning;
 if (Is it Saturday?) then (yes)
   :Pancakes 🥞;
   :Go out;
