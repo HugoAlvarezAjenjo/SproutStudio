@@ -76,7 +76,36 @@ class LanguageTest {
         val snippet = req.items.first { it.kind == CompletionKind.SNIPPET && it.label.endsWith("sequence") }
         val applied = CompletionEngine.apply(text, req, snippet, 3)
         assertTrue(applied.text.startsWith("@startuml\nactor User"))
-        assertEquals("hello", applied.text.substring(applied.caret, applied.caret + 5))
+        assertEquals("request", applied.text.substring(applied.caret, applied.caret + 7))
+    }
+
+    @Test
+    fun `completes theme names after !theme`() {
+        val text = "@startuml\n!theme ca"
+        val labels = assertNotNull(CompletionEngine.complete(text, text.length)).items.map { it.label }
+        assertTrue("carbon-gray" in labels, "$labels")
+    }
+
+    @Test
+    fun `completes colors after a hash`() {
+        val text = "@startuml\nclass A #light"
+        val labels = assertNotNull(CompletionEngine.complete(text, text.length)).items.map { it.label }
+        assertTrue("#lightblue" in labels, "$labels")
+    }
+
+    @Test
+    fun `completes colors after a color-valued skinparam`() {
+        val text = "@startuml\nskinparam backgroundColor na"
+        val req = assertNotNull(CompletionEngine.complete(text, text.length))
+        assertEquals("navy", req.items.first().label)
+    }
+
+    @Test
+    fun `offers arrow styles after a declared participant`() {
+        val text = "@startuml\nparticipant App\nApp \n@enduml"
+        val caret = text.indexOf("App \n") + 4
+        val labels = assertNotNull(CompletionEngine.complete(text, caret, force = true)).items.map { it.label }
+        assertTrue("-->" in labels, "$labels")
     }
 
     @Test

@@ -9,7 +9,7 @@ import es.hugoalvarezajenjo.sproutstudio.editor.findNext
 import es.hugoalvarezajenjo.sproutstudio.editor.selectedText
 import es.hugoalvarezajenjo.sproutstudio.editor.unfoldAll
 import es.hugoalvarezajenjo.sproutstudio.editor.unfoldAtCaret
-import es.hugoalvarezajenjo.sproutstudio.lang.CompletionEngine
+import es.hugoalvarezajenjo.sproutstudio.lang.Templates
 import es.hugoalvarezajenjo.sproutstudio.model.AppState
 import es.hugoalvarezajenjo.sproutstudio.model.AutoSave
 import es.hugoalvarezajenjo.sproutstudio.model.AutoSavePrefs
@@ -34,6 +34,7 @@ internal fun projectCommands(
     onSave: () -> Unit,
     onSaveAs: () -> Unit,
     onCloseTab: () -> Unit,
+    onOpenGallery: () -> Unit = {},
 ): List<Command> {
     val d = p.active
     val has = d != null
@@ -45,6 +46,7 @@ internal fun projectCommands(
 
     // File
     cmd("file.new", "New Diagram", "File", shortcutHint("N")) { p.newDocument() }
+    cmd("file.gallery", "New from Template…", "File", shortcutHint("N", shift = true), restoresFocus = false) { onOpenGallery() }
     cmd("file.openDiagram", "Open Diagram…", "File", shortcutHint("O", shift = true)) { Dialogs.openDiagram()?.let { AppState.openFile(it) } }
     cmd("file.openFolder", "Open Folder…", "File", shortcutHint("O")) { Dialogs.openFolder()?.let { p.openRoot(it) } }
     cmd("file.newWindow", "New Window", "File") { AppState.newProjectWindow() }
@@ -134,11 +136,11 @@ internal fun projectCommands(
     previewCmd("preview.svg", "Export Diagram as SVG…", PreviewAction.EXPORT_SVG)
     previewCmd("preview.png", "Export Diagram as PNG…", PreviewAction.EXPORT_PNG)
 
-    // Insert a template at the caret.
-    CompletionEngine.snippets.forEach { s ->
-        val name = s.detail.ifEmpty { s.label }
-        cmd("insert.${s.label}", "Insert $name Template", "Insert", enabled = has) {
-            d?.let { p.revealEditor(); it.value = EditOps.insertSnippet(it.value, s.insert) }
+    // Insert a template at the caret (whole set, including the blocks).
+    Templates.all.forEach { t ->
+        val suffix = if (t.whole) "Template" else "Block"
+        cmd("insert.${t.id}", "Insert ${t.name} $suffix", "Insert", enabled = has) {
+            d?.let { p.revealEditor(); it.value = EditOps.insertTemplate(it.value, t) }
         }
     }
 

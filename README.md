@@ -60,9 +60,11 @@ No file there → default icon.
 
 | Keys | What it does |
 |---|---|
-| typing | suggestions for the current diagram type and your own participants/classes |
+| typing | suggestions for the current diagram type, your own participants/classes, `!theme` names, and colours after `#` |
 | ⌃Space | show suggestions now |
 | `@st` + ⏎ | pick a ready-made diagram template |
+| left stripe (grid icon) | the Templates panel — the same catalogue as a narrow side list, click a row to insert |
+| ⇧⌘N | the template gallery — ready-made diagrams and blocks with live thumbnails (also File → New from Template…) |
 | ⏎ | smart indent (`alt`, `loop`, `if`, `{` … indent; `end`, `else`, `}` snap back) |
 | ⇥ / ⇧⇥ | indent / outdent lines |
 | ⌘/ | comment / uncomment lines |

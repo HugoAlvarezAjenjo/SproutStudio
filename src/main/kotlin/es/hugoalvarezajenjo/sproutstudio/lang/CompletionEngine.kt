@@ -15,14 +15,14 @@ data class Applied(val text: String, val caret: Int)
 
 object CompletionEngine {
 
-    private fun isWordChar(c: Char) = c.isLetterOrDigit() || c == '_' || c == '@' || c == '!'
+    private fun isWordChar(c: Char) = c.isLetterOrDigit() || c == '_' || c == '@' || c == '!' || c == '#'
 
     fun prefixAt(text: String, caret: Int): Pair<Int, String> {
         var i = caret.coerceIn(0, text.length)
         while (i > 0 && isWordChar(text[i - 1])) i--
-        // '@' and '!' are only valid as the first char of a word.
+        // '@', '!' and '#' are only valid as the first char of a word.
         val raw = text.substring(i, caret.coerceIn(0, text.length))
-        val cut = raw.lastIndexOfAny(charArrayOf('@', '!'))
+        val cut = raw.lastIndexOfAny(charArrayOf('@', '!', '#'))
         return if (cut > 0) (i + cut) to raw.substring(cut) else i to raw
     }
 
@@ -41,9 +41,15 @@ object CompletionEngine {
         val candidates: List<Completion> = when {
             prefix.startsWith("@") -> directives(text)
             prefix.startsWith("!") -> PlantUmlLanguage.preprocessor.map { Completion(it, it, CompletionKind.KEYWORD, "preprocessor") }
+            // `!theme <name>` -> the bundled theme names.
+            trimmedBefore.equals("!theme", ignoreCase = true) ->
+                PlantUmlLanguage.themes.map { Completion(it, it, CompletionKind.DIRECTIVE, "theme") }
+            // A colour: after a bare '#', or after a colour-valued skinparam.
+            prefix.startsWith("#") || isColorContext(trimmedBefore) ->
+                PlantUmlLanguage.colors.map { Completion(if (prefix.startsWith("#")) "#$it" else it, if (prefix.startsWith("#")) "#$it" else it, CompletionKind.SKINPARAM, "color") }
             trimmedBefore.equals("skinparam", ignoreCase = true) ->
                 PlantUmlLanguage.skinparams.map { Completion(it, it, CompletionKind.SKINPARAM, "skinparam") }
-            trimmedBefore.isNotEmpty() -> symbolsAndKeywords(text, caret, afterSomething = true)
+            trimmedBefore.isNotEmpty() -> symbolsAndKeywords(text, caret, afterSomething = true) + arrowsAfterSymbol(text, caret, beforeOnLine)
             else -> symbolsAndKeywords(text, caret, afterSomething = false) + snippetsIfEmpty(text)
         }
 
@@ -55,6 +61,21 @@ object CompletionEngine {
             .distinctBy { it.label }
             .take(40)
         return if (ranked.isEmpty()) null else CompletionRequest(start, prefix, ranked)
+    }
+
+    /** True right after a skinparam whose value is a colour (so we offer colour names). */
+    private fun isColorContext(before: String): Boolean {
+        val last = before.substringAfterLast(' ').substringAfterLast('\t')
+        return last.endsWith("Color", ignoreCase = true) || last.equals("backgroundColor", ignoreCase = true)
+    }
+
+    /** After a declared symbol with nothing but spaces since, suggest arrow styles. */
+    private fun arrowsAfterSymbol(text: String, caret: Int, beforeOnLine: String): List<Completion> {
+        val b = beforeOnLine.trimEnd()
+        if (b.isEmpty() || !b.last().isLetterOrDigit()) return emptyList()
+        val lastWord = b.takeLastWhile { it.isLetterOrDigit() || it == '_' || it == '.' }
+        val known = PlantUmlLanguage.symbols(text).any { it.name == lastWord }
+        return if (known) PlantUmlLanguage.arrows.map { Completion(it, "$it ", CompletionKind.SYMBOL, "arrow") } else emptyList()
     }
 
     fun apply(text: String, request: CompletionRequest, item: Completion, caret: Int): Applied {
@@ -87,12 +108,8 @@ object CompletionEngine {
 
     private fun snippetsIfEmpty(text: String) = if (!text.contains("@start")) snippets else emptyList()
 
-    val snippets: List<Completion> = listOf(
-        Completion("@startuml sequence", "@startuml\nactor User\nparticipant App\n\nUser -> App: $0hello\nApp --> User: hi!\n@enduml\n", CompletionKind.SNIPPET, "Sequence diagram"),
-        Completion("@startuml class", "@startuml\nclass $0Animal {\n  +name: String\n  +speak()\n}\nclass Dog\nAnimal <|-- Dog\n@enduml\n", CompletionKind.SNIPPET, "Class diagram"),
-        Completion("@startuml activity", "@startuml\nstart\n:$0Do something;\nif (Is it done?) then (yes)\n  :Celebrate;\nelse (no)\n  :Try again;\nendif\nstop\n@enduml\n", CompletionKind.SNIPPET, "Activity diagram"),
-        Completion("@startuml state", "@startuml\n[*] --> $0Idle\nIdle --> Working : start\nWorking --> Idle : done\nWorking --> [*]\n@enduml\n", CompletionKind.SNIPPET, "State diagram"),
-        Completion("@startuml component", "@startuml\ncomponent [$0Frontend]\ncomponent [Backend]\ndatabase DB\n[Frontend] --> [Backend]\n[Backend] --> DB\n@enduml\n", CompletionKind.SNIPPET, "Component diagram"),
-        Completion("@startmindmap", "@startmindmap\n* $0Idea\n** Branch one\n** Branch two\n@endmindmap\n", CompletionKind.SNIPPET, "Mind map"),
-    )
+    /** Whole-diagram templates, as completion snippets offered on an empty file. */
+    val snippets: List<Completion> = Templates.wholeDiagrams.map {
+        Completion("@start… ${it.name.lowercase()}", it.body, CompletionKind.SNIPPET, "${it.name} diagram")
+    }
 }

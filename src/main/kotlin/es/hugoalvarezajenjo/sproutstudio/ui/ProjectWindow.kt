@@ -43,6 +43,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
@@ -140,6 +141,11 @@ fun ProjectWindow(win: AppWindow.Project) {
     DisposableEffect(p) { onDispose { p.git.close() } }
 
     var paletteOpen by remember { mutableStateOf(false) }
+    var galleryOpen by remember { mutableStateOf(false) }
+    fun pickTemplate(t: es.hugoalvarezajenjo.sproutstudio.lang.Template) {
+        galleryOpen = false
+        p.insertTemplate(t)
+    }
     val gitScope = androidx.compose.runtime.rememberCoroutineScope()
     val doubleShift = remember { DoubleShiftDetector() }
 
@@ -183,6 +189,7 @@ fun ProjectWindow(win: AppWindow.Project) {
         MenuBar {
             Menu("File") {
                 Item("New Diagram", shortcut = shortcut(Key.N)) { p.newDocument() }
+                Item("New from Template…", shortcut = shortcut(Key.N, shift = true)) { galleryOpen = true }
                 Item("Open Diagram…", shortcut = shortcut(Key.O, shift = true)) { Dialogs.openDiagram()?.let { AppState.openFile(it) } }
                 Item("Open Folder…", shortcut = shortcut(Key.O)) { Dialogs.openFolder()?.let { p.openRoot(it) } }
                 Item("New Window") { AppState.newProjectWindow() }
@@ -225,6 +232,7 @@ fun ProjectWindow(win: AppWindow.Project) {
                 Separator()
                 CheckboxItem("Show Project Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.PROJECT, shortcut = shortcut(Key.One)) { p.toggleTool(SidebarTool.PROJECT) }
                 CheckboxItem("Show Commit Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT, shortcut = shortcut(Key.Zero)) { p.toggleTool(SidebarTool.COMMIT) }
+                CheckboxItem("Show Templates Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.TEMPLATES) { p.toggleTool(SidebarTool.TEMPLATES) }
                 CheckboxItem("Dark Theme", checked = ThemePrefs.dark) { ThemePrefs.toggle() }
                 CheckboxItem("Dark Diagram Preview", checked = DiagramPrefs.dark) { DiagramPrefs.toggle() }
                 Separator()
@@ -283,6 +291,7 @@ fun ProjectWindow(win: AppWindow.Project) {
                     onSave = { save(p.active) },
                     onSaveAs = { p.active?.let { d -> Dialogs.saveAs(d.name, d.dir ?: p.root)?.let { d.save(it); p.refreshTree() } } },
                     onCloseTab = { p.active?.let { d -> closeDocs(listOf(d)) { p.closeDoc(d) } } },
+                    onOpenGallery = { paletteOpen = false; galleryOpen = true },
                 )
                 CommandPalette(
                     commands,
@@ -295,6 +304,10 @@ fun ProjectWindow(win: AppWindow.Project) {
                         if (cmd.restoresFocus) p.active?.let { it.focusTick++ }
                     },
                 )
+            }
+
+            if (galleryOpen) {
+                TemplateGallery(onDismiss = { galleryOpen = false; p.active?.let { it.focusTick++ } }, onPick = { pickTemplate(it) })
             }
             }
 
@@ -412,7 +425,11 @@ internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: 
                 ToolStripe(p)
                 VLine()
                 if (p.sidebarVisible) {
-                    if (p.sidebarTool == SidebarTool.COMMIT) CommitPanel(p) else Sidebar(p)
+                    when (p.sidebarTool) {
+                        SidebarTool.COMMIT -> CommitPanel(p)
+                        SidebarTool.TEMPLATES -> TemplateSidebar(onPick = { p.insertTemplate(it) })
+                        SidebarTool.PROJECT -> Sidebar(p)
+                    }
                     SidebarSplitter(p)
                 }
             }
@@ -510,6 +527,12 @@ private fun ToolStripe(p: ProjectState) {
             if (commit) "Hide Commit (${shortcutHint("0")})" else "Commit (${shortcutHint("0")})",
             selected = commit,
         ) { p.toggleTool(SidebarTool.COMMIT) }
+        val templates = p.sidebarVisible && p.sidebarTool == SidebarTool.TEMPLATES
+        ToolButton(
+            Icons.Outlined.Dashboard,
+            if (templates) "Hide Templates" else "Templates",
+            selected = templates,
+        ) { p.toggleTool(SidebarTool.TEMPLATES) }
     }
 }
 

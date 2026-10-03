@@ -244,6 +244,20 @@ class ProjectState {
         return doc
     }
 
+    /**
+     * Insert a gallery/sidebar template. With no document open, a whole-diagram template opens a
+     * fresh document holding just it; otherwise it goes into the active editor (whole diagram into
+     * a blank doc = full content, else at the caret). Reveals the editor and focuses it.
+     */
+    fun insertTemplate(template: es.hugoalvarezajenjo.sproutstudio.lang.Template) {
+        val doc = active ?: if (template.whole) {
+            newDocument().also { it.value = androidx.compose.ui.text.input.TextFieldValue("") }
+        } else newDocument()
+        revealEditor()
+        doc.value = es.hugoalvarezajenjo.sproutstudio.editor.EditOps.insertTemplate(doc.value, template)
+        doc.focusTick++
+    }
+
     fun closeDoc(doc: Document) {
         val i = docs.indexOf(doc)
         if (i < 0) return
@@ -321,7 +335,7 @@ object LayoutPrefs {
         set(v) = prefs.put("editorLayout", v.name)
 }
 
-enum class SidebarTool { PROJECT, COMMIT }
+enum class SidebarTool { PROJECT, COMMIT, TEMPLATES }
 
 /** How the active tab is shown. */
 enum class EditorLayout(val label: String) {

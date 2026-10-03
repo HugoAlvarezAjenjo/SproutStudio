@@ -134,6 +134,19 @@ object EditOps {
         return TextFieldValue(t, TextRange(at + prefix.length + if (marker >= 0) marker else body.length))
     }
 
+    /**
+     * Inserts a gallery template. A whole-diagram template dropped into a blank document becomes
+     * its entire content; otherwise (a block, or a non-empty document) it goes in at the caret.
+     */
+    fun insertTemplate(v: TextFieldValue, template: es.hugoalvarezajenjo.sproutstudio.lang.Template): TextFieldValue {
+        if (template.whole && v.text.isBlank()) {
+            val marker = template.body.indexOf("\$0")
+            val body = template.body.replace("\$0", "")
+            return TextFieldValue(body, TextRange(if (marker >= 0) marker else body.length))
+        }
+        return insertSnippet(v, template.body)
+    }
+
     private fun replaceSelection(v: TextFieldValue, insert: String): TextFieldValue {
         val t = v.text.substring(0, v.selection.min) + insert + v.text.substring(v.selection.max)
         return TextFieldValue(t, TextRange(v.selection.min + insert.length))

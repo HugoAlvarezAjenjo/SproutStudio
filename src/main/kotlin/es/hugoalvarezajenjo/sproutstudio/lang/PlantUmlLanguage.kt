@@ -64,6 +64,28 @@ object PlantUmlLanguage {
         ),
     )
 
+    val themes = listOf(
+        "amiga", "aws-orange", "black-knight", "bluegray", "blueprint", "carbon-gray", "cerulean",
+        "cerulean-outline", "crt-amber", "crt-green", "cyborg", "cyborg-outline", "hacker", "lightgray",
+        "mars", "materia", "materia-outline", "metal", "mimeograph", "minty", "mono", "plain",
+        "reddress-darkblue", "reddress-darkgreen", "reddress-darkorange", "reddress-darkred",
+        "reddress-lightblue", "reddress-lightgreen", "reddress-lightorange", "reddress-lightred",
+        "sandstone", "silver", "sketchy", "sketchy-outline", "spacelab", "superhero", "superhero-outline",
+        "toy", "united", "vibrant", "cloudscape-design",
+    )
+
+    /** PlantUML's standard named colours, offered after a `#` or a colour-valued skinparam. */
+    val colors = listOf(
+        "white", "black", "red", "green", "blue", "yellow", "orange", "purple", "pink", "brown",
+        "gray", "lightgray", "darkgray", "lightblue", "lightgreen", "lightyellow", "gold", "cyan",
+        "magenta", "navy", "teal", "olive", "maroon", "salmon", "tomato", "crimson", "coral",
+        "khaki", "lavender", "ivory", "beige", "turquoise", "violet", "indigo", "transparent",
+        "business", "technology", "motivation", "strategy", "implementation",
+    )
+
+    /** Arrow styles for sequence/other diagrams, offered after a declared symbol on a line. */
+    val arrows = listOf("->", "-->", "->>", "-\\", "--\\", "<-", "<--", "<->", "o->", "x->", "..>", "--", "..")
+
     val skinparams = listOf(
         "monochrome", "shadowing", "handwritten", "backgroundColor", "defaultFontName", "defaultFontSize",
         "roundcorner", "linetype ortho", "linetype polyline", "nodesep", "ranksep", "dpi",
