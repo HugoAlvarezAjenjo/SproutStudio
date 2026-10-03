@@ -15,10 +15,11 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.Executors
 
-/** What the user can export to. PDF needs extra libraries that are out of scope for v1. */
+/** What the user can export to. PDF is vector, drawn by PlantUML's own OpenPDF backend. */
 enum class ExportFormat(val label: String, val extension: String, internal val plantUml: FileFormat) {
     SVG("SVG (vector)", "svg", FileFormat.SVG),
     PNG("PNG (image)", "png", FileFormat.PNG),
+    PDF("PDF (vector)", "pdf", FileFormat.PDF),
 }
 
 data class RenderError(
@@ -131,6 +132,7 @@ object PlantUmlRenderer {
             OfflineGuard.check(source)?.let { throw IllegalStateException(it.message) }
             limitSize(EXPORT_LIMIT)
             val reader = reader(source, baseDir)
+            if (format == ExportFormat.PDF) PdfFonts.install()
             target.outputStream().use { out ->
                 reader.outputImage(out, index, FileFormatOption(format.plantUml))
             }

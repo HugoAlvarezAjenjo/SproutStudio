@@ -147,6 +147,7 @@ internal fun projectCommands(
     previewCmd("preview.copy", "Copy Diagram Image", PreviewAction.COPY_IMAGE)
     previewCmd("preview.svg", "Export Diagram as SVG…", PreviewAction.EXPORT_SVG)
     previewCmd("preview.png", "Export Diagram as PNG…", PreviewAction.EXPORT_PNG)
+    previewCmd("preview.pdf", "Export Diagram as PDF…", PreviewAction.EXPORT_PDF)
 
     // Insert a template at the caret (whole set, including the blocks).
     Templates.all.forEach { t ->

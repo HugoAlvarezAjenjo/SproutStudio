@@ -131,4 +131,4 @@ class Document(file: File?, initialText: String) {
 }
 
 /** Preview actions that can be triggered without clicking the preview toolbar. */
-enum class PreviewAction { COPY_IMAGE, EXPORT_SVG, EXPORT_PNG }
+enum class PreviewAction { COPY_IMAGE, EXPORT_SVG, EXPORT_PNG, EXPORT_PDF }

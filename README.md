@@ -36,7 +36,7 @@
 - **Problems panel**: every PlantUML error in the file, across all diagrams, marked in red in the editor;
   click one to jump to it.
 - **Preview**: zoom and pan, multi-diagram files, an optional dark diagram independent of the editor theme,
-  export to SVG/PNG or copy to the clipboard.
+  export to SVG/PNG/PDF or copy to the clipboard.
 - **Git built in** (local only): change bars in the gutter with per-block rollback, coloured file tree,
   branches, a Commit panel with amend, undo and stash, file history, and a diagram-vs-HEAD comparison.
 - **100% offline**: PlantUML runs inside the app with its pure-Java layout engine (Smetana). No Graphviz,
@@ -117,7 +117,7 @@ needs to be installed: the app ships its own Java runtime.
 | right-click in the Project tree | New Diagram…, New Folder…, Rename…, Move to Trash…, Reveal in Finder (the project folder row and the empty space below create in the project folder) |
 
 Preview: mouse wheel to zoom at the pointer, drag with the left or middle button to pan (⇧+wheel or a
-sideways trackpad swipe also pans), double-click to fit. Export to SVG or PNG, or copy the picture to the
+sideways trackpad swipe also pans), double-click to fit. Export to SVG, PNG or PDF (vector, with real selectable text), or copy the picture to the
 clipboard (📋) to paste straight into a doc.
 
 The sun/moon button in the preview toolbar (or View → Dark Diagram Preview) recolours the diagram

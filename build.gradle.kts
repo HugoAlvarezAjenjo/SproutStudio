@@ -29,6 +29,13 @@ dependencies {
     // PlantUML engine, MIT-licensed build. Includes the Smetana layout engine,
     // so no Graphviz / dot binary is needed. Rendering is 100% in-process.
     implementation("net.sourceforge.plantuml:plantuml-mit:1.2026.8")
+    // PDF export: PlantUML draws PDFs itself through OpenPDF (vector, real text). Without it
+    // FileFormat.PDF fails with NoClassDefFoundError. LGPL-2.1 / MPL-2.0, ~1.5 MB.
+    implementation("com.github.librepdf:openpdf:3.0.5") {
+        // Only used when *reading* Brotli-compressed PDFs; writing never touches it, and it
+        // drags in JNI natives.
+        exclude(group = "com.aayushatharva.brotli4j")
+    }
 
     // Git, in-process (pure Java, EDL licence): no `git` binary needed on the user's machine.
     implementation("org.eclipse.jgit:org.eclipse.jgit:7.8.0.202609011348-r")

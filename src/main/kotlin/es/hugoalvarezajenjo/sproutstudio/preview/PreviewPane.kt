@@ -170,6 +170,7 @@ fun PreviewPane(
             PreviewAction.COPY_IMAGE -> copyImage()
             PreviewAction.EXPORT_SVG -> export(ExportFormat.SVG)
             PreviewAction.EXPORT_PNG -> export(ExportFormat.PNG)
+            PreviewAction.EXPORT_PDF -> export(ExportFormat.PDF)
         }
     }
 
