@@ -4,6 +4,7 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.lib.UserConfig
+import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.eclipse.jgit.treewalk.TreeWalk
 import java.io.Closeable
@@ -17,6 +18,27 @@ data class FileChange(val path: String, val type: ChangeType, val file: File)
 
 /** A status snapshot: the changes under the project folder plus what .gitignore hides there. */
 @JvmInline value class IgnoredPath(val path: String)
+
+/** One commit, for history lists and "last commit" labels. */
+data class CommitInfo(
+    val id: String,
+    val message: String,
+    val fullMessage: String,
+    val author: String,
+    val timeMillis: Long,
+    val parents: Int,
+) {
+    val short: String get() = id.take(7)
+
+    companion object {
+        fun of(c: org.eclipse.jgit.revwalk.RevCommit) = CommitInfo(
+            c.name, c.shortMessage, c.fullMessage.trimEnd(), c.authorIdent.name,
+            c.authorIdent.whenAsInstant.toEpochMilli(), c.parentCount,
+        )
+    }
+}
+
+data class StashInfo(val index: Int, val message: String, val timeMillis: Long)
 
 data class GitStatus(
     val branch: String?,
@@ -97,9 +119,12 @@ class GitRepo private constructor(private val repo: Repository) : Closeable {
     }
 
     /** Text of [f] in the last commit, or null if it isn't committed (new file, no commits yet). */
-    fun headText(f: File): String? {
+    fun headText(f: File): String? = textAt(Constants.HEAD, f)
+
+    /** Text of [f] at revision [rev] ("HEAD", a commit id, "abc123^"...), or null if absent there. */
+    fun textAt(rev: String, f: File): String? {
         val path = relPath(f) ?: return null
-        val head = repo.resolve("${Constants.HEAD}^{tree}") ?: return null
+        val head = runCatching { repo.resolve("$rev^{tree}") }.getOrNull() ?: return null
         TreeWalk.forPath(repo, path, head)?.use { tw ->
             val bytes = repo.open(tw.getObjectId(0)).bytes
             return String(bytes, Charsets.UTF_8)
@@ -120,14 +145,21 @@ class GitRepo private constructor(private val repo: Repository) : Closeable {
      * already staged stays staged and out of this commit. New files are added, deleted ones removed.
      * Returns the short id of the new commit.
      */
-    fun commit(files: List<File>, message: String): String {
+    fun commit(files: List<File>, message: String, amend: Boolean = false): String {
         require(message.isNotBlank()) { "Empty commit message" }
         val paths = files.mapNotNull(::relPath).distinct()
+        if (amend) {
+            require(headId() != null) { "Nothing to amend yet" }
+            if (paths.isEmpty()) {
+                // Amend with no files: just reword the last commit.
+                return git.commit().setAmend(true).setMessage(message.trim() + "\n").call().id.abbreviate(7).name()
+            }
+        }
         require(paths.isNotEmpty()) { "No files selected" }
         val s = git.status().apply { paths.forEach(::addPath) }.call()
         val untracked = paths.filter { it in s.untracked }
         if (untracked.isNotEmpty()) git.add().apply { untracked.forEach(::addFilepattern) }.call()
-        val commit = git.commit().setMessage(message.trim() + "\n")
+        val commit = git.commit().setMessage(message.trim() + "\n").setAmend(amend)
         if (headId() != null) paths.forEach { commit.setOnly(it) }
         else {
             // First commit: --only isn't supported without a HEAD, so stage exactly the selection.
@@ -156,6 +188,88 @@ class GitRepo private constructor(private val repo: Repository) : Closeable {
         }
     }
 
+    /** The commit HEAD points at, or null before the first commit. */
+    fun lastCommit(): CommitInfo? {
+        val id = repo.resolve(Constants.HEAD) ?: return null
+        return RevWalk(repo).use { CommitInfo.of(it.parseCommit(id)) }
+    }
+
+    /**
+     * "Undo Last Commit": `git reset --soft HEAD~1`. The commit disappears from the branch but its
+     * changes stay, ready to commit again; nothing on disk changes. Returns the undone commit.
+     */
+    fun undoLastCommit(): CommitInfo {
+        val last = lastCommit() ?: throw IllegalStateException("There is no commit to undo")
+        require(last.parents > 0) { "The first commit can't be undone" }
+        git.reset().setMode(org.eclipse.jgit.api.ResetCommand.ResetType.SOFT).setRef("HEAD~1").call()
+        return last
+    }
+
+    /** Commits that touched [f], newest first (doesn't follow renames). */
+    fun history(f: File, max: Int = 300): List<CommitInfo> {
+        val path = relPath(f) ?: return emptyList()
+        if (headId() == null) return emptyList()
+        return git.log().addPath(path).setMaxCount(max).call().map(CommitInfo::of)
+    }
+
+    // ── stash ──
+
+    /** Puts the uncommitted changes to tracked files aside (`git stash`); false if there were none. */
+    fun stash(message: String?): Boolean {
+        require(headId() != null) { "Make the first commit before stashing" }
+        val cmd = git.stashCreate()
+        if (!message.isNullOrBlank()) cmd.setWorkingDirectoryMessage(message.trim())
+        return cmd.call() != null
+    }
+
+    fun stashes(): List<StashInfo> = git.stashList().call().mapIndexed { i, c ->
+        StashInfo(i, c.shortMessage, c.authorIdent.whenAsInstant.toEpochMilli())
+    }
+
+    /** `git stash pop`: re-applies stash [index] and drops it (kept if applying fails). */
+    fun popStash(index: Int) {
+        try {
+            git.stashApply().setStashRef("stash@{$index}").call()
+        } catch (e: org.eclipse.jgit.api.errors.StashApplyFailureException) {
+            throw IllegalStateException("The stash clashes with your current changes; commit or roll them back first")
+        }
+        git.stashDrop().setStashRef(index).call()
+    }
+
+    fun dropStash(index: Int) {
+        git.stashDrop().setStashRef(index).call()
+    }
+
+    /** Local branches, sorted, by short name. */
+    fun branches(): List<String> =
+        git.branchList().call().map { Repository.shortenRefName(it.name) }.sortedBy { it.lowercase() }
+
+    /**
+     * Switch to branch [name]. Like `git checkout`, uncommitted edits to files that don't differ
+     * between the two branches come along; if one would be overwritten, JGit refuses and says which.
+     */
+    fun checkout(name: String) {
+        git.checkout().setName(name).call()
+    }
+
+    /** New branch [name] from the current commit, and switch to it (`git switch -c`). */
+    fun createBranch(name: String) {
+        require(headId() != null) { "Make the first commit before creating branches" }
+        require(Repository.isValidRefName(Constants.R_HEADS + name)) { "\"$name\" isn't a valid branch name" }
+        require(name !in branches()) { "Branch \"$name\" already exists" }
+        git.checkout().setCreateBranch(true).setName(name).call()
+    }
+
+    /** Deletes [name]; refuses the current branch and (like `git branch -d`) one not merged yet. */
+    fun deleteBranch(name: String) {
+        require(name != branch()) { "Can't delete the branch you are on" }
+        try {
+            git.branchDelete().setBranchNames(Constants.R_HEADS + name).setForce(false).call()
+        } catch (e: org.eclipse.jgit.api.errors.NotMergedException) {
+            throw IllegalStateException("\"$name\" has commits that aren't merged into ${branch()}, so it was kept")
+        }
+    }
+
     override fun close() {
         git.close()
         repo.close()
@@ -170,10 +284,17 @@ class GitRepo private constructor(private val repo: Repository) : Closeable {
             if (repo.isBare) { repo.close(); null } else GitRepo(repo)
         }.getOrNull()
 
-        /** `git init` in [dir], on branch main. */
-        fun init(dir: File): GitRepo {
+        /** `git init` in [dir], on branch main; with [gitignore], a starter .gitignore if there's none. */
+        fun init(dir: File, gitignore: Boolean = false): GitRepo {
             val g = Git.init().setDirectory(dir.absoluteFile).setInitialBranch("main").call()
+            val ig = File(dir, ".gitignore")
+            if (gitignore && !ig.exists()) ig.writeText(DEFAULT_GITIGNORE)
             return GitRepo(g.repository)
         }
+
+        /** Litter that never belongs in a diagrams repo; exports are left for you to decide. */
+        const val DEFAULT_GITIGNORE =
+            "# macOS\n.DS_Store\n\n# SproutStudio's temp file while saving\n.*.sprout-tmp\n\n# IDEs\n.idea/\n.vscode/\n"
+
     }
 }

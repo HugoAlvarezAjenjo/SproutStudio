@@ -36,6 +36,8 @@ import androidx.compose.material.icons.outlined.IndeterminateCheckBox
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Schema
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -88,23 +90,45 @@ internal fun CommitPanel(p: ProjectState) {
     val scope = rememberCoroutineScope()
     var confirmRollback by remember { mutableStateOf<FileChange?>(null) }
     val messageFocus = remember { FocusRequester() }
+    var stashOpen by remember { mutableStateOf(false) }
+    var withGitignore by remember { mutableStateOf(true) }
+    LaunchedEffect(git.stashPopupTick) { if (git.stashPopupTick > 0) stashOpen = true }
     // ⌘K / "Commit…" from elsewhere puts the caret in the message box.
     LaunchedEffect(p.commitFocusTick) { if (p.commitFocusTick > 0) runCatching { messageFocus.requestFocus() } }
+
+    fun canCommit() = git.commitMessage.isNotBlank() &&
+        (if (git.amend) git.status.head != null else git.included.isNotEmpty())
 
     fun doCommit() {
         val files = git.included.map { it.file }
         val msg = git.commitMessage
-        if (files.isEmpty() || msg.isBlank()) return
+        if (!canCommit()) return
+        val amending = git.amend
         scope.launch {
             // Like IntelliJ: commit what you see, so unsaved editor text is written first.
             p.docs.filter { it.file != null && it.dirty }.forEach { it.save() }
-            val id = git.commit(files, msg)
+            val id = git.commit(files, msg, amend = amending)
             if (id != null) {
                 git.commitMessage = ""
                 git.selection.clear()
-                git.lastResult = "Committed ${files.size} file${if (files.size == 1) "" else "s"} ($id)"
+                git.amend = false
+                git.lastResult = when {
+                    amending && files.isEmpty() -> "Reworded the last commit ($id)"
+                    amending -> "Amended the last commit with ${files.size} file${if (files.size == 1) "" else "s"} ($id)"
+                    else -> "Committed ${files.size} file${if (files.size == 1) "" else "s"} ($id)"
+                }
                 p.refreshTree()
             }
+        }
+    }
+
+    fun undoLast() {
+        scope.launch {
+            val undone = git.undoLastCommit() ?: return@launch
+            if (git.commitMessage.isBlank()) git.commitMessage = undone.fullMessage
+            git.amend = false
+            git.lastResult = "Undid ${undone.short}: its changes are back in the list"
+            p.refreshTree()
         }
     }
 
@@ -126,7 +150,17 @@ internal fun CommitPanel(p: ProjectState) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Commit", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
-            if (git.isRepo) ToolButton(Icons.Outlined.Refresh, "Refresh") { git.requestRefresh() }
+            if (git.isRepo) {
+                Box {
+                    ToolButton(
+                        Icons.Outlined.Inventory2,
+                        if (git.stashes.isEmpty()) "Stash changes" else "Stash (${git.stashes.size} saved)",
+                        selected = stashOpen,
+                    ) { stashOpen = !stashOpen }
+                    if (stashOpen) StashPopup(p, onDismiss = { stashOpen = false })
+                }
+                ToolButton(Icons.Outlined.Refresh, "Refresh") { git.requestRefresh() }
+            }
             ToolButton(Icons.Outlined.Remove, "Hide (${shortcutHint("0")})") { p.showSidebar(false) }
         }
 
@@ -137,8 +171,12 @@ internal fun CommitPanel(p: ProjectState) {
                 verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
             ) {
                 EmptyState(Icons.Outlined.Commit, "No Git repository", "Keep a history of your diagrams: every commit is a snapshot you can go back to.")
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Check(withGitignore, "Add a .gitignore") { withGitignore = !withGitignore }
+                    Text("Add a .gitignore (.DS_Store, temp files)", fontSize = 12.sp, color = c.textMuted)
+                }
                 ToolButton(null, label = "Create Git Repository", primary = true) {
-                    scope.launch { git.init() }
+                    scope.launch { git.init(withGitignore) }
                 }
                 git.error?.let { Text(it, color = c.error, fontSize = 12.sp) }
             }
@@ -193,13 +231,35 @@ internal fun CommitPanel(p: ProjectState) {
             val n = git.included.size
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ToolButton(
-                    null, tooltip = "Commit (${shortcutHint("⏎")})", label = "Commit", primary = true,
-                    enabled = n > 0 && git.commitMessage.isNotBlank(),
+                    null, tooltip = "${if (git.amend) "Amend" else "Commit"} (${shortcutHint("⏎")})",
+                    label = if (git.amend) "Amend Commit" else "Commit", primary = true,
+                    enabled = canCommit(),
                 ) { doCommit() }
                 Text(
                     if (changes.isEmpty()) "" else "$n of ${changes.size} file${if (changes.size == 1) "" else "s"}",
-                    fontSize = 12.sp, color = c.textMuted,
+                    fontSize = 12.sp, color = c.textMuted, modifier = Modifier.weight(1f),
                 )
+                if (git.status.head != null) {
+                    Check(git.amend, "Amend") {
+                        git.amend = !git.amend
+                        // Amending usually keeps the old message: start from it.
+                        if (git.amend && git.commitMessage.isBlank()) git.commitMessage = git.lastCommit?.fullMessage.orEmpty()
+                    }
+                    Text("Amend", fontSize = 12.sp, color = c.textMuted)
+                }
+            }
+            git.lastCommit?.let { last ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "Last: ${last.message}", fontSize = 12.sp, color = c.textMuted,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Text("· ${last.short}", fontSize = 12.sp, color = c.textMuted)
+                    if (last.parents > 0) {
+                        Spacer(Modifier.width(2.dp))
+                        ToolButton(Icons.AutoMirrored.Outlined.Undo, "Undo last commit (keeps its changes)") { undoLast() }
+                    }
+                }
             }
             AuthorLine(p)
             git.error?.let { Text(it, color = c.error, fontSize = 12.sp, maxLines = 4, overflow = TextOverflow.Ellipsis) }
@@ -255,9 +315,12 @@ private fun ChangeRow(p: ProjectState, ch: FileChange, onRollback: ((FileChange)
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val isActive = p.active?.file?.let { git.changeOf(it)?.path } == ch.path
+    val hasHead = ch.type == ChangeType.MODIFIED || ch.type == ChangeType.DELETED
     val menu = buildList {
         if (canOpen) add(ContextMenuItem("Open") { p.open(ch.file) })
         if (canCompare) add(ContextMenuItem("Compare Diagram with HEAD") { AppState.compareWithHead(p, ch.file) })
+        if (hasHead) add(ContextMenuItem("Show Diff") { AppState.compareWithHead(p, ch.file, textFirst = true) })
+        if (hasHead) add(ContextMenuItem("Show History") { AppState.showHistory(p, ch.file) })
         if (onRollback != null) add(ContextMenuItem("Rollback…") { onRollback(ch) })
     }
     ContextMenuArea(items = { menu }) {
@@ -271,7 +334,13 @@ private fun ChangeRow(p: ProjectState, ch: FileChange, onRollback: ((FileChange)
                     detectTapGestures(
                         onTap = { if (canOpen) p.open(ch.file) },
                         // IntelliJ opens a diff on double-click; ours compares the two pictures.
-                        onDoubleTap = { if (canCompare) AppState.compareWithHead(p, ch.file) else if (canOpen) p.open(ch.file) },
+                        onDoubleTap = {
+                            when {
+                                canCompare -> AppState.compareWithHead(p, ch.file)
+                                hasHead -> AppState.compareWithHead(p, ch.file, textFirst = true)
+                                canOpen -> p.open(ch.file)
+                            }
+                        },
                     )
                 }
                 .padding(start = 22.dp, end = 8.dp)
@@ -337,6 +406,99 @@ private fun AuthorLine(p: ProjectState) {
     }
 }
 
+/** True when [f] is committed and differs from that version (a text diff is meaningful). */
+internal fun hasCommittedChanges(p: ProjectState, f: File?): Boolean =
+    f != null && p.git.changeOf(f)?.type.let { it == ChangeType.MODIFIED || it == ChangeType.DELETED }
+
 /** Opens [f] next to its committed version. */
 internal fun canCompareWithHead(p: ProjectState, f: File?): Boolean =
     f != null && f.isDiagram() && p.git.changeOf(f)?.type == ChangeType.MODIFIED
+
+/**
+ * Stash: put your uncommitted changes aside (to switch branch or try something else) and bring
+ * them back later. Opens below the Commit panel's stash button.
+ */
+@Composable
+private fun StashPopup(p: ProjectState, onDismiss: () -> Unit) {
+    val c = ide
+    val git = p.git
+    val scope = rememberCoroutineScope()
+    var message by remember { mutableStateOf("") }
+    var confirmDrop by remember { mutableStateOf<es.hugoalvarezajenjo.sproutstudio.git.StashInfo?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { git.error = null }
+
+    fun run(op: suspend () -> Boolean) {
+        busy = true
+        // Disk changes under open tabs: same care as switching branches.
+        scope.launch { p.switchingBranches(op); busy = false }
+    }
+
+    androidx.compose.ui.window.Popup(
+        alignment = Alignment.TopStart,
+        offset = androidx.compose.ui.unit.IntOffset(0, 34),
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        androidx.compose.material3.Surface(
+            shape = RoundedCornerShape(8.dp), color = c.popup, shadowElevation = 12.dp,
+            modifier = Modifier.width(320.dp).border(1.dp, c.popupBorder, RoundedCornerShape(8.dp)).testTag("stash-popup"),
+        ) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Stash Changes", style = MaterialTheme.typography.labelLarge, color = c.text)
+                Text("Puts your uncommitted edits aside and leaves the files as in the last commit.", fontSize = 12.sp, color = c.textMuted)
+                Box(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(c.editor)
+                        .border(1.dp, c.popupBorder, RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 6.dp),
+                ) {
+                    if (message.isEmpty()) Text("Description (optional)", fontSize = 13.sp, color = c.textDisabled)
+                    BasicTextField(
+                        message, { message = it }, singleLine = true,
+                        textStyle = TextStyle(fontSize = 13.sp, color = c.text), cursorBrush = SolidColor(c.text),
+                        modifier = Modifier.fillMaxWidth().testTag("stash-message"),
+                    )
+                }
+                Row {
+                    Spacer(Modifier.weight(1f))
+                    ToolButton(
+                        null, label = "Stash", primary = true,
+                        enabled = !busy && git.status.head != null && git.status.changes.any { it.type != ChangeType.UNVERSIONED },
+                    ) { run { git.stash(message).also { if (it) message = "" } } }
+                }
+                if (git.stashes.isNotEmpty()) {
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(c.popupBorder))
+                    Text("Saved", fontSize = 11.sp, color = c.textMuted)
+                    LazyColumn(Modifier.heightIn(max = 220.dp)) {
+                        items(git.stashes, key = { "${it.index}:${it.timeMillis}" }) { st ->
+                            Row(
+                                Modifier.fillMaxWidth().height(30.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(st.message.removePrefix("On ").substringAfter(": ", st.message), fontSize = 13.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(relativeTime(st.timeMillis), fontSize = 11.sp, color = c.textMuted)
+                                }
+                                ToolButton(null, tooltip = "Apply and remove from the list", label = "Pop", enabled = !busy) { run { git.popStash(st.index) } }
+                                ToolButton(null, tooltip = "Delete without applying", label = "Drop", enabled = !busy) { confirmDrop = st }
+                            }
+                        }
+                    }
+                }
+                git.error?.let { Text(it, color = c.error, fontSize = 12.sp) }
+            }
+        }
+    }
+
+    confirmDrop?.let { st ->
+        AlertDialog(
+            onDismissRequest = { confirmDrop = null },
+            containerColor = ide.popup,
+            shape = RoundedCornerShape(10.dp),
+            title = { Text("Drop this stash?", style = MaterialTheme.typography.titleMedium) },
+            text = { Text("Its changes are deleted without being applied. This can't be undone.", style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = { TextButton(onClick = { confirmDrop = null; run { git.dropStash(st.index) } }) { Text("Drop", color = ide.error) } },
+            dismissButton = { TextButton(onClick = { confirmDrop = null }) { Text("Cancel") } },
+        )
+    }
+}

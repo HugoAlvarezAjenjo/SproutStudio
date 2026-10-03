@@ -75,6 +75,7 @@ fun main(args: Array<String>) {
                     is AppWindow.QuickPreview -> QuickPreviewWindow(w)
                     is AppWindow.Project -> ProjectWindow(w)
                     is AppWindow.DiagramDiff -> es.hugoalvarezajenjo.sproutstudio.ui.DiagramDiffWindow(w)
+                    is AppWindow.History -> es.hugoalvarezajenjo.sproutstudio.ui.HistoryWindow(w)
                 }
             }
         }

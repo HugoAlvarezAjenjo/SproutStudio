@@ -1,6 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.ui
 
 import es.hugoalvarezajenjo.sproutstudio.editor.foldAll
+import es.hugoalvarezajenjo.sproutstudio.editor.changeAtCaret
+import es.hugoalvarezajenjo.sproutstudio.editor.rollbackAtCaret
 import es.hugoalvarezajenjo.sproutstudio.editor.foldAtCaret
 import es.hugoalvarezajenjo.sproutstudio.editor.unfoldAll
 import es.hugoalvarezajenjo.sproutstudio.editor.unfoldAtCaret
@@ -234,6 +236,28 @@ fun ProjectWindow(win: AppWindow.Project) {
                 Item("Compare Diagram with HEAD", enabled = canCompareWithHead(p, p.active?.file)) {
                     p.active?.file?.let { AppState.compareWithHead(p, it) }
                 }
+                Item(
+                    "Rollback Lines",
+                    shortcut = KeyShortcut(Key.Z, meta = Dialogs.isMac, ctrl = !Dialogs.isMac, alt = true),
+                    enabled = p.active?.changeAtCaret() != null,
+                ) { p.revealEditor(); p.active?.rollbackAtCaret() }
+                Item("Show Diff with HEAD", enabled = hasCommittedChanges(p, p.active?.file)) {
+                    p.active?.file?.let { AppState.compareWithHead(p, it, textFirst = true) }
+                }
+                Item("Show History for Current File", enabled = g.status.head != null && p.active?.file != null) {
+                    p.active?.file?.let { AppState.showHistory(p, it) }
+                }
+                Separator()
+                Item("Undo Last Commit", enabled = (g.lastCommit?.parents ?: 0) > 0) {
+                    gitScope.launch {
+                        g.undoLastCommit()?.let { u ->
+                            if (g.commitMessage.isBlank()) g.commitMessage = u.fullMessage
+                            g.lastResult = "Undid ${u.short}: its changes are back in the list"
+                            p.showTool(SidebarTool.COMMIT); p.refreshTree()
+                        }
+                    }
+                }
+                Item("Stash Changes…", enabled = g.status.head != null) { p.showTool(SidebarTool.COMMIT); g.stashPopupTick++ }
                 Separator()
                 if (!g.isRepo) Item("Create Git Repository", enabled = p.root != null) { gitScope.launch { g.init() } }
                 Item("Refresh Git Status", enabled = g.isRepo) { g.requestRefresh() }
@@ -539,6 +563,20 @@ private fun Sidebar(p: ProjectState) {
 
 @Composable
 private fun TreeRow(p: ProjectState, node: TreeNode) {
+    val git = p.git
+    if (node.isDir || git.status.head == null) return TreeRowContent(p, node)
+    androidx.compose.foundation.ContextMenuArea(items = {
+        buildList {
+            add(androidx.compose.foundation.ContextMenuItem("Open") { p.open(node.file) })
+            if (canCompareWithHead(p, node.file)) add(androidx.compose.foundation.ContextMenuItem("Compare Diagram with HEAD") { AppState.compareWithHead(p, node.file) })
+            if (hasCommittedChanges(p, node.file)) add(androidx.compose.foundation.ContextMenuItem("Show Diff with HEAD") { AppState.compareWithHead(p, node.file, textFirst = true) })
+            add(androidx.compose.foundation.ContextMenuItem("Show History") { AppState.showHistory(p, node.file) })
+        }
+    }) { TreeRowContent(p, node) }
+}
+
+@Composable
+private fun TreeRowContent(p: ProjectState, node: TreeNode) {
     val c = ide
     val isActive = p.active?.file?.absoluteFile == node.file.absoluteFile
     val open = node.isDir && node.file in p.expanded
@@ -669,11 +707,7 @@ private fun StatusBar(p: ProjectState, line: Int, col: Int, info: StatusInfo?) {
                 else -> StatusText(if (AutoSavePrefs.enabled) "Saved automatically" else "Saved")
             }
         }
-        p.git.status.branch?.let { b ->
-            Box(Modifier.clip(RoundedCornerShape(4.dp)).clickable { p.focusCommit() }.padding(horizontal = 4.dp)) {
-                StatusText(b, icon = Icons.AutoMirrored.Outlined.CallSplit)
-            }
-        }
+        BranchButton(p)
         StatusText("Offline", icon = Icons.Outlined.Lock)
     }
 }

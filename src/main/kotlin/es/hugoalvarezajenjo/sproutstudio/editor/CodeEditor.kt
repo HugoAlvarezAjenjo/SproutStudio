@@ -54,6 +54,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -70,6 +73,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.automirrored.outlined.Undo
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import es.hugoalvarezajenjo.sproutstudio.lang.Completion
@@ -86,6 +92,8 @@ import kotlinx.coroutines.delay
 private const val GUTTER_DP = 58
 /** Git change bar at the gutter's right edge, next to the text. */
 private const val CHANGE_BAR_DP = 3
+/** Height of the change popup's toolbar (the diff rows start right below it). */
+private const val HUNK_HEADER_DP = 34
 
 /**
  * The text layout lags one frame behind the text: right after a keystroke at the very end of
@@ -102,6 +110,9 @@ fun CodeEditor(
     lineChanges: es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index = es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index.Empty,
     onCaretMoved: (line: Int, col: Int) -> Unit = { _, _ -> },
 ) {
+    androidx.compose.runtime.SideEffect { if (doc.gitLines !== lineChanges) doc.gitLines = lineChanges }
+    /** Change block whose popup is open, and the y (px, in the scrolled content) to show it at. */
+    var hunk by remember(doc) { mutableStateOf<Pair<es.hugoalvarezajenjo.sproutstudio.git.LineChange, Float>?>(null) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     var fieldHeightPx by remember { mutableStateOf(0) }
     var completion by remember(doc) { mutableStateOf<CompletionRequest?>(null) }
@@ -196,6 +207,8 @@ fun CodeEditor(
     fun update(newValue: TextFieldValue, typed: Boolean) {
         doc.value = newValue
         if (typed) {
+            doc.rollbackUndo = null // typing after a rollback: its Undo would lose that typing
+            hunk = null
             completion = CompletionEngine.complete(newValue.text, newValue.selection.start)
             selected = 0
         }
@@ -217,7 +230,27 @@ fun CodeEditor(
         val viewportW = maxWidth
         val viewportH = maxHeight
         Row(Modifier.fillMaxSize().verticalScroll(vScroll)) {
-            Gutter(c, doc, layout, mapping, lineStarts, errorLine, caret, measurer, density, fieldHeightPx, lineChanges)
+            Gutter(c, doc, layout, mapping, lineStarts, errorLine, caret, measurer, density, fieldHeightPx, lineChanges,
+                onChangeClick = { ch, y -> hunk = if (hunk?.first == ch) null else ch to y })
+            hunk?.let { (ch, top) ->
+                // Changes moved under us (typing, a commit): drop a popup that points at a stale block.
+                if (ch !in lineChanges.changes) { hunk = null; return@let }
+                val base = lineChanges.base ?: return@let
+                // Laid over the block, IntelliJ-style: the toolbar sits just above its first line and
+                // the diff rows start on that line, in the editor's font, so they cover it.
+                val headerPx = with(density) { (HUNK_HEADER_DP + 1).dp.toPx() }
+                Popup(
+                    offset = IntOffset(with(density) { (GUTTER_DP - 4).dp.roundToPx() }, (top - headerPx).toInt().coerceAtLeast(0)),
+                    onDismissRequest = { hunk = null },
+                    properties = PopupProperties(focusable = true),
+                ) {
+                    ChangePopup(
+                        ch, es.hugoalvarezajenjo.sproutstudio.git.LineDiff.hunkRows(base, value.text, ch),
+                        onRollback = { hunk = null; doc.rollbackChange(ch); runCatching { focus.requestFocus() } },
+                        onClose = { hunk = null; runCatching { focus.requestFocus() } },
+                    )
+                }
+            }
             Box(Modifier.weight(1f).horizontalScroll(hScroll)) {
                 BasicTextField(
                     value = value,
@@ -295,8 +328,27 @@ fun CodeEditor(
                 }
             }
         }
+        // "Lines rolled back · Undo", while the rollback can still be undone.
+        doc.rollbackUndo?.let {
+            LaunchedEffect(it) { delay(8000); if (doc.rollbackUndo === it) doc.rollbackUndo = null }
+            Surface(
+                shape = RoundedCornerShape(8.dp), color = c.popup, shadowElevation = 8.dp,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).border(1.dp, c.popupBorder, RoundedCornerShape(8.dp)),
+            ) {
+                Row(Modifier.padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Lines rolled back", fontSize = 12.sp, color = c.text)
+                    es.hugoalvarezajenjo.sproutstudio.ui.ToolButton(null, label = "Undo") { doc.undoRollback(); runCatching { focus.requestFocus() } }
+                }
+            }
+        }
     }
     }
+}
+
+/** Clickable things in the gutter. */
+private sealed interface GutterHit {
+    data class Change(val change: es.hugoalvarezajenjo.sproutstudio.git.LineChange) : GutterHit
+    data class Fold(val region: FoldRegion) : GutterHit
 }
 
 @Composable
@@ -312,6 +364,7 @@ private fun Gutter(
     density: androidx.compose.ui.unit.Density,
     fieldHeightPx: Int,
     lineChanges: es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index,
+    onChangeClick: (es.hugoalvarezajenjo.sproutstudio.git.LineChange, Float) -> Unit,
 ) {
     val topPad = with(density) { 10.dp.toPx() }
     val text = doc.text
@@ -330,18 +383,71 @@ private fun Gutter(
         return Folding.lineOf(lineStarts, o.coerceIn(0, text.length))
     }
 
+    val gutterW = with(density) { GUTTER_DP.dp.toPx() }
+
+    /** Top (gutter px) of the visual line that shows real line [line]; past the end = bottom of the text. */
+    fun lineTopPx(l: TextLayoutResult, line: Int): Float {
+        if (line >= lineStarts.size) return topPad + l.getLineBottom(l.lineCount - 1)
+        val o = l.safeOffset(mapping.originalToTransformed(lineStarts[line].coerceIn(0, text.length)))
+        val i = l.getLineForOffset(o)
+        // The empty line after a trailing '\n' (see [realLine]).
+        if (line == lineStarts.size - 1 && i == l.lineCount - 2 && text.endsWith('\n')) return topPad + l.getLineTop(i + 1)
+        return topPad + l.getLineTop(i)
+    }
+
+    /** What a click at [pos] would hit: a change bar (a few px wider than drawn) or a fold chevron. */
+    fun hitTest(pos: Offset): GutterHit? {
+        val l = layout ?: return null
+        if (pos.x < gutterW - markerW - 4f || pos.y < topPad - 4f) return null
+        val i = l.getLineForVerticalPosition(pos.y - topPad)
+        if (pos.x >= gutterW - barW - 5 * density.density && lineChanges.changes.isNotEmpty()) {
+            val real = realLine(l, i)
+            val count = if (text.isEmpty()) 1 else l.lineCount
+            val lastReal = if (i + 1 < count) realLine(l, i + 1) - 1 else lineStarts.size - 1
+            val top = topPad + l.getLineTop(i)
+            val h = l.getLineBottom(i) - l.getLineTop(i)
+            val nearBottom = pos.y > top + h * 0.7f
+            val ch = (real..maxOf(real, lastReal)).firstNotNullOfOrNull { lineChanges.changeAt(it) }
+                ?: lineChanges.changeAt(real, orBelow = nearBottom)
+                ?: lineChanges.changeAt(real, orBelow = true)
+            if (ch != null) return GutterHit.Change(ch)
+        }
+        val r = byStart[realLine(l, i)]?.maxByOrNull { it.endLine } ?: return null
+        return GutterHit.Fold(r)
+    }
+
+    // Hover feedback: a hand cursor over anything clickable, and the hovered bar drawn wider.
+    var hoverPos by remember { mutableStateOf<Offset?>(null) }
+    val hovered = hoverPos?.let { hitTest(it) }
+    val hotChange = (hovered as? GutterHit.Change)?.change
+    val hotFold = (hovered as? GutterHit.Fold)?.region
+
     Box(
         Modifier
             .width(GUTTER_DP.dp)
             .height(with(density) { fieldHeightPx.toDp() })
+            .testTag("editor-gutter")
             .background(c.editor)
-            .pointerInput(doc, layout, mapping, regions) {
+            .pointerHoverIcon(if (hovered != null) PointerIcon.Hand else PointerIcon.Default)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val e = awaitPointerEvent()
+                        hoverPos = when (e.type) {
+                            PointerEventType.Exit -> null
+                            else -> e.changes.firstOrNull()?.position ?: hoverPos
+                        }
+                    }
+                }
+            }
+            .pointerInput(doc, layout, mapping, regions, lineChanges) {
                 detectTapGestures { pos ->
                     val l = layout ?: return@detectTapGestures
-                    if (pos.x < size.width - markerW - 4f) return@detectTapGestures
-                    val i = l.getLineForVerticalPosition(pos.y - topPad)
-                    val r = byStart[realLine(l, i)]?.maxByOrNull { it.endLine } ?: return@detectTapGestures
-                    if (doc.folds.isFolded(r)) doc.folds.unfold(r) else doc.foldRegion(r)
+                    when (val hit = hitTest(pos)) {
+                        is GutterHit.Change -> onChangeClick(hit.change, lineTopPx(l, hit.change.start))
+                        is GutterHit.Fold -> if (doc.folds.isFolded(hit.region)) doc.folds.unfold(hit.region) else doc.foldRegion(hit.region)
+                        null -> {}
+                    }
                 }
             }
             .drawBehind {
@@ -356,19 +462,25 @@ private fun Gutter(
                     val lastReal = if (i + 1 < lines) realLine(l, i + 1) - 1 else lineStarts.size - 1
                     val change = if (lastReal > real) lineChanges.inRange(real, lastReal) else lineChanges.at(real)
                     val barX = size.width - barW
+                    // The hovered block (all its lines) is drawn wider, as in IntelliJ.
+                    val hot = hotChange != null && hotChange.type != es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.DELETED &&
+                        hotChange.start <= lastReal && real < hotChange.end
+                    val hotDeleted = hotChange?.type == es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.DELETED
                     if (change != null) {
                         val col = when (change) {
                             es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.ADDED -> c.gutterAdded
                             es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.MODIFIED -> c.gutterModified
                             es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.DELETED -> c.gutterDeleted
                         }
-                        drawRect(col, Offset(barX, y), Size(barW, lineH))
+                        val w = if (hot) barW * 2.2f else barW
+                        drawRect(col, Offset(size.width - w, y), Size(w, lineH))
                     } else if (lineChanges.deletedAbove(real) || (i == lines - 1 && lineChanges.deletedAbove(real + 1))) {
                         // Deleted lines: a small grey wedge on the boundary where they were.
                         val atBottom = !lineChanges.deletedAbove(real)
                         val yy = if (atBottom) y + lineH else y
+                        val k = if (hotDeleted && hotChange!!.start == (if (atBottom) real + 1 else real)) 1.7f else 1f
                         val wedge = androidx.compose.ui.graphics.Path().apply {
-                            moveTo(barX, yy - barW); lineTo(barX + barW * 1.6f, yy); lineTo(barX, yy + barW); close()
+                            moveTo(barX, yy - barW * k); lineTo(barX + barW * 1.6f * k, yy); lineTo(barX, yy + barW * k); close()
                         }
                         drawPath(wedge, c.gutterDeleted)
                     }
@@ -396,8 +508,8 @@ private fun Gutter(
                         }
                     }
                     drawPath(
-                        path, if (doc.folds.isFolded(r)) c.lineNumberActive else c.lineNumber,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.4f * density.density),
+                        path, if (doc.folds.isFolded(r) || r == hotFold) c.lineNumberActive else c.lineNumber,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = (if (r == hotFold) 1.9f else 1.4f) * density.density),
                     )
                 }
             },
@@ -465,5 +577,81 @@ private fun KindBadge(kind: CompletionKind) {
     }
     Box(Modifier.width(30.dp), contentAlignment = Alignment.Center) {
         Text(kind.badge, fontSize = 10.sp, color = fg, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+    }
+}
+
+/**
+ * IntelliJ's change popup: a small toolbar and the diff of this block only (committed lines in
+ * red, current ones in green, the differing part of a modified line marked stronger).
+ */
+@Composable
+private fun ChangePopup(
+    change: es.hugoalvarezajenjo.sproutstudio.git.LineChange,
+    rows: List<es.hugoalvarezajenjo.sproutstudio.git.LineDiff.HunkRow>,
+    onRollback: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val c = ide
+    val n = change.end - change.start
+    val title = when (change.type) {
+        es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.ADDED -> if (n == 1) "1 line added" else "$n lines added"
+        es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.DELETED -> (change.baseEnd - change.baseStart).let { if (it == 1) "1 line deleted" else "$it lines deleted" }
+        es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.MODIFIED -> if (n == 1) "1 line changed" else "$n lines changed"
+    }
+    val addedBg = c.gutterAdded.copy(alpha = if (c.isDark) 0.22f else 0.30f)
+    val addedHi = c.gutterAdded.copy(alpha = if (c.isDark) 0.50f else 0.65f)
+    val deletedBg = c.vcsUnversioned.copy(alpha = if (c.isDark) 0.18f else 0.14f)
+    val deletedHi = c.vcsUnversioned.copy(alpha = if (c.isDark) 0.42f else 0.32f)
+    Surface(
+        shape = RoundedCornerShape(6.dp), shadowElevation = 12.dp, color = c.popup,
+        modifier = Modifier.widthIn(min = 320.dp, max = 640.dp).border(1.dp, c.popupBorder, RoundedCornerShape(6.dp))
+            .onPreviewKeyEvent { e -> if (e.type == KeyEventType.KeyDown && e.key == Key.Escape) { onClose(); true } else false }
+            .testTag("change-popup"),
+    ) {
+        Column(Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Max)) {
+            Row(
+                Modifier.fillMaxWidth().height(HUNK_HEADER_DP.dp).padding(start = 10.dp, end = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(title, fontSize = 12.sp, color = c.textMuted, modifier = Modifier.weight(1f).padding(end = 12.dp))
+                es.hugoalvarezajenjo.sproutstudio.ui.ToolButton(
+                    androidx.compose.material.icons.Icons.AutoMirrored.Outlined.Undo,
+                    tooltip = "Rollback Lines (${es.hugoalvarezajenjo.sproutstudio.ui.shortcutHint("Z", alt = true)})",
+                    label = "Rollback",
+                ) { onRollback() }
+                es.hugoalvarezajenjo.sproutstudio.ui.ToolButton(androidx.compose.material.icons.Icons.Outlined.Close, "Close (esc)") { onClose() }
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(c.popupBorder))
+            Column(
+                Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState())
+                    .testTag("change-popup-diff"),
+            ) {
+                // Full line boxes (no first/last-line trim), so each row is exactly one editor line tall.
+                val rowStyle = editorTextStyle.copy(
+                    lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+                        androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+                        androidx.compose.ui.text.style.LineHeightStyle.Trim.None,
+                    ),
+                )
+                rows.forEach { row ->
+                    val deleted = row.kind == es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Row.Kind.DELETED
+                    val text = androidx.compose.ui.text.buildAnnotatedString {
+                        append(row.text.ifEmpty { " " })
+                        row.changed?.let { r ->
+                            addStyle(SpanStyle(background = if (deleted) deletedHi else addedHi), r.first, (r.last + 1).coerceAtMost(row.text.length))
+                        }
+                    }
+                    Row(Modifier.defaultMinSize(minWidth = 320.dp).background(if (deleted) deletedBg else addedBg)) {
+                        Text(
+                            if (deleted) "−" else "+",
+                            style = rowStyle.copy(color = if (deleted) c.vcsUnversioned else c.vcsAdded),
+                            modifier = Modifier.width(16.dp).padding(start = 4.dp),
+                        )
+                        Text(text, style = rowStyle.copy(color = c.syntax.symbol), maxLines = 1, softWrap = false, modifier = Modifier.padding(end = 16.dp))
+                    }
+                }
+            }
+        }
     }
 }

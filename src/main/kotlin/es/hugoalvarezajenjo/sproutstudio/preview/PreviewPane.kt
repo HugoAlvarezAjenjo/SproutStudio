@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.preview
 
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -269,7 +271,7 @@ private fun ErrorStrip(err: RenderError, onJumpToLine: ((Int) -> Unit)?) {
             Modifier
                 .fillMaxWidth()
                 .background(c.errorBg)
-                .then(if (clickable) Modifier.clickable { onJumpToLine(err.line) } else Modifier)
+                .then(if (clickable) Modifier.pointerHoverIcon(PointerIcon.Hand).clickable { onJumpToLine(err.line) } else Modifier)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),

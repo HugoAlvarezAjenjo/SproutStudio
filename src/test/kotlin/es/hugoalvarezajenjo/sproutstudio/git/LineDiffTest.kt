@@ -15,25 +15,25 @@ class LineDiffTest {
 
     @Test fun `added lines`() {
         val now = "@startuml\nA -> B\nX -> Y\nZ -> W\nB -> C\nC -> D\n@enduml\n"
-        assertEquals(listOf(LineChange(ADDED, 2, 4)), LineDiff.compute(base, now))
+        assertEquals(listOf(LineChange(ADDED, 2, 4)), LineDiff.compute(base, now).map { it.copy(baseStart = 0, baseEnd = 0) })
     }
 
     @Test fun `modified line`() {
         val now = base.replace("B -> C", "B --> C")
-        assertEquals(listOf(LineChange(MODIFIED, 2, 3)), LineDiff.compute(base, now))
+        assertEquals(listOf(LineChange(MODIFIED, 2, 3)), LineDiff.compute(base, now).map { it.copy(baseStart = 0, baseEnd = 0) })
     }
 
     @Test fun `deleted line is marked above the next one`() {
         val now = base.replace("B -> C\n", "")
-        assertEquals(listOf(LineChange(DELETED, 2, 2)), LineDiff.compute(base, now))
-        val idx = LineDiff.Index(LineDiff.compute(base, now))
+        assertEquals(listOf(LineChange(DELETED, 2, 2)), LineDiff.compute(base, now).map { it.copy(baseStart = 0, baseEnd = 0) })
+        val idx = LineDiff.Index(LineDiff.compute(base, now).map { it.copy(baseStart = 0, baseEnd = 0) })
         assertTrue(idx.deletedAbove(2))
         assertNull(idx.at(2))
     }
 
     @Test fun `typing at the end of the file without a newline`() {
         val now = base + "note"
-        assertEquals(listOf(LineChange(ADDED, 5, 6)), LineDiff.compute(base, now))
+        assertEquals(listOf(LineChange(ADDED, 5, 6)), LineDiff.compute(base, now).map { it.copy(baseStart = 0, baseEnd = 0) })
     }
 
     @Test fun `range lookup for folded lines prefers modified`() {

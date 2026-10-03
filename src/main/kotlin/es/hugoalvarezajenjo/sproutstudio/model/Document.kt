@@ -43,6 +43,12 @@ class Document(file: File?, initialText: String) {
     /** A copy/export asked for from outside the preview (the command palette); consumed by the preview. */
     var previewRequest by mutableStateOf<PreviewAction?>(null)
 
+    /** Git markers of this text against the last commit (set by the editor; empty if untracked). */
+    var gitLines by mutableStateOf(es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index.Empty)
+
+    /** Text before the last "Rollback Lines", for its Undo; cleared by the next edit. */
+    var rollbackUndo by mutableStateOf<TextFieldValue?>(null)
+
     /** The editor's ⌘F / ⌘R bar. */
     val find = es.hugoalvarezajenjo.sproutstudio.editor.FindState()
 

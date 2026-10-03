@@ -89,12 +89,25 @@ dark. It is independent of the editor theme, and exports/copies always keep the 
 Built in (JGit, no `git` install needed), local only: nothing is ever pushed.
 
 - Gutter bars against the last commit: green added, blue modified, grey wedge where lines were deleted.
-- Project tree colours: blue modified, green added, red unversioned, olive ignored. Branch in the status bar.
+  Click a bar for the committed text of that block, with Rollback (puts it back in the editor; Undo in the
+  toast) and Show Diff. ⌥⌘Z (Git → Rollback Lines) does the same for the block at the caret.
+- Project tree colours: blue modified, green added, red unversioned, olive ignored.
+- Branch button in the status bar: switch branch, New Branch… (from the current commit), delete a merged branch.
+  Unsaved editor text is saved first; if a switch would overwrite uncommitted changes it is refused and nothing is lost.
 - Commit panel (⌘0 or the second stripe button): tick the files, write a message, Commit (⌘⏎).
   Right-click a file for Rollback (restores the last committed version; a new file only goes back to unversioned).
   No repository yet? The panel offers "Create Git Repository".
 - Git → Compare Diagram with HEAD (or double-click a modified file in the Commit panel):
   the committed diagram and the current one side by side, sharing zoom and pan.
+  The same window has a Text tab: a unified diff with old/new line numbers (Git → Show Diff with HEAD).
+- Amend: tick "Amend" next to Commit to replace the last commit (starts from its message; no files = just reword).
+- Undo Last Commit (the ↶ next to "Last: …", or the Git menu): the commit goes away, its changes come back
+  to the list with its message, nothing on disk changes.
+- History (Git → Show History for Current File, or right-click a file in the tree): every commit of the file;
+  see what each one changed, or that version against today's, as diagrams or text.
+- Stash (box icon in the Commit panel): put uncommitted edits aside and Pop them back later. When a branch
+  switch is blocked by local changes, the branch menu offers "Stash changes and switch".
+- Create Git Repository can add a starter .gitignore (.DS_Store, temp files, IDE folders).
 
 ## Layout
 

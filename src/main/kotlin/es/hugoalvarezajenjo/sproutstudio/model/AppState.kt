@@ -13,8 +13,16 @@ sealed class AppWindow {
     val id: Long = nextId++
 
     class QuickPreview(val file: File) : AppWindow()
-    /** [file] as committed (HEAD) next to how it is now, from [project]'s repository. */
-    class DiagramDiff(val project: ProjectState, val file: File) : AppWindow()
+    /** [file] at [left] next to [right] (by default: last commit vs now), from [project]'s repository. */
+    class DiagramDiff(
+        val project: ProjectState,
+        val file: File,
+        val left: es.hugoalvarezajenjo.sproutstudio.git.DiffSide = es.hugoalvarezajenjo.sproutstudio.git.DiffSide.Head,
+        val right: es.hugoalvarezajenjo.sproutstudio.git.DiffSide = es.hugoalvarezajenjo.sproutstudio.git.DiffSide.WorkingCopy,
+        val textFirst: Boolean = false,
+    ) : AppWindow()
+    /** Commits that touched [file], each viewable as a diagram or text diff. */
+    class History(val project: ProjectState, val file: File) : AppWindow()
     class Project(val state: ProjectState, revealed: Boolean = true) : AppWindow() {
         /** False while composed-but-hidden (the boot welcome waiting to see if a file arrives). */
         var revealed by mutableStateOf(revealed)
@@ -90,10 +98,16 @@ object AppState {
     }
 
     /** "Compare Diagram with HEAD": one window per file, reused if already open. */
-    fun compareWithHead(project: ProjectState, file: File) {
+    fun compareWithHead(project: ProjectState, file: File, textFirst: Boolean = false) {
         val f = file.absoluteFile
-        if (windows.any { it is AppWindow.DiagramDiff && it.file == f }) return
-        windows += AppWindow.DiagramDiff(project, f)
+        if (windows.any { it is AppWindow.DiagramDiff && it.file == f && it.left == es.hugoalvarezajenjo.sproutstudio.git.DiffSide.Head }) return
+        windows += AppWindow.DiagramDiff(project, f, textFirst = textFirst)
+    }
+
+    fun showHistory(project: ProjectState, file: File) {
+        val f = file.absoluteFile
+        if (windows.any { it is AppWindow.History && it.file == f }) return
+        windows += AppWindow.History(project, f)
     }
 
     fun close(w: AppWindow) {

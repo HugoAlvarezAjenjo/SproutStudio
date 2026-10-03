@@ -113,7 +113,12 @@ class CommitPanelTest {
             onNode(hasText("Create Git Repository") and hasClickAction()).performClick()
             waitUntil(timeoutMillis = 10_000) { p.git.isRepo && p.git.status.changes.isNotEmpty() }
             assertEquals("main", p.git.status.branch)
-            assertEquals(listOf("doc.puml" to ChangeType.UNVERSIONED), p.git.status.changes.map { it.path to it.type })
+            // The starter .gitignore is on by default.
+            assertEquals(
+                listOf(".gitignore" to ChangeType.UNVERSIONED, "doc.puml" to ChangeType.UNVERSIONED),
+                p.git.status.changes.map { it.path to it.type },
+            )
+            assertTrue(File(dir, ".gitignore").readText().contains(".DS_Store"))
         }
         assertTrue(File(dir, ".git").isDirectory)
     }

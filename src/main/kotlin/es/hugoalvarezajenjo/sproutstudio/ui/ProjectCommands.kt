@@ -1,6 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.ui
 
 import es.hugoalvarezajenjo.sproutstudio.editor.EditOps
+import es.hugoalvarezajenjo.sproutstudio.editor.changeAtCaret
+import es.hugoalvarezajenjo.sproutstudio.editor.rollbackAtCaret
 import es.hugoalvarezajenjo.sproutstudio.editor.foldAll
 import es.hugoalvarezajenjo.sproutstudio.editor.foldAtCaret
 import es.hugoalvarezajenjo.sproutstudio.editor.findNext
@@ -93,6 +95,27 @@ internal fun projectCommands(
         cmd("git.commit", "Commit…", "Git", shortcutHint("K"), restoresFocus = false) { p.focusCommit() }
         cmd("git.compare", "Compare Diagram with HEAD", "Git", enabled = canCompareWithHead(p, d?.file)) {
             d?.file?.let { AppState.compareWithHead(p, it) }
+        }
+        cmd("git.rollbackLines", "Rollback Lines", "Git", shortcutHint("Z", alt = true), enabled = d?.let { it.changeAtCaret() } != null) {
+            p.revealEditor(); d?.let { it.rollbackAtCaret() }
+        }
+        cmd("git.diff", "Show Diff with HEAD", "Git", enabled = hasCommittedChanges(p, d?.file)) {
+            d?.file?.let { AppState.compareWithHead(p, it, textFirst = true) }
+        }
+        cmd("git.history", "Show History for Current File", "Git", enabled = p.git.status.head != null && d?.file != null) {
+            d?.file?.let { AppState.showHistory(p, it) }
+        }
+        cmd("git.undo", "Undo Last Commit", "Git", enabled = (p.git.lastCommit?.parents ?: 0) > 0, restoresFocus = false) {
+            kotlinx.coroutines.MainScope().launch {
+                p.git.undoLastCommit()?.let { u ->
+                    if (p.git.commitMessage.isBlank()) p.git.commitMessage = u.fullMessage
+                    p.git.lastResult = "Undid ${u.short}: its changes are back in the list"
+                    p.showTool(es.hugoalvarezajenjo.sproutstudio.model.SidebarTool.COMMIT); p.refreshTree()
+                }
+            }
+        }
+        cmd("git.stash", "Stash Changes…", "Git", enabled = p.git.status.head != null, restoresFocus = false) {
+            p.showTool(es.hugoalvarezajenjo.sproutstudio.model.SidebarTool.COMMIT); p.git.stashPopupTick++
         }
         if (!p.git.isRepo) cmd("git.init", "Create Git Repository", "Git") {
             p.showTool(es.hugoalvarezajenjo.sproutstudio.model.SidebarTool.COMMIT)

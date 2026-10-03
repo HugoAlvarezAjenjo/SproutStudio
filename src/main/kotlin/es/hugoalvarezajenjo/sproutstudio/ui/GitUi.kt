@@ -39,7 +39,7 @@ internal fun rememberLineChanges(git: GitState, file: File?, text: String): Line
         if (!tracked || file == null) { idx = LineDiff.Index.Empty; return@LaunchedEffect }
         delay(120) // typing debounce
         val base = git.headText(file) ?: run { idx = LineDiff.Index.Empty; return@LaunchedEffect }
-        idx = withContext(Dispatchers.Default) { LineDiff.Index(LineDiff.compute(base, text)) }
+        idx = withContext(Dispatchers.Default) { LineDiff.Index(LineDiff.compute(base, text), base) }
     }
     return idx
 }

@@ -16,6 +16,9 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 
 /** Off-screen renders of the git UI on a temporary repo (Commit window, gutter, compare). */
 class GitSnapshotTest {
@@ -66,6 +69,43 @@ class GitSnapshotTest {
     @Test fun projectTreeColours() {
         val p = repo().apply { showTool(SidebarTool.PROJECT) }
         shoot("git-project-tree") { Workspace(p, onSave = {}, onCloseTab = {}) }
+    }
+
+    @Test fun branchPopup() {
+        val p = repo()
+        GitRepo.find(dir)!!.use { it.createBranch("feature/rider"); it.checkout("main"); it.createBranch("docs") }
+        runBlocking { p.git.open(dir) }
+        shoot("git-branch-popup") {
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end = 80.dp, bottom = 4.dp)) {
+                    BranchButton(p, initiallyOpen = true)
+                }
+            }
+        }
+    }
+
+    @Test fun textDiff() {
+        val p = repo()
+        runBlocking { p.git.open(dir) }
+        shoot("git-text-diff") { DiffView(p, File(dir, "order.puml"), es.hugoalvarezajenjo.sproutstudio.git.DiffSide.Head, es.hugoalvarezajenjo.sproutstudio.git.DiffSide.WorkingCopy, textFirst = true) }
+    }
+
+    @Test fun history() {
+        val p = repo()
+        val order = File(dir, "order.puml")
+        GitRepo.find(dir)!!.use { it.commit(listOf(order), "Add the rider to the delivery") }
+        order.writeText(order.readText().replace("pick up", "pick up the order"))
+        GitRepo.find(dir)!!.use { it.commit(listOf(order), "Clearer rider step") }
+        runBlocking { p.git.open(dir) }
+        shoot("git-history") { HistoryView(p, order) }
+    }
+
+    @Test fun commitWindowWithStashesAndLastCommit() {
+        val p = repo()
+        GitRepo.find(dir)!!.use { it.stash("Try a second kitchen") }
+        File(dir, "order.puml").appendText("' tweak\n")
+        p.showTool(SidebarTool.COMMIT)
+        shoot("git-commit-window-2") { Workspace(p, onSave = {}, onCloseTab = {}) }
     }
 
     @Test fun compareWithHead() {
