@@ -7,7 +7,14 @@ plugins {
 }
 
 group = "es.hugoalvarezajenjo"
-version = "0.1.0"
+
+// App version. The release workflow passes it from the git tag (v1.2.0 -> -PappVersion=1.2.0);
+// local builds fall back to 1.0.0. macOS requires MAJOR.MINOR.PATCH with MAJOR > 0.
+val appVersion = (findProperty("appVersion") as String?) ?: "1.0.0"
+require(Regex("""[1-9]\d*\.\d+\.\d+""").matches(appVersion)) {
+    "appVersion must be MAJOR.MINOR.PATCH with MAJOR > 0 (macOS rule), got '$appVersion'"
+}
+version = appVersion
 
 kotlin {
     jvmToolchain(21)
@@ -80,7 +87,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg)
             packageName = "SproutStudio"
-            packageVersion = "1.0.0"
+            packageVersion = appVersion
             description = "A friendly, offline PlantUML studio"
             vendor = "Hugo Alvarez Ajenjo"
 

@@ -10,3 +10,8 @@ endif
 :Go play;
 stop
 @enduml
+
+@startuml
+class Hola
+@enduml
+
