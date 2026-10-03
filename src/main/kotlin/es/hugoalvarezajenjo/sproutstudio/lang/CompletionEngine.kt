@@ -31,6 +31,7 @@ object CompletionEngine {
      * something (or a trigger char), so the popup never nags.
      */
     fun complete(text: String, caret: Int, force: Boolean = false): CompletionRequest? {
+        includePath(text, caret)?.let { return it }
         val (start, prefix) = prefixAt(text, caret)
         if (!force && prefix.isEmpty()) return null
 
@@ -61,6 +62,32 @@ object CompletionEngine {
             .distinctBy { it.label }
             .take(40)
         return if (ranked.isEmpty()) null else CompletionRequest(start, prefix, ranked)
+    }
+
+    /** `!include <` (or `!include_many <`…) up to the caret; group 1 is the path typed so far. */
+    private val includeOpen = Regex("""^\s*!include\w*\s*<([^>\s]*)$""", RegexOption.IGNORE_CASE)
+
+    /**
+     * Inside `!include <…`: the bundled stdlib (C4, AWS, Azure…). Offered as soon as `<` is typed,
+     * and the typed text may contain `/`, which the normal word prefix stops at.
+     */
+    private fun includePath(text: String, caret: Int): CompletionRequest? {
+        val c = caret.coerceIn(0, text.length)
+        val lineStart = text.lastIndexOf('\n', c - 1) + 1
+        val typed = includeOpen.find(text.substring(lineStart, c))?.groupValues?.get(1) ?: return null
+        val closed = text.getOrNull(c) == '>'
+        val t = typed.lowercase()
+        val curated = Stdlib.includes.map { Completion(it.path, it.path + if (closed) "" else ">", CompletionKind.DIRECTIVE, it.detail) }
+        // Whole libraries the curated list doesn't cover (gcp, k8s, tupadr3…), as a "lib/" start.
+        val covered = Stdlib.includes.map { it.path.substringBefore('/').lowercase() }.toSet()
+        val libs = Stdlib.libraries.filter { it.lowercase() !in covered }
+            .map { Completion("$it/", "$it/", CompletionKind.DIRECTIVE, "stdlib library") }
+        val items = (curated + libs)
+            .filter { t.isEmpty() || it.label.lowercase().startsWith(t) || (t.length >= 2 && it.label.lowercase().contains(t)) }
+            .filter { it.label.lowercase() != t }
+            .sortedBy { !it.label.lowercase().startsWith(t) } // stable: keeps the curated order
+            .take(40)
+        return if (items.isEmpty()) null else CompletionRequest(c - typed.length, typed, items)
     }
 
     /** True right after a skinparam whose value is a colour (so we offer colour names). */

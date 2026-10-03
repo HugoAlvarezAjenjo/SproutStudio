@@ -23,12 +23,16 @@
 - **Quick Preview**: double-click a `.puml` in Finder and see the diagram instantly. It refreshes by
   itself when the file changes, even if you edit it elsewhere.
 - **Project mode**: open a folder and get a file tree, tabs, a smart editor and a live preview, as
-  editor only, editor + preview, or preview only.
+  editor only, editor + preview, or preview only. Create, rename and delete files and folders from the
+  tree (deleting goes to the Trash); open tabs follow renames.
 - **Smart editor**: syntax highlighting, completion that knows the diagram type, your own participants,
   `!theme` names and colours, smart indent, code folding, find & replace with regex, and a command palette
   (Shift Shift) with every action.
-- **Templates**: a gallery (⇧⌘N) and a side panel with ready-made UML, C4, mindmap, Gantt, JSON and
-  wireframe diagrams, each with a live thumbnail.
+- **C4, AWS and Azure, offline**: PlantUML's standard library ships inside the app, so
+  `!include <C4/C4_Container>`, `!include <awslib14/Compute/Lambda>` or `!include <azure/AzureCommon>`
+  just work, with no download. Typing `!include <` suggests the paths.
+- **Templates**: a gallery (⇧⌘N) and a side panel with ready-made UML, C4, AWS, Azure, mindmap, Gantt,
+  JSON and wireframe diagrams, each with a live thumbnail.
 - **Problems panel**: every PlantUML error in the file, across all diagrams, marked in red in the editor;
   click one to jump to it.
 - **Preview**: zoom and pan, multi-diagram files, an optional dark diagram independent of the editor theme,
@@ -89,6 +93,7 @@ needs to be installed: the app ships its own Java runtime.
 |---|---|
 | typing | suggestions for the current diagram type, your own participants/classes, `!theme` names, and colours after `#` |
 | ⌃Space | show suggestions now |
+| `!include <` | the bundled libraries: C4 levels, the common AWS and Azure icons, and every other stdlib library (gcp, kubernetes, tupadr3…) |
 | `@st` + ⏎ | pick a ready-made diagram template |
 | left stripe (grid icon) | the Templates panel — the same catalogue as a narrow side list, click a row to insert |
 | ⇧⌘N | the template gallery — ready-made diagrams and blocks with live thumbnails (also File → New from Template…) |
@@ -108,6 +113,8 @@ needs to be installed: the app ships its own Java runtime.
 | ⌥⌘Z | roll back the changed block at the caret to the last commit |
 | ⌥⌘1 / ⌥⌘2 / ⌥⌘3 | editor only / editor and preview / preview only (also the three buttons at the right of the tab bar) |
 | ⌥⌘Y | refresh the file tree |
+| drag in the Project tree | move a file or folder: drop it on a folder, or on the project folder row / the empty space to move it to the top |
+| right-click in the Project tree | New Diagram…, New Folder…, Rename…, Move to Trash…, Reveal in Finder (the project folder row and the empty space below create in the project folder) |
 
 Preview: mouse wheel to zoom at the pointer, drag with the left or middle button to pan (⇧+wheel or a
 sideways trackpad swipe also pans), double-click to fit. Export to SVG or PNG, or copy the picture to the
@@ -115,6 +122,24 @@ clipboard (📋) to paste straight into a doc.
 
 The sun/moon button in the preview toolbar (or View → Dark Diagram Preview) recolours the diagram
 dark. It is independent of the editor theme, and exports/copies always keep the original colours.
+
+## C4, AWS and Azure
+
+PlantUML's standard library comes inside the app (it is part of the bundled PlantUML jar), so these
+work with no network:
+
+```plantuml
+!include <C4/C4_Container>            ' C4_Context, C4_Component, C4_Dynamic, C4_Deployment, C4_Sequence
+!include <awslib14/AWSCommon>         ' AWS: include this first, then the icons you use
+!include <awslib14/Compute/Lambda>
+!include <azure/AzureCommon>          ' Azure: same idea
+!include <azure/Compute/AzureFunction>
+```
+
+The gallery has ready-made C4 Context, C4 Container, AWS and Azure diagrams to start from. Other
+libraries in the stdlib (gcp, kubernetes, tupadr3, office, material…) work the same way. The icon
+sets keep their own licences (C4-PlantUML and Azure-PlantUML: MIT; aws-icons-for-plantuml: see its
+repository).
 
 ## Problems
 

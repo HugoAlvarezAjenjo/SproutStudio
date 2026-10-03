@@ -38,9 +38,15 @@ object Templates {
             "@startuml\nnode $0Server {\n  artifact app.jar\n}\ncloud Internet\nInternet --> Server\n@enduml\n"),
         Template("er", "Entity-relationship", "UML",
             "@startuml\nentity $0User {\n  * id : int\n  --\n  name : text\n}\nentity Order {\n  * id : int\n  --\n  user_id : int\n}\nUser ||--o{ Order\n@enduml\n"),
-        // ── C4 (local macros, no network) ──
+        // ── C4 and cloud: PlantUML's bundled stdlib, so these work offline ──
         Template("c4-context", "C4 Context", "C4",
-            "@startuml\n' Local C4 macros (no !include needed for these shapes)\n!define Person(e_alias, e_label) rectangle \"e_label\" <<Person>> as e_alias\n!define System(e_alias, e_label) rectangle \"e_label\" <<System>> as e_alias\n\nPerson(user, \"$0Customer\")\nSystem(app, \"Web App\")\nSystem(mail, \"Email System\")\nuser --> app : uses\napp --> mail : sends email\n@enduml\n"),
+            "@startuml\n!include <C4/C4_Context>\ntitle System context\n\nPerson(customer, \"$0Customer\", \"Orders pizza online\")\nSystem(shop, \"Pizza Shop\", \"Takes and tracks orders\")\nSystem_Ext(pay, \"Payment Provider\")\n\nRel(customer, shop, \"Orders from\")\nRel(shop, pay, \"Charges the card via\")\nSHOW_LEGEND()\n@enduml\n"),
+        Template("c4-container", "C4 Container", "C4",
+            "@startuml\n!include <C4/C4_Container>\ntitle Containers\nLAYOUT_LEFT_RIGHT()\n\nPerson(customer, \"Customer\")\nSystem_Boundary(shop, \"Pizza Shop\") {\n  Container(web, \"$0Web App\", \"Kotlin\", \"Order screens\")\n  Container(api, \"API\", \"Ktor\", \"Order logic\")\n  ContainerDb(db, \"Orders DB\", \"PostgreSQL\")\n}\n\nRel(customer, web, \"Uses\", \"HTTPS\")\nRel(web, api, \"Calls\", \"JSON\")\nRel(api, db, \"Reads and writes\", \"SQL\")\nSHOW_LEGEND()\n@enduml\n"),
+        Template("aws", "AWS architecture", "Cloud",
+            "@startuml\n!include <awslib14/AWSCommon>\n!include <awslib14/General/Users>\n!include <awslib14/ApplicationIntegration/APIGateway>\n!include <awslib14/Compute/Lambda>\n!include <awslib14/Database/DynamoDB>\nleft to right direction\n\nUsers(users, \"$0Customers\", \"web and mobile\")\nAPIGateway(api, \"Orders API\", \"REST\")\nLambda(fn, \"Place order\", \"Kotlin\")\nDynamoDB(table, \"Orders\", \"table\")\n\nusers --> api\napi --> fn\nfn --> table\n@enduml\n"),
+        Template("azure", "Azure architecture", "Cloud",
+            "@startuml\n!include <azure/AzureCommon>\n!include <azure/Web/AzureWebApp>\n!include <azure/Compute/AzureFunction>\n!include <azure/Databases/AzureCosmosDb>\nleft to right direction\n\nAzureWebApp(web, \"$0Web front\", \"App Service\")\nAzureFunction(fn, \"Order worker\", \"Functions\")\nAzureCosmosDb(db, \"Orders\", \"NoSQL\")\n\nweb --> fn\nfn --> db\n@enduml\n"),
         // ── non-UML ──
         Template("mindmap", "Mind map", "Other",
             "@startmindmap\n* $0Idea\n** Branch one\n*** Detail\n** Branch two\n@endmindmap\n"),
@@ -68,7 +74,7 @@ object Templates {
     val wholeDiagrams: List<Template> get() = all.filter { it.whole }
 
     /** Category order for the gallery; anything else goes last. */
-    private val order = listOf("UML", "C4", "Other", "Blocks")
+    private val order = listOf("UML", "C4", "Cloud", "Other", "Blocks")
     val byCategory: List<Pair<String, List<Template>>>
         get() = all.groupBy { it.category }.toList().sortedBy { order.indexOf(it.first).let { i -> if (i < 0) order.size else i } }
 }

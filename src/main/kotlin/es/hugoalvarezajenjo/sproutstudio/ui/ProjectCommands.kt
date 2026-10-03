@@ -50,6 +50,15 @@ internal fun projectCommands(
     cmd("file.openDiagram", "Open Diagram…", "File", shortcutHint("O", shift = true)) { Dialogs.openDiagram()?.let { AppState.openFile(it) } }
     cmd("file.openFolder", "Open Folder…", "File", shortcutHint("O")) { Dialogs.openFolder()?.let { p.openRoot(it) } }
     cmd("file.newWindow", "New Window", "File") { AppState.newProjectWindow() }
+    p.root?.let { root ->
+        val dir = d?.file?.absoluteFile?.parentFile?.takeIf { it == root.absoluteFile || it.startsWith(root.absoluteFile) } ?: root
+        cmd("file.newNamed", "New Diagram in Folder…", "File", restoresFocus = false) { p.fileAction = es.hugoalvarezajenjo.sproutstudio.model.FileAction.NewDiagram(dir) }
+        cmd("file.newFolder", "New Folder…", "File", restoresFocus = false) { p.fileAction = es.hugoalvarezajenjo.sproutstudio.model.FileAction.NewFolder(dir) }
+        d?.file?.let { f ->
+            cmd("file.rename", "Rename File…", "File", restoresFocus = false) { p.fileAction = es.hugoalvarezajenjo.sproutstudio.model.FileAction.Rename(f) }
+            cmd("file.trash", "Move File to Trash…", "File", restoresFocus = false) { p.fileAction = es.hugoalvarezajenjo.sproutstudio.model.FileAction.Delete(f) }
+        }
+    }
     cmd("file.save", "Save", "File", shortcutHint("S"), enabled = has) { onSave() }
     cmd("file.saveAs", "Save As…", "File", shortcutHint("S", shift = true), enabled = has) { onSaveAs() }
     cmd("file.autosave", if (AutoSavePrefs.enabled) "Turn Off Save Automatically" else "Turn On Save Automatically", "File") {

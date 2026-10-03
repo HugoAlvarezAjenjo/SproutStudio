@@ -56,6 +56,17 @@ import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.VerticalSplit
 import es.hugoalvarezajenjo.sproutstudio.model.EditorLayout
+import es.hugoalvarezajenjo.sproutstudio.model.FileAction
+import es.hugoalvarezajenjo.sproutstudio.model.move
+import androidx.compose.ui.composed
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.border
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.material.icons.outlined.CreateNewFolder
+import androidx.compose.material.icons.outlined.UnfoldLess
+import androidx.compose.ui.platform.testTag
 import es.hugoalvarezajenjo.sproutstudio.model.SidebarTool
 import androidx.compose.material.icons.outlined.Commit
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
@@ -573,56 +584,128 @@ private fun SidebarSplitter(p: ProjectState) {
 @Composable
 private fun Sidebar(p: ProjectState) {
     val c = ide
-    Column(Modifier.width(p.sidebarWidth.dp).fillMaxHeight().background(c.panel)) {
+    val root = p.root ?: return
+    val drag = remember(p) { TreeDrag() }
+    var message by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(message) { if (message != null) { kotlinx.coroutines.delay(4000); message = null } }
+    val onDrop: (java.io.File, java.io.File) -> Unit = { what, where ->
+        p.move(what, where).exceptionOrNull()?.let { message = it.message }
+    }
+    var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    // zIndex: the drag label may run past the panel, over the editor.
+    Box(Modifier.width(p.sidebarWidth.dp).fillMaxHeight().zIndex(if (drag.source != null) 2f else 0f).onGloballyPositioned { origin = it.positionInWindow() }) {
+    Column(Modifier.fillMaxSize().background(c.panel).testTag("project-tree")) {
         // Tool window header: title + actions, 36dp like IntelliJ.
         Row(
             Modifier.fillMaxWidth().height(36.dp).padding(start = 12.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Project", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
-            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New diagram (⌘N)") { p.newDocument() }
+            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New Diagram…") { p.fileAction = FileAction.NewDiagram(targetDir(p)) }
+            ToolButton(Icons.Outlined.CreateNewFolder, "New Folder…") { p.fileAction = FileAction.NewFolder(targetDir(p)) }
+            ToolButton(Icons.Outlined.UnfoldLess, "Collapse All") { p.expanded.clear(); p.refreshTree() }
             ToolButton(Icons.Outlined.Refresh, "Refresh (⌥⌘Y)") { p.refreshTree() }
             ToolButton(Icons.Outlined.Remove, "Hide (⌘1)") { p.showSidebar(false) }
         }
-        // Root row.
+        // Root row: a folder like any other, so it collapses too.
+        androidx.compose.foundation.ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
+            ListRow(
+                onClick = { p.rootCollapsed = !p.rootCollapsed }, height = 26, startPadding = 6,
+                modifier = Modifier.treeDrag(drag, "root", root, file = null, onDrop).dropHighlight(drag.target == root.absoluteFile),
+            ) {
+                Icon(if (p.rootCollapsed) Icons.Outlined.ChevronRight else Icons.Outlined.ExpandMore, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
+                Icon(if (p.rootCollapsed) Icons.Outlined.Folder else Icons.Outlined.FolderOpen, null, tint = c.textMuted, modifier = Modifier.size(16.dp))
+                Text(root.name, style = MaterialTheme.typography.labelLarge, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag("tree-root"))
+                Text(
+                    root.parent?.replace(System.getProperty("user.home"), "~") ?: "",
+                    fontSize = 12.sp, color = c.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (!p.rootCollapsed) {
+            if (p.tree.isEmpty()) {
+                Text("No diagrams in this folder", fontSize = 12.sp, color = c.textMuted, modifier = Modifier.padding(start = 34.dp, top = 6.dp))
+            }
+            LazyColumn(Modifier.weight(1f, fill = false).padding(horizontal = 4.dp)) {
+                items(p.tree, key = { it.file.absolutePath }) { node -> TreeRow(p, node, drag, onDrop) }
+            }
+        }
+        // The empty space below the tree: right-click creates in the project folder.
+        androidx.compose.foundation.ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
+            Box(Modifier.weight(1f).fillMaxWidth().treeDrag(drag, "empty", root, file = null, onDrop))
+        }
+        message?.let {
+            Text(it, color = c.error, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().background(c.errorBg).padding(horizontal = 12.dp, vertical = 6.dp).testTag("tree-message"))
+        }
+    }
+    // What's being dragged, following the pointer.
+    drag.source?.let { src ->
+        val d = LocalDensity.current
+        val at = drag.pointer - origin
         Row(
-            Modifier.fillMaxWidth().height(26.dp).padding(start = 10.dp, end = 8.dp),
+            Modifier.offset { androidx.compose.ui.unit.IntOffset(at.x.toInt() + with(d) { 14.dp.roundToPx() }, at.y.toInt() + with(d) { 6.dp.roundToPx() }) }
+                .clip(RoundedCornerShape(6.dp)).background(c.popup).border(1.dp, if (drag.target != null) c.accent else c.popupBorder, RoundedCornerShape(6.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(Icons.Outlined.ExpandMore, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
-            Icon(Icons.Outlined.Folder, null, tint = c.textMuted, modifier = Modifier.size(16.dp))
-            Text(p.root?.name ?: "", style = MaterialTheme.typography.labelLarge, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                p.root?.parent?.replace(System.getProperty("user.home"), "~") ?: "",
-                fontSize = 12.sp, color = c.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
-        }
-        if (p.tree.isEmpty()) {
-            Text("No diagrams in this folder", fontSize = 12.sp, color = c.textMuted, modifier = Modifier.padding(start = 34.dp, top = 6.dp))
-        }
-        LazyColumn(Modifier.weight(1f).padding(horizontal = 4.dp)) {
-            items(p.tree, key = { it.file.absolutePath }) { node -> TreeRow(p, node) }
+            Icon(if (src.isDirectory) Icons.Outlined.Folder else Icons.Outlined.Schema, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
+            Text(drag.target?.let { "${src.name} → ${if (it == root.absoluteFile) root.name else it.name}" } ?: src.name, color = c.text, fontSize = 12.sp)
         }
     }
+    }
+    FileActionDialog(p)
+}
+
+/** Accent outline on the folder row a drag would drop into. */
+private fun Modifier.dropHighlight(on: Boolean) = composed {
+    if (on) border(1.5.dp, ide.accent, RoundedCornerShape(4.dp)).background(ide.accent.copy(alpha = 0.12f), RoundedCornerShape(4.dp)) else this
+}
+
+/** Where the header's New buttons create: the active file's folder inside the project, else the root. */
+private fun targetDir(p: ProjectState): java.io.File {
+    val root = p.root!!.absoluteFile
+    val dir = p.active?.file?.absoluteFile?.parentFile
+    return if (dir != null && (dir == root || dir.startsWith(root))) dir else root
+}
+
+private fun folderMenu(p: ProjectState, dir: java.io.File, isRoot: Boolean) = buildList {
+    add(androidx.compose.foundation.ContextMenuItem("New Diagram…") { p.fileAction = FileAction.NewDiagram(dir) })
+    add(androidx.compose.foundation.ContextMenuItem("New Folder…") { p.fileAction = FileAction.NewFolder(dir) })
+    if (!isRoot) {
+        add(androidx.compose.foundation.ContextMenuItem("Rename…") { p.fileAction = FileAction.Rename(dir) })
+        add(androidx.compose.foundation.ContextMenuItem("Move to Trash…") { p.fileAction = FileAction.Delete(dir) })
+    } else {
+        add(androidx.compose.foundation.ContextMenuItem(if (p.rootCollapsed) "Expand" else "Collapse") { p.rootCollapsed = !p.rootCollapsed })
+    }
+    add(androidx.compose.foundation.ContextMenuItem(if (Dialogs.isMac) "Reveal in Finder" else "Open Containing Folder") { revealInFinder(dir) })
 }
 
 @Composable
-private fun TreeRow(p: ProjectState, node: TreeNode) {
-    val git = p.git
-    if (node.isDir || git.status.head == null) return TreeRowContent(p, node)
+private fun TreeRow(p: ProjectState, node: TreeNode, drag: TreeDrag, onDrop: (java.io.File, java.io.File) -> Unit) {
+    val f = node.file
+    DisposableEffect(f) { onDispose { drag.forget(f.absolutePath) } }
     androidx.compose.foundation.ContextMenuArea(items = {
-        buildList {
-            add(androidx.compose.foundation.ContextMenuItem("Open") { p.open(node.file) })
-            if (canCompareWithHead(p, node.file)) add(androidx.compose.foundation.ContextMenuItem("Compare Diagram with HEAD") { AppState.compareWithHead(p, node.file) })
-            if (hasCommittedChanges(p, node.file)) add(androidx.compose.foundation.ContextMenuItem("Show Diff with HEAD") { AppState.compareWithHead(p, node.file, textFirst = true) })
-            add(androidx.compose.foundation.ContextMenuItem("Show History") { AppState.showHistory(p, node.file) })
+        if (node.isDir) folderMenu(p, f, isRoot = false) else buildList {
+            val dir = f.absoluteFile.parentFile
+            add(androidx.compose.foundation.ContextMenuItem("Open") { p.open(f) })
+            add(androidx.compose.foundation.ContextMenuItem("New Diagram…") { p.fileAction = FileAction.NewDiagram(dir) })
+            add(androidx.compose.foundation.ContextMenuItem("New Folder…") { p.fileAction = FileAction.NewFolder(dir) })
+            add(androidx.compose.foundation.ContextMenuItem("Rename…") { p.fileAction = FileAction.Rename(f) })
+            add(androidx.compose.foundation.ContextMenuItem("Move to Trash…") { p.fileAction = FileAction.Delete(f) })
+            add(androidx.compose.foundation.ContextMenuItem(if (Dialogs.isMac) "Reveal in Finder" else "Open Containing Folder") { revealInFinder(f) })
+            if (p.git.status.head != null) {
+                if (canCompareWithHead(p, f)) add(androidx.compose.foundation.ContextMenuItem("Compare Diagram with HEAD") { AppState.compareWithHead(p, f) })
+                if (hasCommittedChanges(p, f)) add(androidx.compose.foundation.ContextMenuItem("Show Diff with HEAD") { AppState.compareWithHead(p, f, textFirst = true) })
+                add(androidx.compose.foundation.ContextMenuItem("Show History") { AppState.showHistory(p, f) })
+            }
         }
-    }) { TreeRowContent(p, node) }
+    }) { TreeRowContent(p, node, drag, onDrop) }
 }
 
 @Composable
-private fun TreeRowContent(p: ProjectState, node: TreeNode) {
+private fun TreeRowContent(p: ProjectState, node: TreeNode, drag: TreeDrag, onDrop: (java.io.File, java.io.File) -> Unit) {
     val c = ide
     val isActive = p.active?.file?.absoluteFile == node.file.absoluteFile
     val open = node.isDir && node.file in p.expanded
@@ -631,6 +714,10 @@ private fun TreeRowContent(p: ProjectState, node: TreeNode) {
         onClick = { if (node.isDir) p.toggleDir(node.file) else p.open(node.file) },
         height = 26,
         startPadding = 6 + (node.depth + 1) * 16,
+        modifier = Modifier.testTag("tree-row-${node.file.name}")
+            .treeDrag(drag, node.file.absolutePath, folder = if (node.isDir) node.file else node.file.absoluteFile.parentFile, file = node.file, onDrop)
+            .dropHighlight(node.isDir && drag.target == node.file.absoluteFile)
+            .then(if (drag.source?.absoluteFile == node.file.absoluteFile) Modifier.alpha(0.45f) else Modifier),
     ) {
         if (node.isDir) {
             Icon(if (open) Icons.Outlined.ExpandMore else Icons.Outlined.ChevronRight, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
@@ -793,13 +880,14 @@ private fun ListRow(
     onClick: () -> Unit,
     height: Int = 44,
     startPadding: Int = 8,
+    modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit,
 ) {
     val c = ide
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .height(height.dp)
             .clip(RoundedCornerShape(4.dp))

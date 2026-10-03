@@ -220,6 +220,10 @@ class ProjectState {
     }
     var previewFraction by mutableStateOf(0.5f)
     val expanded = mutableStateListOf<File>()
+    /** The project folder's own row is collapsible too, like every folder under it. */
+    var rootCollapsed by mutableStateOf(false)
+    /** New / rename / delete dialog the project tree is showing, if any. */
+    var fileAction by mutableStateOf<FileAction?>(null)
     var tree by mutableStateOf<List<TreeNode>>(emptyList())
         private set
 
@@ -227,6 +231,7 @@ class ProjectState {
 
     fun openRoot(dir: File) {
         root = dir
+        rootCollapsed = false
         expanded.clear()
         Recents.add(dir)
         refreshTree()
@@ -289,7 +294,9 @@ class ProjectState {
         fun walk(dir: File, depth: Int) {
             val children = dir.listFiles().orEmpty()
                 .filter { !it.name.startsWith(".") && it.name !in IGNORED }
-                .filter { it.isDirectory && containsDiagrams(it) || it.isDiagram() }
+                // Every folder shows, even empty ones (a folder you just created must be visible);
+                // files: only diagrams, the app's subject.
+                .filter { it.isDirectory || it.isDiagram() }
                 .sortedWith(compareBy<File>({ !it.isDirectory }, { it.name.lowercase() }))
             for (c in children) {
                 out += TreeNode(c, depth, c.isDirectory)
@@ -313,13 +320,6 @@ class ProjectState {
         }
         walk(r, 0)
         return out
-    }
-
-    private fun containsDiagrams(dir: File, depth: Int = 0): Boolean {
-        if (depth > 6) return false
-        return dir.listFiles().orEmpty().any { f ->
-            !f.name.startsWith(".") && f.name !in IGNORED && (f.isDiagram() || (f.isDirectory && containsDiagrams(f, depth + 1)))
-        }
     }
 
     companion object {

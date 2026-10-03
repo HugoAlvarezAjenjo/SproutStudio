@@ -103,6 +103,9 @@ class TemplateGalleryTest {
             File("build/ui-snapshots").mkdirs()
             File("build/ui-snapshots/template-sidebar.png").writeBytes(bmp.encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)!!.bytes)
         }
+        // Rows far down a lazy list aren't composed until scrolled to: filter, as a user would.
+        onNode(androidx.compose.ui.test.hasSetTextAction()).performTextInput("gantt")
+        waitForIdle()
         onNodeWithTag("template-row-gantt").performClick()
         assertEquals("gantt", picked?.id)
     }
