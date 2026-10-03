@@ -52,15 +52,19 @@ object FileOps {
     }
 }
 
-fun ProjectState.newDiagramIn(dir: File, name: String): Result<File> = runCatching {
+/** A new diagram file: empty, or holding [template] with the caret on its `$0` marker. */
+fun ProjectState.newDiagramIn(dir: File, name: String, template: es.hugoalvarezajenjo.sproutstudio.lang.Template? = null): Result<File> = runCatching {
     if (name.isBlank()) error("Enter a name")
     val n = FileOps.diagramName(name)
     FileOps.validate(dir, n)?.let { error(it) }
     val f = File(dir, n)
-    Document.writeAtomically(f, Document.NEW_TEMPLATE)
+    Document.writeAtomically(f, template?.previewSource ?: "")
     expandTo(dir)
     refreshTree()
     open(f)
+    template?.body?.indexOf("\$0")?.takeIf { it >= 0 }?.let { at ->
+        active?.let { d -> d.value = d.value.copy(selection = androidx.compose.ui.text.TextRange(at)) }
+    }
     f
 }
 

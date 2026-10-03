@@ -70,7 +70,12 @@ import kotlinx.coroutines.withContext
  * content; blocks drop in at the caret). Opens over the window like the command palette.
  */
 @Composable
-fun TemplateGallery(onDismiss: () -> Unit, onPick: (Template) -> Unit) {
+fun TemplateGallery(
+    onDismiss: () -> Unit,
+    onPick: (Template) -> Unit,
+    /** Only complete diagrams (for a new file), no blocks. */
+    wholeOnly: Boolean = false,
+) {
     val c = ide
     var query by remember { mutableStateOf("") }
     val focus = remember { FocusRequester() }
@@ -79,7 +84,7 @@ fun TemplateGallery(onDismiss: () -> Unit, onPick: (Template) -> Unit) {
     val groups = remember(query) {
         val q = query.trim().lowercase()
         Templates.byCategory
-            .map { (cat, items) -> cat to items.filter { q.isEmpty() || it.name.lowercase().contains(q) || it.category.lowercase().contains(q) } }
+            .map { (cat, items) -> cat to items.filter { (!wholeOnly || it.whole) && (q.isEmpty() || it.name.lowercase().contains(q) || it.category.lowercase().contains(q)) } }
             .filter { it.second.isNotEmpty() }
     }
 

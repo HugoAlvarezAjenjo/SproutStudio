@@ -162,4 +162,37 @@ class ProjectTreeTest {
         assertTrue(File(dir, "a.puml").exists())
         assertEquals(0, count("tree-message", this))
     }
+
+    @Test fun newDiagramWithATemplateChosenFromTheGallery() = runComposeUiTest {
+        val p = ProjectState().apply { openRoot(dir); fileAction = FileAction.NewDiagram(dir) }
+        setContent { PumlTheme(dark = true) { Surface(Modifier.size(1100.dp, 760.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
+        onNodeWithTag("file-name-field").performTextClearance()
+        onNodeWithTag("file-name-field").performTextInput("login")
+        onNodeWithTag("choose-template").performClick()
+        waitForIdle()
+        onNodeWithTag("template-gallery")
+        assertEquals(0, count("template-card-block-note", this), "blocks aren't offered for a new file")
+        onNodeWithTag("template-card-seq").performClick()
+        waitForIdle()
+        // Back in the dialog: the typed name survived, the template is shown.
+        assertTrue(onAllNodes(androidx.compose.ui.test.hasText("Sequence", substring = true)).fetchSemanticsNodes().isNotEmpty())
+        run {
+            val roots = onAllNodes(isRoot())
+            val img = roots[roots.fetchSemanticsNodes().size - 1].captureToImage()
+            File("build/ui-snapshots/new-diagram-template.png").writeBytes(
+                org.jetbrains.skia.Image.makeFromBitmap(img.asSkiaBitmap()).encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)!!.bytes)
+        }
+        onNodeWithTag("file-name-confirm").performClick()
+        waitForIdle()
+        val f = File(dir, "login.puml")
+        assertTrue(f.readText().startsWith("@startuml\nactor User"), f.readText())
+    }
+
+    @Test fun newDiagramWithoutATemplateIsEmpty() = runComposeUiTest {
+        val p = ProjectState().apply { openRoot(dir); fileAction = FileAction.NewDiagram(dir) }
+        setContent { PumlTheme(dark = true) { Surface(Modifier.size(1100.dp, 760.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
+        onNodeWithTag("file-name-confirm").performClick()
+        waitForIdle()
+        assertEquals("", File(dir, "new-diagram.puml").readText())
+    }
 }

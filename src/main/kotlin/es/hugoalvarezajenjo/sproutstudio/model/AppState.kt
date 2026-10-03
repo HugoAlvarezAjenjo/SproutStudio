@@ -265,10 +265,10 @@ class ProjectState {
             var n = 1
             var f = File(dir, "new-diagram.puml")
             while (f.exists()) f = File(dir, "new-diagram-${++n}.puml")
-            f.writeText(Document.NEW_TEMPLATE)
+            f.writeText("") // empty: content only comes from a template you pick
             refreshTree()
             Document.open(f)
-        } else Document(null, Document.NEW_TEMPLATE)
+        } else Document(null, "")
         docs += doc
         activeIndex = docs.lastIndex
         return doc
@@ -280,9 +280,7 @@ class ProjectState {
      * a blank doc = full content, else at the caret). Reveals the editor and focuses it.
      */
     fun insertTemplate(template: es.hugoalvarezajenjo.sproutstudio.lang.Template) {
-        val doc = active ?: if (template.whole) {
-            newDocument().also { it.value = androidx.compose.ui.text.input.TextFieldValue("") }
-        } else newDocument()
+        val doc = active ?: newDocument()
         revealEditor()
         doc.value = es.hugoalvarezajenjo.sproutstudio.editor.EditOps.insertTemplate(doc.value, template)
         doc.focusTick++

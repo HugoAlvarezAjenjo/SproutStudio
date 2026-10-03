@@ -29,12 +29,27 @@ class FileOpsTest {
 
     @AfterTest fun tearDown() { FileOps.trash = realTrash; dir.deleteRecursively() }
 
-    @Test fun `new diagram gets puml, opens in a tab and shows in the tree`() {
+    @Test fun `new diagram is empty, gets puml, opens in a tab and shows in the tree`() {
         val f = p.newDiagramIn(File(dir, "docs"), "flow").getOrThrow()
         assertEquals("flow.puml", f.name)
-        assertTrue(f.readText().startsWith("@startuml"))
+        assertEquals("", f.readText(), "no content unless a template was chosen")
         assertEquals(f.absoluteFile, p.active?.file?.absoluteFile)
         assertTrue(p.tree.any { it.file.absoluteFile == f.absoluteFile }, "parent folder was expanded")
+    }
+
+    @Test fun `new diagram from a template gets its text and the caret on the marker`() {
+        val t = es.hugoalvarezajenjo.sproutstudio.lang.Templates.all.first { it.id == "seq" }
+        val f = p.newDiagramIn(dir, "login", t).getOrThrow()
+        assertEquals(t.previewSource, f.readText())
+        val d = p.active!!
+        assertFalse(d.dirty)
+        assertEquals("request", d.text.substring(d.value.selection.start, d.value.selection.start + 7))
+    }
+
+    @Test fun `quick new diagram is empty too`() {
+        val d = p.newDocument()
+        assertEquals("", d.text)
+        assertEquals("", d.file!!.readText())
     }
 
     @Test fun `a diagram extension is kept`() {

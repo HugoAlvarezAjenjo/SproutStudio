@@ -127,7 +127,6 @@ class Document(file: File?, initialText: String) {
             }
         }
 
-        const val NEW_TEMPLATE = "@startuml\n' 👋 Welcome! Start typing — suggestions pop up as you go.\n\nactor Me\nparticipant Idea\n\nMe -> Idea: let's draw!\nIdea --> Me: ✨\n@enduml\n"
     }
 }
 
