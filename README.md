@@ -76,6 +76,7 @@ No file there → default icon.
 | ⌘S, ⇧⌘S | save, save as (autosave is on: File → Save Automatically) |
 | ⌘N, ⌘O, ⇧⌘O | new diagram, open folder, open diagram |
 | ⌘P, ⌘1 | show / hide the preview, the project panel |
+| ⌘6 | show / hide the Problems panel |
 | ⌘0, ⌘K | show / hide the Commit panel, jump to the commit message |
 | ⌥⌘1 / ⌥⌘2 / ⌥⌘3 | editor only / editor and preview / preview only (also the three buttons at the right of the tab bar) |
 | ⌥⌘Y | refresh the file tree |
@@ -85,6 +86,16 @@ the picture to the clipboard (📋) to paste straight into a doc.
 
 The sun/moon button in the preview toolbar (or View -> Dark Diagram Preview) recolours the diagram
 dark. It is independent of the editor theme, and exports/copies always keep the original colours.
+
+## Problems
+
+A Problems panel at the bottom of the editor (⌘6, View → Show Problems, or click the problem count
+in the status bar) lists every error PlantUML finds — across all diagram blocks in the file, not just
+the one in the preview, and every error within a block, not just the first. Each row shows the message
+and its location ("Diagram 2 · line 7" when the file has several diagrams, "line 7" when it has one);
+clicking it jumps the editor to that line and switches the preview to that diagram. The 1-line header
+always shows: a green "No problems" when the file is clean, a red count when it isn't. It stays collapsed
+by default and remembers its state.
 
 ## Git
 

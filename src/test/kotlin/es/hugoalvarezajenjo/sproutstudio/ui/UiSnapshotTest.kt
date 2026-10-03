@@ -125,4 +125,21 @@ class UiSnapshotTest {
         }
         shoot("workspace-error", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
     }
+
+    @Test
+    fun workspaceProblemsPanel() {
+        val saved = es.hugoalvarezajenjo.sproutstudio.model.LayoutPrefs.problemsExpanded
+        val p = ProjectState().apply {
+            openRoot(File("samples").absoluteFile)
+            open(File("samples/morning.puml").absoluteFile)
+            val d = active!!
+            d.value = d.value.copy(text = d.text.replace(":Go play;", ":Go play;\nthis is broken ((("))
+            showProblems(true)
+        }
+        try {
+            shoot("workspace-problems-panel", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
+        } finally {
+            es.hugoalvarezajenjo.sproutstudio.model.LayoutPrefs.problemsExpanded = saved
+        }
+    }
 }

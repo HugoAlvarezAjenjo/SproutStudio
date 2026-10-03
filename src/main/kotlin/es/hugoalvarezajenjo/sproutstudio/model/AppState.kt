@@ -171,6 +171,17 @@ class ProjectState {
         LayoutPrefs.sidebarVisible = show
     }
 
+    /** Bottom Problems panel: the 1-line header always shows; this is whether the list is open. */
+    var problemsExpanded by mutableStateOf(LayoutPrefs.problemsExpanded)
+        private set
+
+    fun toggleProblems() = showProblems(!problemsExpanded)
+
+    fun showProblems(open: Boolean) {
+        problemsExpanded = open
+        LayoutPrefs.problemsExpanded = open
+    }
+
     /** Which tool window the left panel shows: the file tree or the Commit window. */
     var sidebarTool by mutableStateOf(SidebarTool.PROJECT)
         private set
@@ -333,6 +344,11 @@ object LayoutPrefs {
     var editorLayout: EditorLayout
         get() = runCatching { EditorLayout.valueOf(prefs.get("editorLayout", EditorLayout.SPLIT.name)) }.getOrDefault(EditorLayout.SPLIT)
         set(v) = prefs.put("editorLayout", v.name)
+
+    /** Whether the Problems panel at the bottom is expanded. The header bar always shows. */
+    var problemsExpanded: Boolean
+        get() = prefs.getBoolean("problemsExpanded", false)
+        set(v) = prefs.putBoolean("problemsExpanded", v)
 }
 
 enum class SidebarTool { PROJECT, COMMIT, TEMPLATES }

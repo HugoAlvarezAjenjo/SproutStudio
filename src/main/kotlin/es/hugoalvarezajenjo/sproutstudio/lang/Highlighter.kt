@@ -76,7 +76,7 @@ object Highlighter {
     fun highlight(
         text: String,
         colors: SyntaxColors,
-        errorLine: Int? = null,
+        errorLines: Set<Int> = emptySet(),
         caret: Int = -1,
     ): AnnotatedString {
         val symbols = PlantUmlLanguage.symbols(text).map { it.name }.toSet()
@@ -85,12 +85,12 @@ object Highlighter {
             append(text)
             for (t in tokens) addStyle(styleFor(t.type, colors), t.start, t.end)
 
-            errorLine?.let { line -> lineRange(text, line)?.let { (s, e) ->
+            for (line in errorLines) lineRange(text, line)?.let { (s, e) ->
                 if (e > s) addStyle(
                     SpanStyle(textDecoration = TextDecoration.Underline, background = colors.error.copy(alpha = 0.10f)),
                     s, e,
                 )
-            } }
+            }
 
             matchingBracket(text, caret)?.let { (a, b) ->
                 val st = SpanStyle(background = colors.bracketMatch, fontWeight = FontWeight.Bold)

@@ -85,6 +85,7 @@ internal fun projectCommands(
         cmd("view.layout.${l.name}", l.label, "View", shortcutHint("${l.ordinal + 1}", alt = true), enabled = p.layout != l) { p.changeLayout(l) }
     }
     cmd("view.preview", if (p.previewVisible) "Hide Preview" else "Show Preview", "View", shortcutHint("P")) { p.togglePreview() }
+    cmd("view.problems", if (p.problemsExpanded) "Hide Problems" else "Show Problems", "View", shortcutHint("6"), enabled = has) { p.toggleProblems() }
     if (p.root != null) {
         cmd("view.sidebar", if (p.sidebarVisible) "Hide Project Panel" else "Show Project Panel", "View", shortcutHint("1")) {
             p.showSidebar(!p.sidebarVisible)

@@ -7,6 +7,7 @@ import net.sourceforge.plantuml.FileFormat
 import net.sourceforge.plantuml.FileFormatOption
 import net.sourceforge.plantuml.SourceStringReader
 import net.sourceforge.plantuml.error.PSystemError
+import net.sourceforge.plantuml.ErrorUml
 import net.sourceforge.plantuml.klimt.color.ColorMapper
 import net.sourceforge.plantuml.preproc.Defines
 import net.sourceforge.plantuml.security.SFile
@@ -39,6 +40,15 @@ data class RenderResult(
 ) {
     val svg: ByteArray? get() = bytes
 }
+
+/** One entry for the Problems panel: a single PlantUML error, placed in the file. */
+data class Problem(
+    /** 1-based line in the editor text, or null when PlantUML could not pin it down. */
+    val line: Int?,
+    val message: String,
+    /** 0-based index of the diagram block this error belongs to. */
+    val diagramIndex: Int,
+)
 
 /**
  * Renders PlantUML text fully in-process.
@@ -174,6 +184,69 @@ object PlantUmlRenderer {
             }
         return RenderResult(out.toByteArray(), blocks.size, i, error, scale)
     }
+
+    /**
+     * Every error PlantUML can find in [source], across all diagram blocks and all errors within
+     * each block — the data behind the Problems panel. Rendering only touches one block at a time,
+     * so this parses the whole file once. Returns an empty list when the file is clean.
+     *
+     * Runs on the PlantUML thread like [render]; PlantUML keeps global state and isn't concurrency-safe.
+     */
+    suspend fun collectProblems(source: String, baseDir: File?): List<Problem> =
+        withContext(thread) { collectProblemsBlocking(source, baseDir) }
+
+    fun collectProblemsBlocking(source: String, baseDir: File?): List<Problem> {
+        OfflineGuard.check(source)?.let { return listOf(Problem(it.line, it.message, 0)) }
+        if (source.isBlank()) return emptyList()
+
+        val reader = reader(source, baseDir)
+        val blocks = reader.blocks
+        if (blocks.isEmpty()) return emptyList()
+
+        val out = ArrayList<Problem>()
+        val lines = source.split('\n').toMutableList()
+        blocks.forEachIndexed { i, block ->
+            var err = block.diagram as? PSystemError ?: return@forEachIndexed
+            // PlantUML's parser stops at the FIRST bad line of a block, so "cla sad" further down is
+            // never reported while "inte dasda" is broken. To list them all, blank each reported line
+            // (with a comment, so numbering is kept) and parse again, until the block is clean.
+            val masked = lines.toMutableList()
+            var last = -1
+            repeat(MAX_ERRORS_PER_BLOCK) {
+                val found = errorsOf(err, i)
+                out += found
+                val pos = found.mapNotNull { it.line?.minus(1) }.maxOrNull() ?: return@forEachIndexed
+                if (pos <= last || pos !in masked.indices) return@forEachIndexed
+                // Never blank the block's own @start/@end: that would merge or split diagrams.
+                if (masked[pos].trimStart().let { it.startsWith("@start") || it.startsWith("@end") }) return@forEachIndexed
+                masked[pos] = "'"
+                last = pos
+                val again = reader(masked.joinToString("\n"), baseDir).blocks
+                if (again.size != blocks.size) return@forEachIndexed
+                err = again[i].diagram as? PSystemError ?: return@forEachIndexed
+            }
+        }
+        // Same error can surface twice (block location + per-error location); keep distinct ones.
+        return out.distinct().sortedWith(compareBy({ it.diagramIndex }, { it.line ?: Int.MAX_VALUE }))
+    }
+
+    private const val MAX_ERRORS_PER_BLOCK = 20
+
+    /** The errors PlantUML reported for one failed block. */
+    private fun errorsOf(err: PSystemError, block: Int): List<Problem> {
+        // getErrorsUml() returns every error PlantUML raised for this block; getFirstError() is
+        // the one it shows on its own bitmap. Fall back to firstError if the collection is empty.
+        val errs: Collection<ErrorUml> = runCatching { err.errorsUml }.getOrNull()?.takeIf { it.isNotEmpty() }
+            ?: listOfNotNull(err.firstError)
+        if (errs.isEmpty()) return listOf(Problem(lineOf(err.lineLocation?.position), "Syntax error", block))
+        return errs.map { e ->
+            val pos = runCatching { e.lineLocation?.position ?: e.position }.getOrNull()
+            Problem(lineOf(pos), e.error ?: "Syntax error", block)
+        }
+    }
+
+    /** PlantUML line positions are 0-based; the editor is 1-based. Treat <0 as "unknown". */
+    private fun lineOf(pos: Int?): Int? = pos?.takeIf { it >= 0 }?.let { it + 1 }
 
     private fun reader(source: String, baseDir: File?, configLines: List<String> = config): SourceStringReader {
         // Local includes are resolved relative to the file's folder and only from there.

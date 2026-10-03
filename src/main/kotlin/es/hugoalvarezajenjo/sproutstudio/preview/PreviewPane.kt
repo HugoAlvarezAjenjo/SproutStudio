@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.render.ExportFormat
 import es.hugoalvarezajenjo.sproutstudio.model.PreviewAction
 import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
+import es.hugoalvarezajenjo.sproutstudio.render.Problem
 import es.hugoalvarezajenjo.sproutstudio.render.RenderError
 import es.hugoalvarezajenjo.sproutstudio.ui.EmptyState
 import es.hugoalvarezajenjo.sproutstudio.ui.DiagramPrefs
@@ -78,6 +79,8 @@ class PreviewState {
     /** True when [image] is an older, successful render shown while the current text has an error. */
     var stale by mutableStateOf(false)
     var error by mutableStateOf<RenderError?>(null)
+    /** Every error across all diagram blocks (the Problems panel); empty when the file is clean. */
+    var problems by mutableStateOf<List<Problem>>(emptyList())
     var diagramCount by mutableStateOf(0)
     var index by mutableStateOf(0)
     var rendering by mutableStateOf(false)
@@ -102,6 +105,10 @@ fun rememberLivePreview(
         // A colour toggle re-renders at once; only typing is debounced.
         if (state.firstDone && state.renderedDark == darkDiagram) delay(debounceMs)
         state.rendering = true
+        // Problems first: they're a cheap parse and drive the editor's red lines, so they shouldn't
+        // wait for the image. (Done after the render, a keystroke cancelling the effect mid-way left
+        // them out of date next to the new image — red line and Problems panel disagreeing.)
+        state.problems = PlantUmlRenderer.collectProblems(text, baseDir)
         val r = PlantUmlRenderer.renderPreview(text, baseDir, state.index, PREVIEW_SCALE, darkDiagram)
         state.renderedDark = darkDiagram
         state.diagramCount = r.diagramCount

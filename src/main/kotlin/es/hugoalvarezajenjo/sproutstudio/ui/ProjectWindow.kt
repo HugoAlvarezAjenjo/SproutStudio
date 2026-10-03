@@ -233,6 +233,7 @@ fun ProjectWindow(win: AppWindow.Project) {
                 CheckboxItem("Show Project Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.PROJECT, shortcut = shortcut(Key.One)) { p.toggleTool(SidebarTool.PROJECT) }
                 CheckboxItem("Show Commit Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT, shortcut = shortcut(Key.Zero)) { p.toggleTool(SidebarTool.COMMIT) }
                 CheckboxItem("Show Templates Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.TEMPLATES) { p.toggleTool(SidebarTool.TEMPLATES) }
+                CheckboxItem("Show Problems", checked = p.problemsExpanded, shortcut = shortcut(Key.Six)) { p.toggleProblems() }
                 CheckboxItem("Dark Theme", checked = ThemePrefs.dark) { ThemePrefs.toggle() }
                 CheckboxItem("Dark Diagram Preview", checked = DiagramPrefs.dark) { DiagramPrefs.toggle() }
                 Separator()
@@ -443,11 +444,30 @@ internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: 
                 } else {
                     key(doc) {
                         val preview = rememberLivePreview(doc.text, doc.dir)
-                        EditorAndPreview(p, doc, preview, onCaret = { l, col -> caretLine = l; caretCol = col })
+                        Box(Modifier.weight(1f).fillMaxWidth()) {
+                            EditorAndPreview(p, doc, preview, onCaret = { l, col -> caretLine = l; caretCol = col })
+                        }
+                        HLine()
+                        ProblemsPanel(
+                            problems = preview.problems,
+                            expanded = p.problemsExpanded,
+                            multiBlock = preview.diagramCount > 1,
+                            onToggle = { p.toggleProblems() },
+                            onGoTo = { target ->
+                                p.revealEditor()
+                                if (target.diagramIndex != preview.index && target.diagramIndex < preview.diagramCount) {
+                                    preview.index = target.diagramIndex
+                                }
+                                target.line?.let { doc.jumpRequest = it }
+                            },
+                            // Expanded: capped height so the editor keeps most of the window. Collapsed: just the bar.
+                            modifier = if (p.problemsExpanded) Modifier.height(200.dp) else Modifier,
+                        )
                         val info = StatusInfo(
                             kind = PlantUmlLanguage.kindAt(doc.text, doc.value.selection.start).label,
                             diagrams = preview.diagramCount,
                             errorLine = preview.error?.let { it.line ?: 0 },
+                            problems = preview.problems.size,
                         )
                         SideEffect { status = info }
                     }
@@ -460,7 +480,7 @@ internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: 
 }
 
 /** What the active editor knows, for the status bar. */
-private data class StatusInfo(val kind: String, val diagrams: Int, val errorLine: Int?)
+private data class StatusInfo(val kind: String, val diagrams: Int, val errorLine: Int?, val problems: Int)
 
 @Composable
 private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalvarezajenjo.sproutstudio.preview.PreviewState, onCaret: (Int, Int) -> Unit) {
@@ -473,7 +493,10 @@ private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalv
             if (p.editorVisible) {
                 CodeEditor(
                     doc,
-                    errorLine = preview.error?.line,
+                    // Red lines come from the Problems list (every block), not only the error of the
+                    // diagram the preview happens to show; it's also computed before the image.
+                    errorLine = null,
+                    errorLines = preview.problems.mapNotNull { it.line }.toSet(),
                     lineChanges = rememberLineChanges(p.git, doc.file, doc.text),
                     modifier = Modifier.weight(if (split) 1f - p.previewFraction else 1f).fillMaxHeight(),
                     onCaretMoved = onCaret,
@@ -716,11 +739,17 @@ private fun StatusBar(p: ProjectState, line: Int, col: Int, info: StatusInfo?) {
         Spacer(Modifier.weight(1f))
         if (doc != null) {
             info?.let {
-                when (it.errorLine) {
-                    null -> StatusText("No problems", c.textMuted, Icons.Outlined.CheckCircle)
-                    0 -> StatusText("Syntax error", c.error, Icons.Outlined.ErrorOutline)
-                    else -> StatusText("Error on line ${it.errorLine}", c.error, Icons.Outlined.ErrorOutline)
+                val problemText = when {
+                    it.problems == 0 -> "No problems"
+                    it.problems == 1 -> "1 problem"
+                    else -> "${it.problems} problems"
                 }
+                StatusClickable(
+                    text = problemText,
+                    color = if (it.problems == 0) c.textMuted else c.error,
+                    icon = if (it.problems == 0) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
+                    onClick = { p.showProblems(true) },
+                )
                 StatusText(if (it.diagrams > 1) "${it.kind} · ${it.diagrams} diagrams" else it.kind)
             }
             StatusText("$line:$col")
@@ -732,6 +761,28 @@ private fun StatusBar(p: ProjectState, line: Int, col: Int, info: StatusInfo?) {
         }
         BranchButton(p)
         StatusText("Offline", icon = Icons.Outlined.Lock)
+    }
+}
+
+/** A status-bar segment that behaves like a button: hover tint, hand cursor, click. */
+@Composable
+private fun StatusClickable(text: String, color: Color, icon: ImageVector, onClick: () -> Unit) {
+    val c = ide
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(if (hovered) c.hover else Color.Transparent)
+            .hoverable(interaction)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(icon, null, tint = color, modifier = Modifier.size(13.dp))
+        Text(text, color = color, fontSize = 12.sp)
     }
 }
 

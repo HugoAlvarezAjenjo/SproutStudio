@@ -106,6 +106,8 @@ fun CodeEditor(
     doc: Document,
     errorLine: Int?,
     modifier: Modifier = Modifier,
+    /** Every line with a problem (all diagram blocks); [errorLine] is folded in. */
+    errorLines: Set<Int> = emptySet(),
     /** Git markers against HEAD (empty outside a repo or for uncommitted files). */
     lineChanges: es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index = es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index.Empty,
     onCaretMoved: (line: Int, col: Int) -> Unit = { _, _ -> },
@@ -127,8 +129,9 @@ fun CodeEditor(
     val value = doc.value
     val caret = value.selection.start
 
-    val highlighted = remember(value.text, errorLine, caret, c) {
-        Highlighter.highlight(value.text, c.syntax, errorLine, caret)
+    val errs = remember(errorLine, errorLines) { if (errorLine == null) errorLines else errorLines + errorLine }
+    val highlighted = remember(value.text, errs, caret, c) {
+        Highlighter.highlight(value.text, c.syntax, errs, caret)
     }
     // ── folding: the field shows the folded view; layout offsets go through [toT] ──
     val activeFolds = Folding.topLevel(doc.folds.active(value.text))
@@ -230,7 +233,7 @@ fun CodeEditor(
         val viewportW = maxWidth
         val viewportH = maxHeight
         Row(Modifier.fillMaxSize().verticalScroll(vScroll)) {
-            Gutter(c, doc, layout, mapping, lineStarts, errorLine, caret, measurer, density, fieldHeightPx, lineChanges,
+            Gutter(c, doc, layout, mapping, lineStarts, errs, caret, measurer, density, fieldHeightPx, lineChanges,
                 onChangeClick = { ch, y -> hunk = if (hunk?.first == ch) null else ch to y })
             hunk?.let { (ch, top) ->
                 // Changes moved under us (typing, a commit): drop a popup that points at a stale block.
@@ -277,7 +280,7 @@ fun CodeEditor(
                                 drawRect(color, Offset(-12.dp.toPx(), top), Size(size.width + 36.dp.toPx(), bottom - top))
                             }
                             band(l.getLineForOffset(l.safeOffset(toT(caret))), c.currentLine)
-                            errorLine?.let { e ->
+                            for (e in errs) {
                                 if (e - 1 in lineStarts.indices) band(l.getLineForOffset(l.safeOffset(toT(lineStarts[e - 1]))), c.errorBg)
                             }
                             // Find hits: draw at most what's reasonable, current one stronger.
@@ -358,7 +361,7 @@ private fun Gutter(
     layout: TextLayoutResult?,
     mapping: OffsetMapping,
     lineStarts: IntArray,
-    errorLine: Int?,
+    errorLines: Set<Int>,
     caret: Int,
     measurer: androidx.compose.ui.text.TextMeasurer,
     density: androidx.compose.ui.unit.Density,
@@ -484,7 +487,7 @@ private fun Gutter(
                         }
                         drawPath(wedge, c.gutterDeleted)
                     }
-                    val isErr = lineNo == errorLine
+                    val isErr = lineNo in errorLines
                     val isCur = lineNo == currentLine
                     if (isErr) drawCircle(c.error, 4f, Offset(8f, y + lineH / 2))
                     val label = measurer.measure(
