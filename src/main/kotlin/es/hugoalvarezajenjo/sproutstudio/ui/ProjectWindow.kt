@@ -158,6 +158,11 @@ fun ProjectWindow(win: AppWindow.Project) {
         p.insertTemplate(t)
     }
     val gitScope = androidx.compose.runtime.rememberCoroutineScope()
+    /** Unsaved tabs get the usual question; then this window shows the welcome screen again. */
+    fun closeProject() = closeDocs(p.docs.toList()) {
+        p.closeProject()
+        gitScope.launch { p.git.open(null) }
+    }
     val doubleShift = remember { DoubleShiftDetector() }
 
     fun save(doc: Document?) {
@@ -216,6 +221,8 @@ fun ProjectWindow(win: AppWindow.Project) {
                 Item("Close Tab", shortcut = shortcut(Key.W), enabled = p.active != null) {
                     p.active?.let { d -> closeDocs(listOf(d)) { p.closeDoc(d) } }
                 }
+                Separator()
+                Item("Close Project", enabled = p.root != null || p.docs.isNotEmpty()) { closeProject() }
             }
             Menu("Edit") {
                 val d = p.active
@@ -304,6 +311,7 @@ fun ProjectWindow(win: AppWindow.Project) {
                     onSaveAs = { p.active?.let { d -> Dialogs.saveAs(d.name, d.dir ?: p.root)?.let { d.save(it); p.refreshTree() } } },
                     onCloseTab = { p.active?.let { d -> closeDocs(listOf(d)) { p.closeDoc(d) } } },
                     onOpenGallery = { paletteOpen = false; galleryOpen = true },
+                    onCloseProject = { closeProject() },
                 )
                 CommandPalette(
                     commands,

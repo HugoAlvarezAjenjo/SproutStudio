@@ -35,6 +35,7 @@ internal fun projectCommands(
     onSaveAs: () -> Unit,
     onCloseTab: () -> Unit,
     onOpenGallery: () -> Unit = {},
+    onCloseProject: () -> Unit = {},
 ): List<Command> {
     val d = p.active
     val has = d != null
@@ -66,6 +67,7 @@ internal fun projectCommands(
         if (AutoSavePrefs.enabled) AutoSave.flush(p.docs.toList())
     }
     cmd("file.closeTab", "Close Tab", "File", shortcutHint("W"), enabled = has) { onCloseTab() }
+    cmd("file.closeProject", "Close Project", "File", enabled = p.root != null || has, restoresFocus = false) { onCloseProject() }
 
     // Edit
     cmd("edit.find", "Find…", "Edit", shortcutHint("F"), enabled = has, restoresFocus = false) {

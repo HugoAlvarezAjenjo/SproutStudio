@@ -237,6 +237,20 @@ class ProjectState {
         refreshTree()
     }
 
+    /**
+     * File → Close Project: back to the welcome screen in this same window. Callers handle unsaved
+     * tabs first (the window asks, like on quit) and reset [git] (a suspend call).
+     */
+    fun closeProject() {
+        docs.clear()
+        activeIndex = 0
+        root = null
+        expanded.clear()
+        rootCollapsed = false
+        fileAction = null
+        tree = emptyList()
+    }
+
     fun open(file: File) {
         val f = file.absoluteFile
         val i = docs.indexOfFirst { it.file?.absoluteFile == f }

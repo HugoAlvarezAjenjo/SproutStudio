@@ -158,3 +158,19 @@ class FileMoveTest {
         assertTrue(canMove(File(dir, "a.puml"), File(dir, "docs")))
     }
 }
+
+class CloseProjectTest {
+    @Test fun `close project goes back to the welcome state`() {
+        val dir = Files.createTempDirectory("close").toFile().canonicalFile
+        try {
+            File(dir, "a.puml").writeText("@startuml\nA -> B\n@enduml\n"); File(dir, "d").mkdirs()
+            val p = ProjectState().apply { openRoot(dir); open(File(dir, "a.puml")); toggleDir(File(dir, "d")); rootCollapsed = true }
+            p.closeProject()
+            assertNull(p.root); assertTrue(p.docs.isEmpty()); assertTrue(p.tree.isEmpty()); assertTrue(p.expanded.isEmpty())
+            assertFalse(p.rootCollapsed)
+            // Reopening works like a fresh start.
+            p.openRoot(dir)
+            assertTrue(p.tree.any { it.file.name == "a.puml" })
+        } finally { dir.deleteRecursively() }
+    }
+}
