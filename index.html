@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SproutStudio — a friendly, fully offline PlantUML studio</title>
+  <meta name="description" content="SproutStudio is a lightweight desktop IDE for PlantUML: live preview, smart editor, templates, a Problems panel and built-in Git. 100% offline.">
+  <link rel="icon" href="assets/icon.png">
+  <meta property="og:title" content="SproutStudio">
+  <meta property="og:description" content="A friendly, fully offline PlantUML studio.">
+  <meta property="og:image" content="assets/screenshots/hero.png">
+  <style>
+    :root {
+      --bg: #1e1f22; --panel: #2b2d30; --card: #26282c; --border: #393b40;
+      --text: #dfe1e5; --muted: #9a9ea6; --accent: #3574f0; --green: #2fa36b;
+      --radius: 14px; --max: 1120px;
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg: #f7f8fa; --panel: #ffffff; --card: #ffffff; --border: #e3e5ea; --text: #16171a; --muted: #5d616b; }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    }
+    a { color: var(--accent); }
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+
+    /* Header */
+    header { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 85%, transparent);
+      backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+    header .wrap { display: flex; align-items: center; gap: 12px; height: 60px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); text-decoration: none; }
+    .brand img { width: 30px; height: 30px; border-radius: 8px; }
+    nav { margin-left: auto; display: flex; gap: 22px; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 15px; }
+    nav a:hover, nav a:focus-visible { color: var(--text); }
+    @media (max-width: 720px) { nav { display: none; } }
+
+    /* Hero */
+    .hero { text-align: center; padding: 88px 0 40px; }
+    .hero img.logo { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 12px 40px rgba(47,163,107,.35); }
+    .hero h1 { font-size: clamp(38px, 6vw, 64px); line-height: 1.05; margin: 24px 0 12px; letter-spacing: -0.02em; }
+    .hero h1 span { background: linear-gradient(90deg, var(--green), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p.lead { font-size: clamp(18px, 2.2vw, 21px); color: var(--muted); max-width: 640px; margin: 0 auto 32px; }
+    .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 10px;
+      font-weight: 600; text-decoration: none; border: 1px solid var(--border); color: var(--text); background: var(--panel); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn:hover { filter: brightness(1.1); }
+    .btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 2px; }
+    .note { margin-top: 14px; font-size: 14px; color: var(--muted); }
+    .badges { margin-top: 22px; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+
+    /* Screenshots */
+    .shot { border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; background: var(--panel);
+      box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+    .shot img { display: block; width: 100%; height: auto; }
+    .hero-shot { margin: 56px auto 0; max-width: 1040px; }
+
+    /* Sections */
+    section { padding: 72px 0; }
+    h2 { font-size: clamp(28px, 4vw, 38px); margin: 0 0 12px; letter-spacing: -0.01em; text-align: center; }
+    .sub { color: var(--muted); text-align: center; max-width: 620px; margin: 0 auto 44px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+    .card .ico { font-size: 26px; }
+    .card h3 { margin: 10px 0 6px; font-size: 18px; }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+    .feature { display: grid; grid-template-columns: 1fr 1.4fr; gap: 44px; align-items: center; margin-bottom: 72px; }
+    .feature.flip { grid-template-columns: 1.4fr 1fr; }
+    .feature.flip .text { order: 2; }
+    .feature h3 { font-size: 26px; margin: 0 0 10px; }
+    .feature p, .feature li { color: var(--muted); }
+    .feature ul { padding-left: 18px; margin: 12px 0 0; }
+    @media (max-width: 860px) { .feature, .feature.flip { grid-template-columns: 1fr; } .feature.flip .text { order: 0; } }
+
+    .install { background: var(--panel); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .steps { counter-reset: s; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+    .step { counter-increment: s; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+    .step::before { content: counter(s); display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+      background: var(--accent); color: #fff; font-weight: 700; margin-bottom: 10px; }
+    .step p { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; background: color-mix(in srgb, var(--text) 9%, transparent);
+      padding: 2px 6px; border-radius: 5px; }
+
+    .tech { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .chip { padding: 8px 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); font-size: 14px; }
+
+    footer { padding: 40px 0; color: var(--muted); font-size: 14px; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <a class="brand" href="#"><img src="assets/icon.png" alt="">SproutStudio</a>
+      <nav aria-label="Sections">
+        <a href="#features">Features</a>
+        <a href="#tour">Tour</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/HugoAlvarezAjenjo/SproutStudio">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <img class="logo" src="assets/icon.png" alt="SproutStudio logo">
+      <h1>PlantUML, <span>without the friction</span></h1>
+      <p class="lead">A lightweight desktop studio for PlantUML with a live preview, a smart editor and built-in Git.
+        Everything runs on your machine: no server, no Graphviz, no network.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/HugoAlvarezAjenjo/SproutStudio/releases/latest">⬇ Download for macOS</a>
+        <a class="btn" href="https://github.com/HugoAlvarezAjenjo/SproutStudio">View on GitHub</a>
+      </div>
+      <p class="note">Free and open source · Apple Silicon · ships its own Java runtime</p>
+      <div class="badges">
+        <a href="https://github.com/HugoAlvarezAjenjo/SproutStudio/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/HugoAlvarezAjenjo/SproutStudio/actions/workflows/ci.yml/badge.svg"></a>
+        <a href="https://github.com/HugoAlvarezAjenjo/SproutStudio/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/HugoAlvarezAjenjo/SproutStudio?sort=semver"></a>
+      </div>
+      <div class="shot hero-shot">
+        <img src="assets/screenshots/hero.png" alt="SproutStudio project window: file tree, editor and live diagram preview">
+      </div>
+    </div>
+
+    <section id="features">
+      <div class="wrap">
+        <h2>Everything a diagram needs</h2>
+        <p class="sub">Built like a JetBrains IDE, focused on one thing: writing PlantUML fast.</p>
+        <div class="grid">
+          <div class="card"><div class="ico" aria-hidden="true">⚡</div><h3>Live preview</h3><p>The diagram redraws as you type. Zoom, pan, several diagrams per file, and an optional dark diagram.</p></div>
+          <div class="card"><div class="ico" aria-hidden="true">🧠</div><h3>Smart editor</h3><p>Completion that knows the diagram type and your participants, smart indent, folding, find &amp; replace with regex.</p></div>
+          <div class="card"><div class="ico" aria-hidden="true">🧩</div><h3>Templates</h3><p>A gallery of UML, C4, mindmap, Gantt, JSON and wireframe diagrams, each with a live thumbnail.</p></div>
+          <div class="card"><div class="ico" aria-hidden="true">🩺</div><h3>Problems panel</h3><p>Every error in the file, marked in red in the editor. Click one to jump straight to it.</p></div>
+          <div class="card"><div class="ico" aria-hidden="true">🌿</div><h3>Git built in</h3><p>Change bars, per-block rollback, branches, commit, amend, stash, history. Local only, nothing is pushed.</p></div>
+          <div class="card"><div class="ico" aria-hidden="true">🔒</div><h3>100% offline</h3><p>PlantUML runs inside the app with its pure-Java layout engine. Remote includes are refused.</p></div>
+          <div class="card"><div class="ico" aria-hidden="true">👀</div><h3>Quick Preview</h3><p>Double-click a <code>.puml</code> in Finder for an instant preview that follows the file as it changes.</p></div>
+          <div class="card"><div class="ico" aria-hidden="true">⌨️</div><h3>Keyboard first</h3><p>A command palette (Shift Shift) with every action, your diagrams and recent projects.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tour">
+      <div class="wrap">
+        <h2>A quick tour</h2>
+        <p class="sub">Real screens from the app.</p>
+
+        <div class="feature">
+          <div class="text">
+            <h3>Start from a template</h3>
+            <p>Not sure of the syntax? Pick a diagram from the gallery (⇧⌘N) or the side panel and edit from there.</p>
+            <ul><li>Sequence, class, activity, state, ER, C4…</li><li>Blocks too: notes, alt/else, loops</li></ul>
+          </div>
+          <div class="shot"><img src="assets/screenshots/templates.png" alt="Template gallery with live diagram thumbnails" loading="lazy"></div>
+        </div>
+
+        <div class="feature flip">
+          <div class="text">
+            <h3>See every problem at once</h3>
+            <p>PlantUML stops at the first error. SproutStudio keeps going and lists them all, across every diagram in the file.</p>
+            <ul><li>Red lines in the editor</li><li>Click to jump to the line and the right diagram</li></ul>
+          </div>
+          <div class="shot"><img src="assets/screenshots/problems.png" alt="Problems panel listing syntax errors under the editor" loading="lazy"></div>
+        </div>
+
+        <div class="feature">
+          <div class="text">
+            <h3>Compare diagrams, not just text</h3>
+            <p>See the last committed version of a diagram next to the current one, sharing zoom and pan. A text diff is one tab away.</p>
+          </div>
+          <div class="shot"><img src="assets/screenshots/compare.png" alt="Last committed diagram and working copy side by side" loading="lazy"></div>
+        </div>
+
+        <div class="feature flip">
+          <div class="text">
+            <h3>Git without leaving the editor</h3>
+            <p>Click a change bar in the gutter to see that block's diff and roll it back. Commit, switch branches and stash from the app.</p>
+          </div>
+          <div class="shot"><img src="assets/screenshots/git.png" alt="Inline diff popup on a changed block with a Rollback button" loading="lazy"></div>
+        </div>
+
+        <div class="feature">
+          <div class="text">
+            <h3>Light or dark</h3>
+            <p>Dark by default, light when you want it. The diagram has its own dark mode, and exports always keep the original colours.</p>
+          </div>
+          <div class="shot"><img src="assets/screenshots/light.png" alt="SproutStudio in the light theme" loading="lazy"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="install" class="install">
+      <div class="wrap">
+        <h2>Install in a minute</h2>
+        <p class="sub">Nothing else to install: Java and Git come inside the app.</p>
+        <div class="steps">
+          <div class="step"><strong>Download</strong><p>Get the latest <code>.dmg</code> from <a href="https://github.com/HugoAlvarezAjenjo/SproutStudio/releases/latest">Releases</a>.</p></div>
+          <div class="step"><strong>Drag to Applications</strong><p>Open the <code>.dmg</code> and drag SproutStudio into Applications.</p></div>
+          <div class="step"><strong>First launch</strong><p>The app is unsigned: right-click it and choose Open once. After that it opens normally.</p></div>
+        </div>
+        <p class="note" style="text-align:center">Or from the terminal: <code>xattr -dr com.apple.quarantine /Applications/SproutStudio.app</code></p>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Built with</h2>
+        <p class="sub">Kotlin and Compose for Desktop, packaged with jpackage.</p>
+        <div class="tech">
+          <span class="chip">Kotlin</span><span class="chip">Compose for Desktop</span><span class="chip">JDK 21</span>
+          <span class="chip">PlantUML + Smetana</span><span class="chip">JGit</span><span class="chip">Gradle</span><span class="chip">GitHub Actions</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">SproutStudio · by Hugo Álvarez Ajenjo · <a href="https://github.com/HugoAlvarezAjenjo/SproutStudio">Source on GitHub</a></div>
+  </footer>
+</body>
+</html>
