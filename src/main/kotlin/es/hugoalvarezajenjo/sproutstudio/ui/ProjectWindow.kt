@@ -53,6 +53,11 @@ import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.VerticalSplit
 import es.hugoalvarezajenjo.sproutstudio.model.EditorLayout
+import es.hugoalvarezajenjo.sproutstudio.model.SidebarTool
+import androidx.compose.material.icons.outlined.Commit
+import androidx.compose.material.icons.automirrored.outlined.CallSplit
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -130,7 +135,10 @@ fun ProjectWindow(win: AppWindow.Project) {
     LaunchedEffect(p) { AutoSave.watch({ p.docs.toList() }) }
     LaunchedEffect(p.activeIndex) { AutoSave.flush(p.docs.toList()) }
 
+    DisposableEffect(p) { onDispose { p.git.close() } }
+
     var paletteOpen by remember { mutableStateOf(false) }
+    val gitScope = androidx.compose.runtime.rememberCoroutineScope()
     val doubleShift = remember { DoubleShiftDetector() }
 
     fun save(doc: Document?) {
@@ -164,6 +172,8 @@ fun ProjectWindow(win: AppWindow.Project) {
         DisposableEffect(window) {
             val l = object : WindowAdapter() {
                 override fun windowLostFocus(e: WindowEvent?) = AutoSave.flush(p.docs.toList())
+                // Back from the terminal (a commit, a checkout...): re-read git status.
+                override fun windowGainedFocus(e: WindowEvent?) = p.git.requestRefresh()
             }
             window.addWindowFocusListener(l)
             onDispose { window.removeWindowFocusListener(l) }
@@ -211,11 +221,22 @@ fun ProjectWindow(win: AppWindow.Project) {
                 }
                 CheckboxItem("Show Preview", checked = p.previewVisible, shortcut = shortcut(Key.P)) { p.togglePreview() }
                 Separator()
-                CheckboxItem("Show Project Panel", checked = p.sidebarVisible, shortcut = shortcut(Key.One)) { p.showSidebar(it) }
+                CheckboxItem("Show Project Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.PROJECT, shortcut = shortcut(Key.One)) { p.toggleTool(SidebarTool.PROJECT) }
+                CheckboxItem("Show Commit Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT, shortcut = shortcut(Key.Zero)) { p.toggleTool(SidebarTool.COMMIT) }
                 CheckboxItem("Dark Theme", checked = ThemePrefs.dark) { ThemePrefs.toggle() }
                 CheckboxItem("Dark Diagram Preview", checked = DiagramPrefs.dark) { DiagramPrefs.toggle() }
                 Separator()
                 Item("Refresh Files", shortcut = KeyShortcut(Key.Y, meta = Dialogs.isMac, ctrl = !Dialogs.isMac, alt = true)) { p.refreshTree() }
+            }
+            Menu("Git") {
+                val g = p.git
+                Item("Commit…", shortcut = shortcut(Key.K), enabled = p.root != null) { p.focusCommit() }
+                Item("Compare Diagram with HEAD", enabled = canCompareWithHead(p, p.active?.file)) {
+                    p.active?.file?.let { AppState.compareWithHead(p, it) }
+                }
+                Separator()
+                if (!g.isRepo) Item("Create Git Repository", enabled = p.root != null) { gitScope.launch { g.init() } }
+                Item("Refresh Git Status", enabled = g.isRepo) { g.requestRefresh() }
             }
             Menu("Help") {
                 Item("Find Action…", shortcut = shortcut(Key.P, shift = true)) { paletteOpen = true }
@@ -356,13 +377,18 @@ internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: 
     var status by remember { mutableStateOf<StatusInfo?>(null) }
     val c = ide
 
+    // Git: find the repository of the folder, and re-read status on demand / after each save.
+    LaunchedEffect(p.root) { p.git.open(p.root) }
+    LaunchedEffect(p.git.refreshTick) { if (p.git.refreshTick > 0) { kotlinx.coroutines.delay(150); p.git.refresh() } }
+    LaunchedEffect(p) { snapshotFlow { p.docs.map { it.savedText } }.collect { p.git.requestRefresh() } }
+
     Column(Modifier.fillMaxSize().background(c.panel)) {
         Row(Modifier.weight(1f)) {
             if (p.root != null) {
                 ToolStripe(p)
                 VLine()
                 if (p.sidebarVisible) {
-                    Sidebar(p)
+                    if (p.sidebarTool == SidebarTool.COMMIT) CommitPanel(p) else Sidebar(p)
                     SidebarSplitter(p)
                 }
             }
@@ -407,6 +433,7 @@ private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalv
                 CodeEditor(
                     doc,
                     errorLine = preview.error?.line,
+                    lineChanges = rememberLineChanges(p.git, doc.file, doc.text),
                     modifier = Modifier.weight(if (split) 1f - p.previewFraction else 1f).fillMaxHeight(),
                     onCaretMoved = onCaret,
                 )
@@ -447,11 +474,18 @@ private fun ToolStripe(p: ProjectState) {
         Modifier.width(40.dp).fillMaxHeight().background(ide.panel).padding(top = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        val project = p.sidebarVisible && p.sidebarTool == SidebarTool.PROJECT
+        val commit = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT
         ToolButton(
             Icons.Outlined.Folder,
-            if (p.sidebarVisible) "Hide Project (⌘1)" else "Show Project (⌘1)",
-            selected = p.sidebarVisible,
-        ) { p.showSidebar(!p.sidebarVisible) }
+            if (project) "Hide Project (${shortcutHint("1")})" else "Show Project (${shortcutHint("1")})",
+            selected = project,
+        ) { p.toggleTool(SidebarTool.PROJECT) }
+        ToolButton(
+            Icons.Outlined.Commit,
+            if (commit) "Hide Commit (${shortcutHint("0")})" else "Commit (${shortcutHint("0")})",
+            selected = commit,
+        ) { p.toggleTool(SidebarTool.COMMIT) }
     }
 }
 
@@ -521,10 +555,15 @@ private fun TreeRow(p: ProjectState, node: TreeNode) {
             Spacer(Modifier.width(14.dp))
             Icon(Icons.Outlined.Schema, null, tint = c.syntax.arrow, modifier = Modifier.size(16.dp))
         }
+        val git = p.git
+        val vcs = when {
+            node.isDir -> if (git.dirChanged(node.file)) c.vcsModified else if (git.isIgnored(node.file)) c.vcsIgnored else null
+            else -> c.vcsColor(git.changeOf(node.file)?.type) ?: if (git.isIgnored(node.file)) c.vcsIgnored else null
+        }
         Text(
             node.file.name,
             style = MaterialTheme.typography.bodyMedium,
-            color = c.text,
+            color = vcs ?: c.text,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
@@ -628,6 +667,11 @@ private fun StatusBar(p: ProjectState, line: Int, col: Int, info: StatusInfo?) {
                 doc.saveError != null -> StatusText("Save failed: ${doc.saveError}", c.error, Icons.Outlined.ErrorOutline)
                 doc.dirty -> StatusText(if (doc.file == null) "Not saved yet" else "Modified")
                 else -> StatusText(if (AutoSavePrefs.enabled) "Saved automatically" else "Saved")
+            }
+        }
+        p.git.status.branch?.let { b ->
+            Box(Modifier.clip(RoundedCornerShape(4.dp)).clickable { p.focusCommit() }.padding(horizontal = 4.dp)) {
+                StatusText(b, icon = Icons.AutoMirrored.Outlined.CallSplit)
             }
         }
         StatusText("Offline", icon = Icons.Outlined.Lock)

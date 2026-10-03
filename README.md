@@ -74,6 +74,7 @@ No file there → default icon.
 | ⌘S, ⇧⌘S | save, save as (autosave is on: File → Save Automatically) |
 | ⌘N, ⌘O, ⇧⌘O | new diagram, open folder, open diagram |
 | ⌘P, ⌘1 | show / hide the preview, the project panel |
+| ⌘0, ⌘K | show / hide the Commit panel, jump to the commit message |
 | ⌥⌘1 / ⌥⌘2 / ⌥⌘3 | editor only / editor and preview / preview only (also the three buttons at the right of the tab bar) |
 | ⌥⌘Y | refresh the file tree |
 
@@ -82,6 +83,18 @@ the picture to the clipboard (📋) to paste straight into a doc.
 
 The sun/moon button in the preview toolbar (or View -> Dark Diagram Preview) recolours the diagram
 dark. It is independent of the editor theme, and exports/copies always keep the original colours.
+
+## Git
+
+Built in (JGit, no `git` install needed), local only: nothing is ever pushed.
+
+- Gutter bars against the last commit: green added, blue modified, grey wedge where lines were deleted.
+- Project tree colours: blue modified, green added, red unversioned, olive ignored. Branch in the status bar.
+- Commit panel (⌘0 or the second stripe button): tick the files, write a message, Commit (⌘⏎).
+  Right-click a file for Rollback (restores the last committed version; a new file only goes back to unversioned).
+  No repository yet? The panel offers "Create Git Repository".
+- Git → Compare Diagram with HEAD (or double-click a modified file in the Commit panel):
+  the committed diagram and the current one side by side, sharing zoom and pan.
 
 ## Layout
 

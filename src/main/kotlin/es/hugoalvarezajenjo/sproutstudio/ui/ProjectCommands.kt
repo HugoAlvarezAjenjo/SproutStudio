@@ -15,6 +15,7 @@ import es.hugoalvarezajenjo.sproutstudio.model.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.model.PreviewAction
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
 import es.hugoalvarezajenjo.sproutstudio.model.Recents
+import kotlinx.coroutines.launch
 
 /** Shortcut label in the platform's style: "⇧⌘F" on macOS, "Ctrl+Shift+F" elsewhere. */
 internal fun shortcutHint(key: String, shift: Boolean = false, alt: Boolean = false): String =
@@ -85,6 +86,18 @@ internal fun projectCommands(
             p.showSidebar(!p.sidebarVisible)
         }
         cmd("view.refresh", "Refresh Files", "View", shortcutHint("Y", alt = true)) { p.refreshTree() }
+        cmd("view.commitPanel", if (p.sidebarVisible && p.sidebarTool == es.hugoalvarezajenjo.sproutstudio.model.SidebarTool.COMMIT) "Hide Commit Panel" else "Show Commit Panel", "View", shortcutHint("0")) {
+            p.toggleTool(es.hugoalvarezajenjo.sproutstudio.model.SidebarTool.COMMIT)
+        }
+        // Git
+        cmd("git.commit", "Commit…", "Git", shortcutHint("K"), restoresFocus = false) { p.focusCommit() }
+        cmd("git.compare", "Compare Diagram with HEAD", "Git", enabled = canCompareWithHead(p, d?.file)) {
+            d?.file?.let { AppState.compareWithHead(p, it) }
+        }
+        if (!p.git.isRepo) cmd("git.init", "Create Git Repository", "Git") {
+            p.showTool(es.hugoalvarezajenjo.sproutstudio.model.SidebarTool.COMMIT)
+            kotlinx.coroutines.MainScope().launch { p.git.init() }
+        }
     }
     cmd("view.theme", if (ThemePrefs.dark) "Switch to Light Theme" else "Switch to Dark Theme", "View") { ThemePrefs.toggle() }
     cmd("view.diagramDark", if (DiagramPrefs.dark) "Light Diagram Preview" else "Dark Diagram Preview", "Preview") { DiagramPrefs.toggle() }

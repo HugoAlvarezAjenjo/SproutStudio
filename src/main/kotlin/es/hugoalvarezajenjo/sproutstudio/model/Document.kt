@@ -86,6 +86,19 @@ class Document(file: File?, initialText: String) {
         return true
     }
 
+    /**
+     * Take the file's current content from disk, dropping the editor's copy (after a git
+     * rollback, which is meant to throw the edits away). Folds and caret survive where they fit.
+     */
+    fun replaceFromDisk() {
+        val f = file ?: return
+        val disk = runCatching { f.readText() }.getOrNull() ?: return
+        val sel = value.selection.let { if (it.max > disk.length) androidx.compose.ui.text.TextRange(disk.length) else it }
+        value = TextFieldValue(disk, sel)
+        savedText = disk
+        saveError = null
+    }
+
     companion object {
         fun open(file: File) = Document(file, file.readText())
 

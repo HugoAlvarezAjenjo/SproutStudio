@@ -13,6 +13,8 @@ sealed class AppWindow {
     val id: Long = nextId++
 
     class QuickPreview(val file: File) : AppWindow()
+    /** [file] as committed (HEAD) next to how it is now, from [project]'s repository. */
+    class DiagramDiff(val project: ProjectState, val file: File) : AppWindow()
     class Project(val state: ProjectState, revealed: Boolean = true) : AppWindow() {
         /** False while composed-but-hidden (the boot welcome waiting to see if a file arrives). */
         var revealed by mutableStateOf(revealed)
@@ -87,6 +89,13 @@ object AppState {
         if (from != null) windows.remove(from)
     }
 
+    /** "Compare Diagram with HEAD": one window per file, reused if already open. */
+    fun compareWithHead(project: ProjectState, file: File) {
+        val f = file.absoluteFile
+        if (windows.any { it is AppWindow.DiagramDiff && it.file == f }) return
+        windows += AppWindow.DiagramDiff(project, f)
+    }
+
     fun close(w: AppWindow) {
         windows.remove(w)
     }
@@ -148,6 +157,34 @@ class ProjectState {
         LayoutPrefs.sidebarVisible = show
     }
 
+    /** Which tool window the left panel shows: the file tree or the Commit window. */
+    var sidebarTool by mutableStateOf(SidebarTool.PROJECT)
+        private set
+
+    /** Stripe button / ⌘1 / ⌘0: show [tool], or hide the panel if it's already showing it. */
+    fun toggleTool(tool: SidebarTool) {
+        if (sidebarVisible && sidebarTool == tool) showSidebar(false)
+        else { sidebarTool = tool; showSidebar(true) }
+    }
+
+    /** Show [tool] (never hides), e.g. ⌘K always lands in the Commit window. */
+    fun showTool(tool: SidebarTool) {
+        sidebarTool = tool
+        showSidebar(true)
+    }
+
+    /** Bumped by ⌘K / "Commit…" to put the caret in the commit message. */
+    var commitFocusTick by mutableStateOf(0)
+        private set
+
+    fun focusCommit() {
+        showTool(SidebarTool.COMMIT)
+        commitFocusTick++
+    }
+
+    /** Git status of the project folder; opened by the window when [root] changes. */
+    val git = es.hugoalvarezajenjo.sproutstudio.git.GitState()
+
     fun resizeSidebar(widthDp: Float) {
         sidebarWidth = widthDp.coerceIn(SIDEBAR_MIN, SIDEBAR_MAX)
     }
@@ -207,6 +244,7 @@ class ProjectState {
     }
 
     fun refreshTree() {
+        git.requestRefresh()
         val r = root ?: run { tree = emptyList(); return }
         val out = ArrayList<TreeNode>()
         fun walk(dir: File, depth: Int) {
@@ -268,6 +306,8 @@ object LayoutPrefs {
         get() = runCatching { EditorLayout.valueOf(prefs.get("editorLayout", EditorLayout.SPLIT.name)) }.getOrDefault(EditorLayout.SPLIT)
         set(v) = prefs.put("editorLayout", v.name)
 }
+
+enum class SidebarTool { PROJECT, COMMIT }
 
 /** How the active tab is shown. */
 enum class EditorLayout(val label: String) {

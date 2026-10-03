@@ -30,6 +30,11 @@ dependencies {
     // so no Graphviz / dot binary is needed. Rendering is 100% in-process.
     implementation("net.sourceforge.plantuml:plantuml-mit:1.2026.8")
 
+    // Git, in-process (pure Java, EDL licence): no `git` binary needed on the user's machine.
+    implementation("org.eclipse.jgit:org.eclipse.jgit:7.8.0.202609011348-r")
+    // JGit logs through SLF4J; without a provider it prints a warning on every launch.
+    implementation("org.slf4j:slf4j-nop:2.0.17")
+
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.compose.ui:ui-test-junit4:1.12.1")
 }
@@ -92,8 +97,12 @@ compose.desktop {
             vendor = "Hugo Alvarez Ajenjo"
 
             // java.desktop for AWT/Desktop (open-file events), java.xml for SVG,
-            // java.logging + jdk.unsupported used by PlantUML / Skiko.
-            modules("java.desktop", "java.xml", "java.logging", "java.naming", "jdk.unsupported")
+            // java.logging + jdk.unsupported used by PlantUML / Skiko; java.management,
+            // java.security.jgss and java.sql by JGit (found with jdeps).
+            modules(
+                "java.desktop", "java.xml", "java.logging", "java.naming", "jdk.unsupported",
+                "java.management", "java.security.jgss", "java.sql",
+            )
 
             fileAssociation(
                 mimeType = "text/x-plantuml",

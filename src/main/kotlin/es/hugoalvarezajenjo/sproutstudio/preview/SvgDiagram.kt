@@ -98,10 +98,18 @@ class ZoomState {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun DiagramView(image: DiagramImage, zoom: ZoomState, dimmed: Boolean = false, modifier: Modifier = Modifier) {
+fun DiagramView(
+    image: DiagramImage,
+    zoom: ZoomState,
+    dimmed: Boolean = false,
+    modifier: Modifier = Modifier,
+    /** Size "fit to window" frames; the side-by-side compare fits both pictures alike. */
+    fitWidth: Float = image.width,
+    fitHeight: Float = image.height,
+) {
     // Keep the diagram fitted while the user hasn't taken control of the view.
-    LaunchedEffect(image, zoom.viewport) {
-        if (zoom.autoFit) zoom.fit(image.width, image.height)
+    LaunchedEffect(image, zoom.viewport, fitWidth, fitHeight) {
+        if (zoom.autoFit) zoom.fit(fitWidth, fitHeight)
     }
 
     Canvas(
@@ -144,7 +152,7 @@ fun DiagramView(image: DiagramImage, zoom: ZoomState, dimmed: Boolean = false, m
                     }
                 }
             }
-            .pointerInput(image) { detectTapGestures(onDoubleTap = { zoom.fit(image.width, image.height) }) },
+            .pointerInput(image, fitWidth, fitHeight) { detectTapGestures(onDoubleTap = { zoom.fit(fitWidth, fitHeight) }) },
     ) {
         // The canvas IS the diagram's paper: no frame, no shadow, no wasted margin around a card.
         drawRect(image.background)

@@ -58,6 +58,16 @@ data class IdeColors(
     /** Find: every match / the selected one (IntelliJ search-result colours). */
     val findMatch: Color,
     val findCurrent: Color,
+    /** Git, IntelliJ's VCS file colours: names in the tree / Commit window. */
+    val vcsModified: Color,
+    val vcsAdded: Color,
+    val vcsDeleted: Color,
+    val vcsUnversioned: Color,
+    val vcsIgnored: Color,
+    /** Git change bars in the editor gutter. */
+    val gutterAdded: Color,
+    val gutterModified: Color,
+    val gutterDeleted: Color,
     val syntax: SyntaxColors,
 )
 
@@ -86,6 +96,14 @@ val DarkIde = IdeColors(
     onTooltip = Color(0xFFDFE1E5),
     findMatch = Color(0xFF2E4A36),
     findCurrent = Color(0xFF3F6E4A),
+    vcsModified = Color(0xFF6C9BE0),
+    vcsAdded = Color(0xFF73BD79),
+    vcsDeleted = Color(0xFF868A91),
+    vcsUnversioned = Color(0xFFD5756C),
+    vcsIgnored = Color(0xFFA1A35A),
+    gutterAdded = Color(0xFF4E8A55),
+    gutterModified = Color(0xFF3E6FB0),
+    gutterDeleted = Color(0xFF7A7E85),
     syntax = SyntaxColors(
         keyword = Color(0xFFCF8E6D),
         directive = Color(0xFFC77DBB),
@@ -126,6 +144,14 @@ val LightIde = IdeColors(
     onTooltip = Color(0xFFDFE1E5),
     findMatch = Color(0xFFFCEFB4),
     findCurrent = Color(0xFFF5D76E),
+    vcsModified = Color(0xFF2B5FC7),
+    vcsAdded = Color(0xFF208A3C),
+    vcsDeleted = Color(0xFF6C707E),
+    vcsUnversioned = Color(0xFFB33D2C),
+    vcsIgnored = Color(0xFF8C8C2A),
+    gutterAdded = Color(0xFFA6D4A3),
+    gutterModified = Color(0xFFA9C2F0),
+    gutterDeleted = Color(0xFFB4B8C4),
     syntax = SyntaxColors(
         keyword = Color(0xFF0033B3),
         directive = Color(0xFF871094),

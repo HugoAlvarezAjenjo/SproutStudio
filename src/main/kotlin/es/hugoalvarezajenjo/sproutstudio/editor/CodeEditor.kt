@@ -83,7 +83,9 @@ import es.hugoalvarezajenjo.sproutstudio.ui.editorTextStyle
 import es.hugoalvarezajenjo.sproutstudio.ui.ide
 import kotlinx.coroutines.delay
 
-private const val GUTTER_DP = 52
+private const val GUTTER_DP = 58
+/** Git change bar at the gutter's right edge, next to the text. */
+private const val CHANGE_BAR_DP = 3
 
 /**
  * The text layout lags one frame behind the text: right after a keystroke at the very end of
@@ -96,6 +98,8 @@ fun CodeEditor(
     doc: Document,
     errorLine: Int?,
     modifier: Modifier = Modifier,
+    /** Git markers against HEAD (empty outside a repo or for uncommitted files). */
+    lineChanges: es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index = es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index.Empty,
     onCaretMoved: (line: Int, col: Int) -> Unit = { _, _ -> },
 ) {
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -213,7 +217,7 @@ fun CodeEditor(
         val viewportW = maxWidth
         val viewportH = maxHeight
         Row(Modifier.fillMaxSize().verticalScroll(vScroll)) {
-            Gutter(c, doc, layout, mapping, lineStarts, errorLine, caret, measurer, density, fieldHeightPx)
+            Gutter(c, doc, layout, mapping, lineStarts, errorLine, caret, measurer, density, fieldHeightPx, lineChanges)
             Box(Modifier.weight(1f).horizontalScroll(hScroll)) {
                 BasicTextField(
                     value = value,
@@ -307,13 +311,16 @@ private fun Gutter(
     measurer: androidx.compose.ui.text.TextMeasurer,
     density: androidx.compose.ui.unit.Density,
     fieldHeightPx: Int,
+    lineChanges: es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index,
 ) {
     val topPad = with(density) { 10.dp.toPx() }
     val text = doc.text
     val currentLine = Folding.lineOf(lineStarts, caret.coerceIn(0, text.length)) + 1
     val regions = doc.folds.regions(text)
     val byStart = remember(regions) { regions.groupBy { it.startLine } }
-    val markerW = with(density) { 14.dp.toPx() }
+    val barW = with(density) { CHANGE_BAR_DP.dp.toPx() }
+    // Fold chevron + line numbers sit left of the change bar.
+    val markerW = with(density) { 14.dp.toPx() } + barW + with(density) { 2.dp.toPx() }
 
     /** Real 0-based line shown on visual line [i] (folds merge several real lines into one). */
     fun realLine(l: TextLayoutResult, i: Int): Int {
@@ -345,6 +352,26 @@ private fun Gutter(
                     val lineH = l.getLineBottom(i) - l.getLineTop(i)
                     val real = realLine(l, i)
                     val lineNo = real + 1
+                    // ── git change bar: a folded line shows what is hidden inside it ──
+                    val lastReal = if (i + 1 < lines) realLine(l, i + 1) - 1 else lineStarts.size - 1
+                    val change = if (lastReal > real) lineChanges.inRange(real, lastReal) else lineChanges.at(real)
+                    val barX = size.width - barW
+                    if (change != null) {
+                        val col = when (change) {
+                            es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.ADDED -> c.gutterAdded
+                            es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.MODIFIED -> c.gutterModified
+                            es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.DELETED -> c.gutterDeleted
+                        }
+                        drawRect(col, Offset(barX, y), Size(barW, lineH))
+                    } else if (lineChanges.deletedAbove(real) || (i == lines - 1 && lineChanges.deletedAbove(real + 1))) {
+                        // Deleted lines: a small grey wedge on the boundary where they were.
+                        val atBottom = !lineChanges.deletedAbove(real)
+                        val yy = if (atBottom) y + lineH else y
+                        val wedge = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(barX, yy - barW); lineTo(barX + barW * 1.6f, yy); lineTo(barX, yy + barW); close()
+                        }
+                        drawPath(wedge, c.gutterDeleted)
+                    }
                     val isErr = lineNo == errorLine
                     val isCur = lineNo == currentLine
                     if (isErr) drawCircle(c.error, 4f, Offset(8f, y + lineH / 2))
@@ -358,7 +385,7 @@ private fun Gutter(
                     drawText(label, topLeft = Offset(size.width - markerW - label.size.width - 4f, y + (lineH - label.size.height) / 2))
                     // Fold marker: ▾ open / ▸ folded, IntelliJ-style chevron next to the number.
                     val r = byStart[real]?.maxByOrNull { it.endLine } ?: continue
-                    val cx = size.width - markerW / 2 - 2f
+                    val cx = size.width - barW - 2.dp.toPx() - 7.dp.toPx()
                     val cy = y + lineH / 2
                     val h = 3.5f * density.density
                     val path = androidx.compose.ui.graphics.Path().apply {
