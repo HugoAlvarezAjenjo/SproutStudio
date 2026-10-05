@@ -1,5 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.FoldRegion
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Folding
+
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue

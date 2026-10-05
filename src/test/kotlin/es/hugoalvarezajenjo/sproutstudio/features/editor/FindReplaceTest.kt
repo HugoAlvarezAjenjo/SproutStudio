@@ -15,8 +15,8 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 import es.hugoalvarezajenjo.sproutstudio.features.editor.CodeEditor
-import es.hugoalvarezajenjo.sproutstudio.features.editor.FindQuery
-import es.hugoalvarezajenjo.sproutstudio.features.editor.FindReplace
+import es.hugoalvarezajenjo.sproutstudio.domain.text.FindQuery
+import es.hugoalvarezajenjo.sproutstudio.domain.text.FindReplace
 import es.hugoalvarezajenjo.sproutstudio.features.editor.FindState
 import es.hugoalvarezajenjo.sproutstudio.features.editor.currentMatchIndex
 import es.hugoalvarezajenjo.sproutstudio.features.editor.navigate

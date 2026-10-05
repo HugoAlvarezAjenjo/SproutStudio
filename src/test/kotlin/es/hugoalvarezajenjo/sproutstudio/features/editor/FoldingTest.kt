@@ -12,8 +12,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 import es.hugoalvarezajenjo.sproutstudio.features.editor.CodeEditor
-import es.hugoalvarezajenjo.sproutstudio.features.editor.FoldRegion
-import es.hugoalvarezajenjo.sproutstudio.features.editor.Folding
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.FoldRegion
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Folding
 import es.hugoalvarezajenjo.sproutstudio.features.editor.foldAll
 import es.hugoalvarezajenjo.sproutstudio.features.editor.foldAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.editor.foldRegion
@@ -82,7 +82,7 @@ class FoldingTest {
     @Test
     fun foldedViewKeepsOpenerAndCloserOnOneLine() {
         val r = Folding.regions(seq).first { it.kind == FoldRegion.Kind.BRACES }
-        val (view, map) = Folding.transform(AnnotatedString(seq), listOf(r), SpanStyle())
+        val (view, map) = foldTransform(AnnotatedString(seq), listOf(r), SpanStyle())
         assertTrue("class Pizza { … }\n" in view.text, view.text)
         // Round trip outside the fold, and hidden offsets collapse onto the placeholder.
         assertEquals(r.hideStart, map.transformedToOriginal(map.originalToTransformed(r.hideStart)))

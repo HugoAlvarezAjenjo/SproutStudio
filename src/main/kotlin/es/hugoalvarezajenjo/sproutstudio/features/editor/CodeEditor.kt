@@ -1,5 +1,10 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.domain.text.FindResult
+import es.hugoalvarezajenjo.sproutstudio.domain.text.FindReplace
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.FoldRegion
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Folding
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -140,7 +145,7 @@ fun CodeEditor(
     // ── folding: the field shows the folded view; layout offsets go through [toT] ──
     val activeFolds = Folding.topLevel(doc.folds.active(value.text))
     val folded = remember(highlighted, activeFolds, c) {
-        Folding.transform(highlighted, activeFolds, SpanStyle(color = c.textMuted, background = c.hover))
+        foldTransform(highlighted, activeFolds, SpanStyle(color = c.textMuted, background = c.hover))
     }
     val mapping = folded.second
     fun toT(o: Int) = mapping.originalToTransformed(o.coerceIn(0, value.text.length))

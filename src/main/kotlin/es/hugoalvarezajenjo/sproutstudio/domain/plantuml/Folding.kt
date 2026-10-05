@@ -1,12 +1,4 @@
-package es.hugoalvarezajenjo.sproutstudio.features.editor
-
-import androidx.compose.runtime.getValue
-
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.withStyle
+package es.hugoalvarezajenjo.sproutstudio.domain.plantuml
 
 /**
  * A foldable block. Folding hides [hideStart, hideEnd): from the end of the opening line up to
@@ -139,66 +131,4 @@ object Folding {
         if (i < 0) i = -i - 2
         return i.coerceIn(0, starts.size - 1)
     }
-
-    /** Replace each folded range with the placeholder, keeping the syntax colours elsewhere. */
-    fun transform(text: AnnotatedString, folds: List<FoldRegion>, placeholder: SpanStyle): Pair<AnnotatedString, OffsetMapping> {
-        if (folds.isEmpty()) return text to OffsetMapping.Identity
-        val b = AnnotatedString.Builder()
-        var last = 0
-        for (f in folds) {
-            b.append(text.subSequence(last, f.hideStart))
-            b.withStyle(placeholder) { append(PLACEHOLDER) }
-            last = f.hideEnd
-        }
-        b.append(text.subSequence(last, text.length))
-        return b.toAnnotatedString() to FoldMapping(folds, text.length)
-    }
 }
-
-// ── Document commands (Code → Folding menu, gutter clicks) ──────────────────────────────────
-
-private fun es.hugoalvarezajenjo.sproutstudio.features.document.Document.caretLine(): Int =
-    Folding.lineOf(Folding.lineStarts(text), value.selection.start)
-
-/** Fold [r]; if the caret would end up hidden, park it at the end of the opening line first. */
-fun es.hugoalvarezajenjo.sproutstudio.features.document.Document.foldRegion(r: FoldRegion) {
-    val sel = value.selection
-    if (sel.start in r || sel.end in r || (sel.min <= r.hideStart && sel.max >= r.hideEnd && !sel.collapsed)) {
-        value = value.copy(selection = TextRange(r.hideStart))
-    }
-    folds.fold(r)
-}
-
-/** ⌘-: fold the innermost unfolded block around the caret (press again for the outer one). */
-fun es.hugoalvarezajenjo.sproutstudio.features.document.Document.foldAtCaret(): Boolean {
-    val line = caretLine()
-    val r = folds.regions(text)
-        .filter { line in it.startLine..it.endLine && !folds.isFolded(it) }
-        .maxByOrNull { it.startLine } ?: return false
-    foldRegion(r)
-    return true
-}
-
-/** ⌘+: unfold the folded block on the caret line (or the innermost one around it). */
-fun es.hugoalvarezajenjo.sproutstudio.features.document.Document.unfoldAtCaret(): Boolean {
-    val line = caretLine()
-    val folded = folds.active(text)
-    val r = folded.filter { it.startLine == line }.minByOrNull { it.startLine }
-        ?: folded.filter { line in it.startLine..it.endLine }.maxByOrNull { it.startLine }
-        ?: return false
-    folds.unfold(r)
-    return true
-}
-
-fun es.hugoalvarezajenjo.sproutstudio.features.document.Document.foldAll() {
-    val all = folds.regions(text)
-    if (all.isEmpty()) return
-    // Park the caret on the outermost opener that would hide it.
-    val c = value.selection.start
-    Folding.topLevel(all).firstOrNull { c in it }?.let {
-        value = value.copy(selection = TextRange(it.hideStart))
-    }
-    folds.set(all)
-}
-
-fun es.hugoalvarezajenjo.sproutstudio.features.document.Document.unfoldAll() = folds.clear()

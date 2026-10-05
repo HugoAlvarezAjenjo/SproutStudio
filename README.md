@@ -183,7 +183,7 @@ MVVM in layers; dependencies only point down (`ArchitectureTest` checks it).
 src/main/kotlin/es/hugoalvarezajenjo/sproutstudio/
   app/                    main(), AppGraph (wires everything by hand), WindowManager
   core/                   dispatchers, LatestWinsQueue, ViewModel base, settings store
-  domain/                 plain Kotlin: PlantUML language (completion, templates, edits), line diffs
+  domain/                 plain Kotlin: PlantUML language (completion, templates, edits, folding, syntax), find & replace, line diffs
   services/
     render/               PlantUML in-process behind RenderService: one queued worker, offline guard
     git/                  GitService/GitRepository on JGit, typed GitError

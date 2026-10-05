@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.domain.text.FindQuery
+
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue

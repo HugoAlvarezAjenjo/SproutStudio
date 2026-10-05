@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.domain.text.FindResult
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement

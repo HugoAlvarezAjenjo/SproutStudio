@@ -4,8 +4,7 @@ import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.CompletionEngine
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.CompletionKind
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.DiagramKind
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.PlantUmlLanguage
-import es.hugoalvarezajenjo.sproutstudio.features.editor.Highlighter
-import es.hugoalvarezajenjo.sproutstudio.features.editor.TokenType
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.TokenType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -117,7 +116,7 @@ class LanguageTest {
     @Test
     fun `tokenizer classifies the main categories`() {
         val text = "@startuml\n' a comment\nclass Foo <<entity>> #FF0000\nFoo --> Bar : \"label\"\n@enduml"
-        val tokens = Highlighter.tokenize(text)
+        val tokens = SyntaxScanner.tokenize(text)
         fun typeOf(s: String) = tokens.first { text.substring(it.start, it.end) == s }.type
         assertEquals(TokenType.DIRECTIVE, typeOf("@startuml"))
         assertEquals(TokenType.COMMENT, typeOf("' a comment"))
@@ -131,8 +130,8 @@ class LanguageTest {
     @Test
     fun `finds matching brackets around the caret`() {
         val text = "class A {\n  x()\n}"
-        assertEquals(8 to 16, Highlighter.matchingBracket(text, 9))
-        assertEquals(8 to 16, Highlighter.matchingBracket(text, 17))
-        assertNull(Highlighter.matchingBracket("abc", 1))
+        assertEquals(8 to 16, SyntaxScanner.matchingBracket(text, 9))
+        assertEquals(8 to 16, SyntaxScanner.matchingBracket(text, 17))
+        assertNull(SyntaxScanner.matchingBracket("abc", 1))
     }
 }

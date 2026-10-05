@@ -1,0 +1,140 @@
+' SproutStudio architecture, high level.
+' Three diagrams in one file: use the preview's diagram switcher to move between them.
+'   1. Layers: what lives where and who may depend on whom.
+'   2. Ownership: which objects exist at runtime and who creates them.
+'   3. Flow: what happens when you type in the editor.
+
+@startuml layers
+title SproutStudio · 1. Layers (arrows = "may use")
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam rectangleRoundCorner 8
+skinparam nodesep 30
+skinparam ranksep 45
+
+rectangle "**app**\nMain · AppGraph (wires everything by hand) · WindowManager" as app #EEF5FF
+
+rectangle "**features**  (MVVM: one ViewModel + its Composables per feature)\nworkspace · document · editor · preview · problems · explorer\ngit · templates · palette · quickpreview" as features #F1FBEF
+
+rectangle "**ui/designsystem**\nTheme · Components · icons" as ds #FFF8E8
+rectangle "**platform**\nmacOS: dialogs · Trash · Finder · clipboard" as platform #F5F0FF
+
+rectangle "**services**  (IO + concurrency, never UI state)\nrender · git · files · persistence" as services #FFF1F1
+
+rectangle "**domain**  (pure Kotlin: no Compose, no IO)\nPlantUML language · completion · templates · folding · syntax\nfind & replace · LineDiff" as domain #F4F4F4
+
+rectangle "**core**  (usable by every layer)\nAppDispatchers · LatestWinsQueue · SettingsStore · ViewModel base" as core #EAF7F7
+
+app -down-> features
+features -down-> ds
+features -down-> platform
+features -down-> services
+services -down-> domain
+domain -down[hidden]-> core
+
+note right of features
+  Views draw state and call ViewModel methods.
+  ViewModels change state on Main only and never
+  build user text (views do it: ready for i18n).
+end note
+
+note right of services
+  Behind interfaces (RenderService, GitService...),
+  so ViewModel tests use fakes.
+  Errors are typed: GitError, FileError, RenderError.
+end note
+
+legend bottom
+  features may also use domain directly.
+  ArchitectureTest enforces these arrows and one public class per file.
+endlegend
+@enduml
+
+@startuml ownership
+title SproutStudio · 2. Who owns what at runtime
+skinparam shadowing false
+skinparam rectangleRoundCorner 8
+top to bottom direction
+
+rectangle "AppGraph  (one per app, built in Main)" as graph #EEF5FF {
+  rectangle "Settings\ntheme · layout · diagram\nautosave · recents" as settings
+  rectangle "RenderService\none PlantUML thread" as render
+  rectangle "GitService" as git
+  rectangle "DocumentStore\nonly writer to disk" as store
+  rectangle "ProjectFiles" as files
+  rectangle "Platform" as platform
+  rectangle "WindowManager" as wm
+}
+
+rectangle "Project window  (one per window)" as win #F1FBEF {
+  rectangle "WorkspaceViewModel\nits scope lives as long as the window" as wvm {
+    rectangle "Document\none per tab" as doc
+    rectangle "GitViewModel" as gvm
+  }
+  rectangle "Composables\nProjectWindow · Workspace · panels" as views
+  rectangle "PreviewViewModel\none per visible preview,\nclosed when the preview leaves" as pvm
+}
+
+wm -down-> win : opens / closes
+graph .down.> wvm : WorkspaceDeps
+views -right-> wvm : read state,\ncall methods
+views -down-> pvm : creates
+pvm ..> doc : reads text
+pvm --> render
+gvm --> git
+wvm --> files
+wvm --> store
+
+note bottom of win
+  Closing the window cancels the WorkspaceViewModel scope,
+  so every job of that window stops. Closing a panel does not:
+  a commit or a save keeps going.
+end note
+@enduml
+
+@startuml flow
+title SproutStudio · 3. What happens when you type
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+autonumber
+
+actor User
+participant "CodeEditor\n(View)" as editor
+participant "Document" as doc
+participant "PreviewViewModel" as pvm
+participant "RenderService" as render
+participant "LatestWinsQueue\n(one PlantUML thread)" as queue
+participant "AutoSaver" as autosave
+participant "DocumentStore" as store
+
+User -> editor : types
+editor -> doc : new text
+
+par preview
+  doc -> pvm : text changed
+  pvm -> pvm : wait 300 ms (debounce);\na new keystroke restarts it
+  pvm -> render : problems(text)
+  render -> queue : submit(URGENT, key = problems of this doc)
+  queue --> pvm : List<Problem>
+  pvm --> editor : red lines + Problems panel
+  pvm -> render : preview(text)
+  render -> queue : submit(NORMAL, key = preview of this doc)
+  note right of queue
+    A newer request with the same key
+    replaces the one still waiting, so
+    stale renders never pile up.
+    Gallery thumbnails run as BACKGROUND
+    and never delay the preview.
+  end note
+  queue --> pvm : RenderResult (PNG)
+  pvm --> editor : preview image
+else autosave
+  doc -> autosave : dirty
+  autosave -> store : write(file, text)
+  note right of store
+    Runs on IO, one lock per file.
+    Save, rollback, rename and move
+    go through here too.
+  end note
+end
+@enduml

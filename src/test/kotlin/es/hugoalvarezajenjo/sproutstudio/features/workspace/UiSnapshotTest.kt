@@ -93,7 +93,7 @@ class UiSnapshotTest {
         val p = pizzaProject()
         val d = p.active!!
         d.find.open(replace = true, seed = null)
-        d.find.query = es.hugoalvarezajenjo.sproutstudio.features.editor.FindQuery("pizza")
+        d.find.query = es.hugoalvarezajenjo.sproutstudio.domain.text.FindQuery("pizza")
         d.find.replacement = "pie"
         shoot("workspace-find", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
     }
@@ -118,8 +118,8 @@ class UiSnapshotTest {
     fun workspaceFolded() {
         val p = pizzaProject()
         val d = p.active!!
-        val rs = es.hugoalvarezajenjo.sproutstudio.features.editor.Folding.regions(d.text)
-        d.folds.set(listOf(rs.first(), rs.first { it.kind == es.hugoalvarezajenjo.sproutstudio.features.editor.FoldRegion.Kind.BRACES }))
+        val rs = es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Folding.regions(d.text)
+        d.folds.set(listOf(rs.first(), rs.first { it.kind == es.hugoalvarezajenjo.sproutstudio.domain.plantuml.FoldRegion.Kind.BRACES }))
         shoot("workspace-folded", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
     }
 

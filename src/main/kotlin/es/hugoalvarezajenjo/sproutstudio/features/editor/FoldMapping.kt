@@ -1,6 +1,11 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.withStyle
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.FoldRegion
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Folding
 
 /**
  * Maps between the real text and the folded view. A click INSIDE a placeholder maps into the
@@ -41,4 +46,18 @@ class FoldMapping(private val folds: List<FoldRegion>, private val originalLengt
         }
         return (offset - shift).coerceIn(0, originalLength)
     }
+}
+
+/** Replace each folded range with the placeholder, keeping the syntax colours elsewhere. */
+fun foldTransform(text: AnnotatedString, folds: List<FoldRegion>, placeholder: SpanStyle): Pair<AnnotatedString, OffsetMapping> {
+    if (folds.isEmpty()) return text to OffsetMapping.Identity
+    val b = AnnotatedString.Builder()
+    var last = 0
+    for (f in folds) {
+        b.append(text.subSequence(last, f.hideStart))
+        b.withStyle(placeholder) { append(Folding.PLACEHOLDER) }
+        last = f.hideEnd
+    }
+    b.append(text.subSequence(last, text.length))
+    return b.toAnnotatedString() to FoldMapping(folds, text.length)
 }
