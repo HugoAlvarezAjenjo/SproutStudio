@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
+import es.hugoalvarezajenjo.sproutstudio.services.render.PlantUmlEngine
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.skia.Bitmap
 import java.io.File
@@ -28,7 +28,7 @@ class DiagramClipTest {
     @Test
     fun zoomedDiagramDoesNotPaintOutsideItsCanvas() {
         val file = File("samples/pizza.puml")
-        val r = runBlocking { PlantUmlRenderer.renderPreview(file.readText(), file.parentFile, 0, 3.0) }
+        val r = runBlocking { PlantUmlEngine.renderPreview(file.readText(), file.parentFile, 0, 3.0) }
         val img = DiagramImage.fromPng(r.bytes!!, r.scale)!!
         val neighbour = Color(0xFFFF00FF) // magenta "toolbar" above and "editor" left of the canvas
 

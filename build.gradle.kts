@@ -22,6 +22,8 @@ kotlin {
 
 dependencies {
     implementation(compose.desktop.currentOs)
+    // Dispatchers.Main = the Swing UI thread, for ViewModel scopes (same version Compose uses).
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.9.0")
     implementation("org.jetbrains.compose.material3:material3:1.9.0")
     // Vector icons (compiled into the app, no runtime download).
     implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")

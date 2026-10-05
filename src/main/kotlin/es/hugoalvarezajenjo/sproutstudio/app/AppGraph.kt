@@ -9,6 +9,8 @@ import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.RecentProjects
 import es.hugoalvarezajenjo.sproutstudio.services.persistence.AutoSaveSettings
+import es.hugoalvarezajenjo.sproutstudio.services.render.PlantUmlRenderService
+import es.hugoalvarezajenjo.sproutstudio.services.render.RenderService
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ThemeSettings
 
 /**
@@ -25,6 +27,8 @@ class AppGraph(
     val autoSave = AutoSaveSettings(store)
     val recents = RecentProjects(store)
     val paletteHistory = PaletteHistory(store)
+
+    val render: RenderService = PlantUmlRenderService()
 
     companion object {
         /**

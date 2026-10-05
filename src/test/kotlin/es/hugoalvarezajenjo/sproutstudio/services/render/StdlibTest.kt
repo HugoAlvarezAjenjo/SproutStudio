@@ -1,4 +1,4 @@
-package es.hugoalvarezajenjo.sproutstudio.render
+package es.hugoalvarezajenjo.sproutstudio.services.render
 
 import kotlin.test.Test
 import kotlin.test.assertNull
@@ -10,7 +10,7 @@ class StdlibTest {
     init { System.setProperty("java.awt.headless", "true") }
 
     private fun renders(src: String, vararg mustContain: String) {
-        val r = PlantUmlRenderer.renderBlocking(src, null)
+        val r = PlantUmlEngine.renderBlocking(src, null)
         assertNull(r.error, "unexpected error: ${r.error}")
         // PlantUML's SVG puts each word in its own <text>, so check single words.
         val svg = String(r.svg!!)
@@ -65,7 +65,7 @@ class StdlibTest {
                 e.path.startsWith("azure/") && !e.path.endsWith("Common") -> "!include <azure/AzureCommon>\n"
                 else -> ""
             }
-            val r = PlantUmlRenderer.renderBlocking("@startuml\n$common!include <${e.path}>\nrectangle x\n@enduml\n", null)
+            val r = PlantUmlEngine.renderBlocking("@startuml\n$common!include <${e.path}>\nrectangle x\n@enduml\n", null)
             r.error?.let { "${e.path}: ${it.message}" }
         }
         assertTrue(bad.isEmpty(), "broken include paths:\n" + bad.joinToString("\n"))
@@ -78,7 +78,7 @@ class StdlibTest {
 
     @Test fun `every whole template renders without errors`() {
         val bad = es.hugoalvarezajenjo.sproutstudio.lang.Templates.wholeDiagrams.mapNotNull { t ->
-            PlantUmlRenderer.renderBlocking(t.previewSource, null).error?.let { "${t.id}: line ${it.line}: ${it.message}" }
+            PlantUmlEngine.renderBlocking(t.previewSource, null).error?.let { "${t.id}: line ${it.line}: ${it.message}" }
         }
         assertTrue(bad.isEmpty(), "broken templates:\n" + bad.joinToString("\n"))
     }

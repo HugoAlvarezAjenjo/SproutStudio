@@ -1,4 +1,4 @@
-package es.hugoalvarezajenjo.sproutstudio.render
+package es.hugoalvarezajenjo.sproutstudio.services.render
 
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.skia.Image
@@ -24,9 +24,9 @@ class LargeDiagramTest {
 
     @Test
     fun previewOfAWideDiagramIsNotCropped() = runBlocking {
-        val (w, _) = svgSize(String(PlantUmlRenderer.render(wide, null).bytes!!))
+        val (w, _) = svgSize(String(PlantUmlEngine.renderBlocking(wide, null).bytes!!))
         assertTrue(w * 3 > 4096, "test diagram must exceed the default limit at 3x (w=$w)")
-        val r = PlantUmlRenderer.renderPreview(wide, null, 0, 3.0)
+        val r = PlantUmlEngine.renderPreview(wide, null, 0, 3.0)
         val img = Image.makeFromEncoded(r.bytes!!)
         assertEquals(w * 3.0, img.width.toDouble(), w * 0.05 * 3, "preview PNG width ${img.width} vs ${w * 3}")
     }
@@ -39,8 +39,8 @@ class LargeDiagramTest {
             for (i in 1..69) appendLine("S$i -> S${i + 1}: call $i")
             appendLine("@enduml")
         }
-        val (w, h) = svgSize(String(PlantUmlRenderer.render(huge, null).bytes!!))
-        val r = PlantUmlRenderer.renderPreview(huge, null, 0, 3.0)
+        val (w, h) = svgSize(String(PlantUmlEngine.renderBlocking(huge, null).bytes!!))
+        val r = PlantUmlEngine.renderPreview(huge, null, 0, 3.0)
         val img = Image.makeFromEncoded(r.bytes!!)
         assertTrue(r.scale < 3.0 && img.width <= 16384, "scale=${r.scale} width=${img.width}")
         // Whole diagram: same aspect ratio as the natural size, and the size matches the scale.
@@ -50,8 +50,8 @@ class LargeDiagramTest {
 
     @Test
     fun exportedPngOfAWideDiagramIsNotCropped() = runBlocking {
-        val (w, _) = svgSize(String(PlantUmlRenderer.render(wide, null).bytes!!))
-        val png = PlantUmlRenderer.renderPng(wide, null, 0)
+        val (w, _) = svgSize(String(PlantUmlEngine.renderBlocking(wide, null).bytes!!))
+        val png = PlantUmlEngine.renderPng(wide, null, 0)
         val img = Image.makeFromEncoded(png)
         assertEquals(w.toDouble(), img.width.toDouble(), w * 0.05)
     }

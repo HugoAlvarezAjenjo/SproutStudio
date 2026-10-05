@@ -10,7 +10,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
+import es.hugoalvarezajenjo.sproutstudio.services.render.PlantUmlEngine
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import kotlin.test.Test
@@ -23,7 +23,7 @@ class DiagramMouseTest {
     init { System.setProperty("java.awt.headless", "true") }
 
     private val img = File("samples/pizza.puml").let { f ->
-        val r = runBlocking { PlantUmlRenderer.renderPreview(f.readText(), f.parentFile, 0, 3.0) }
+        val r = runBlocking { PlantUmlEngine.renderPreview(f.readText(), f.parentFile, 0, 3.0) }
         DiagramImage.fromPng(r.bytes!!, r.scale)!!
     }
 

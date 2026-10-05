@@ -1,4 +1,4 @@
-package es.hugoalvarezajenjo.sproutstudio.render
+package es.hugoalvarezajenjo.sproutstudio.services.render
 
 import es.hugoalvarezajenjo.sproutstudio.preview.DiagramImage
 import kotlinx.coroutines.runBlocking
@@ -10,7 +10,7 @@ class DarkDiagramTest {
     private val src = "@startuml\nAlice -> Bob: hi\n@enduml\n"
 
     private fun luminance(dark: Boolean): Float = runBlocking {
-        val r = PlantUmlRenderer.renderPreview(src, null, 0, 1.0, darkDiagram = dark)
+        val r = PlantUmlEngine.renderPreview(src, null, 0, 1.0, darkDiagram = dark)
         val bg = DiagramImage.fromPng(r.bytes!!, r.scale)!!.background
         0.2126f * bg.red + 0.7152f * bg.green + 0.0722f * bg.blue
     }
@@ -23,7 +23,7 @@ class DarkDiagramTest {
 
     @Test
     fun pngExportStaysLightWhatever() = runBlocking {
-        val png = PlantUmlRenderer.renderPng(src, null, 0)
+        val png = PlantUmlEngine.renderPng(src, null, 0)
         val bg = DiagramImage.fromPng(png, 1.0)!!.background
         assertTrue(bg.red > 0.9f && bg.green > 0.9f && bg.blue > 0.9f, "export must keep original colours")
     }

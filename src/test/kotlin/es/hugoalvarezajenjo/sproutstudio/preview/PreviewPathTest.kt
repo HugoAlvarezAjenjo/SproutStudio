@@ -1,6 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.preview
 
-import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
+import es.hugoalvarezajenjo.sproutstudio.services.render.PlantUmlEngine
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.skia.Bitmap
 import java.io.File
@@ -19,7 +19,7 @@ class PreviewPathTest {
     private val out = File("build/preview-snapshots").apply { mkdirs() }
 
     private fun snapshot(file: File, index: Int) = runBlocking {
-        val r = PlantUmlRenderer.renderPreview(file.readText(), file.parentFile, index, 3.0)
+        val r = PlantUmlEngine.renderPreview(file.readText(), file.parentFile, index, 3.0)
         assertNull(r.error, "${file.name}[$index]: ${r.error}")
         val bytes = r.bytes!!
         val img = assertNotNull(DiagramImage.fromPng(bytes, r.scale), "PNG did not decode")
@@ -42,8 +42,8 @@ class PreviewPathTest {
     @Test
     fun `preview png is really rendered at 3x pixels`() = runBlocking {
         val src = "@startuml\nAlice -> Bob: hi\n@enduml\n"
-        val one = PlantUmlRenderer.renderPreview(src, null, 0, 1.0)
-        val three = PlantUmlRenderer.renderPreview(src, null, 0, 3.0)
+        val one = PlantUmlEngine.renderPreview(src, null, 0, 1.0)
+        val three = PlantUmlEngine.renderPreview(src, null, 0, 3.0)
         val w1 = org.jetbrains.skia.Image.makeFromEncoded(one.bytes!!).width
         val w3 = org.jetbrains.skia.Image.makeFromEncoded(three.bytes!!).width
         assertEquals(w1 * 3f, w3.toFloat(), w1 * 0.1f)

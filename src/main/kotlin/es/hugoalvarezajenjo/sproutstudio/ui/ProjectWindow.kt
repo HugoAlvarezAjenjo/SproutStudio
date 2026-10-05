@@ -125,7 +125,7 @@ import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
 import es.hugoalvarezajenjo.sproutstudio.model.Recents
 import es.hugoalvarezajenjo.sproutstudio.model.TreeNode
 import es.hugoalvarezajenjo.sproutstudio.preview.PreviewPane
-import es.hugoalvarezajenjo.sproutstudio.preview.rememberLivePreview
+import es.hugoalvarezajenjo.sproutstudio.preview.rememberPreviewViewModel
 import java.awt.Cursor
 
 private fun shortcut(key: Key, shift: Boolean = false) =
@@ -462,7 +462,7 @@ internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: 
                     }
                 } else {
                     key(doc) {
-                        val preview = rememberLivePreview(doc.text, doc.dir)
+                        val preview = rememberPreviewViewModel(doc.text, doc.dir)
                         Box(Modifier.weight(1f).fillMaxWidth()) {
                             EditorAndPreview(p, doc, preview, onCaret = { l, col -> caretLine = l; caretCol = col })
                         }
@@ -475,7 +475,7 @@ internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: 
                             onGoTo = { target ->
                                 p.revealEditor()
                                 if (target.diagramIndex != preview.index && target.diagramIndex < preview.diagramCount) {
-                                    preview.index = target.diagramIndex
+                                    preview.showDiagram(target.diagramIndex)
                                 }
                                 target.line?.let { doc.jumpRequest = it }
                             },
@@ -502,7 +502,7 @@ internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: 
 private data class StatusInfo(val kind: String, val diagrams: Int, val errorLine: Int?, val problems: Int)
 
 @Composable
-private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalvarezajenjo.sproutstudio.preview.PreviewState, onCaret: (Int, Int) -> Unit) {
+private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewViewModel, onCaret: (Int, Int) -> Unit) {
     val c = ide
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val total = maxWidth
@@ -530,7 +530,6 @@ private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalv
             if (p.previewVisible) {
                 PreviewPane(
                     preview = preview,
-                    text = doc.text,
                     baseDir = doc.dir,
                     baseName = doc.baseName,
                     modifier = Modifier.weight(if (split) p.previewFraction else 1f).fillMaxHeight(),

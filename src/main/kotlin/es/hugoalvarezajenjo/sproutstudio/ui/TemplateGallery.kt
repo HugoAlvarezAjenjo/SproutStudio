@@ -60,7 +60,6 @@ import androidx.compose.ui.window.PopupProperties
 import es.hugoalvarezajenjo.sproutstudio.lang.Template
 import es.hugoalvarezajenjo.sproutstudio.lang.Templates
 import es.hugoalvarezajenjo.sproutstudio.preview.DiagramImage
-import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -182,14 +181,17 @@ private fun TemplateCard(template: Template, onPick: () -> Unit) {
 
 /** Renders a template's thumbnail in the background; null until it's ready. */
 @Composable
-private fun rememberThumbnail(template: Template) = produceState<DiagramImage?>(null, template.id, DiagramPrefs.dark) {
-    value = withContext(Dispatchers.Default) {
-        runCatching {
-            val bytes = PlantUmlRenderer.renderPreview(template.previewSource, null, 0, 1.0, DiagramPrefs.dark).bytes
-            bytes?.let { DiagramImage.fromPng(it, 1.0) }
+private fun rememberThumbnail(template: Template): DiagramImage? {
+    val dark = DiagramPrefs.dark
+    return produceState<DiagramImage?>(null, template.id, dark) {
+        // The render service draws thumbnails only when the editor's own renders are done, and
+        // draws each template once.
+        val bytes = runCatching {
+            es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.render.thumbnail(template.previewSource, dark)
         }.getOrNull()
-    }
-}.value
+        value = bytes?.let { withContext(Dispatchers.Default) { DiagramImage.fromPng(it, 1.0) } }
+    }.value
+}
 
 /** Draws a thumbnail scaled to fit its box, or a "…" placeholder while it renders. */
 @Composable

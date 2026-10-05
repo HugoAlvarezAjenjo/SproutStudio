@@ -1,4 +1,4 @@
-package es.hugoalvarezajenjo.sproutstudio.render
+package es.hugoalvarezajenjo.sproutstudio.services.render
 
 import org.openpdf.text.pdf.BaseFont
 

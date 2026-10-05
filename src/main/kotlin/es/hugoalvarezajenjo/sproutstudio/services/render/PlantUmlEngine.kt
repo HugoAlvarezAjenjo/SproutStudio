@@ -1,69 +1,24 @@
-package es.hugoalvarezajenjo.sproutstudio.render
+package es.hugoalvarezajenjo.sproutstudio.services.render
 
-import kotlinx.coroutines.ExecutorCoroutineDispatcher
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.withContext
+import net.sourceforge.plantuml.ErrorUml
 import net.sourceforge.plantuml.FileFormat
 import net.sourceforge.plantuml.FileFormatOption
 import net.sourceforge.plantuml.SourceStringReader
 import net.sourceforge.plantuml.error.PSystemError
-import net.sourceforge.plantuml.ErrorUml
 import net.sourceforge.plantuml.klimt.color.ColorMapper
 import net.sourceforge.plantuml.preproc.Defines
 import net.sourceforge.plantuml.security.SFile
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.util.concurrent.Executors
-
-/** What the user can export to. PDF is vector, drawn by PlantUML's own OpenPDF backend. */
-enum class ExportFormat(val label: String, val extension: String, internal val plantUml: FileFormat) {
-    SVG("SVG (vector)", "svg", FileFormat.SVG),
-    PNG("PNG (image)", "png", FileFormat.PNG),
-    PDF("PDF (vector)", "pdf", FileFormat.PDF),
-}
-
-data class RenderError(
-    /** 1-based line in the editor text, or null when PlantUML could not pin it down. */
-    val line: Int?,
-    val message: String,
-)
-
-data class RenderResult(
-    /** Image bytes (SVG or PNG, per request); present even for errors (PlantUML draws an error image). */
-    val bytes: ByteArray?,
-    /** Number of @startxxx/@endxxx blocks found in the file (0 when none). */
-    val diagramCount: Int,
-    /** Index actually rendered (clamped into range). */
-    val index: Int,
-    val error: RenderError?,
-    /** Pixel scale the image was rendered at (PNG only; 1.0 for SVG). */
-    val scale: Double = 1.0,
-) {
-    val svg: ByteArray? get() = bytes
-}
-
-/** One entry for the Problems panel: a single PlantUML error, placed in the file. */
-data class Problem(
-    /** 1-based line in the editor text, or null when PlantUML could not pin it down. */
-    val line: Int?,
-    val message: String,
-    /** 0-based index of the diagram block this error belongs to. */
-    val diagramIndex: Int,
-)
 
 /**
- * Renders PlantUML text fully in-process.
+ * PlantUML itself, fully in-process. Every function BLOCKS and none is thread-safe: PlantUML
+ * keeps global state. Only [PlantUmlRenderService]'s single worker may call it (and tests).
  *
  * - Layout engine is forced to Smetana (pure Java) so no Graphviz/dot binary is ever needed.
  * - The security profile is ALLOWLIST with an empty URL allowlist: no network access.
- * - All PlantUML calls go through one dedicated thread; PlantUML keeps global state and is
- *   not safe to call concurrently.
  */
-object PlantUmlRenderer {
-
-    private val thread: ExecutorCoroutineDispatcher =
-        Executors.newSingleThreadExecutor { r -> Thread(r, "plantuml-render").apply { isDaemon = true } }
-            .asCoroutineDispatcher()
+object PlantUmlEngine {
 
     /** Prepended to every diagram as configuration; does not shift user line numbers. */
     private val config = listOf("!pragma layout smetana")
@@ -79,35 +34,24 @@ object PlantUmlRenderer {
         System.setProperty("java.awt.headless", System.getProperty("java.awt.headless") ?: "false")
     }
 
-    suspend fun render(source: String, baseDir: File?, index: Int = 0): RenderResult =
-        withContext(thread) { renderBlocking(source, baseDir, index) }
-
     /**
      * Preview render: a PNG drawn by PlantUML itself at [scale]x, so text uses real fonts.
      * (Skia's SVG renderer has no font manager on desktop and would drop all text.)
+     * [darkDiagram] recolours with PlantUML's own dark mode (as `-darkmode`); exports stay original.
      */
-    suspend fun renderPreview(
-        source: String,
-        baseDir: File?,
-        index: Int,
-        scale: Double,
-        /** Recolour with PlantUML's own dark mode (as `-darkmode`). Preview only; exports stay original. */
-        darkDiagram: Boolean = false,
-    ): RenderResult =
-        withContext(thread) {
-            val mapper = if (darkDiagram) ColorMapper.DARK_MODE else ColorMapper.IDENTITY
-            limitSize(PREVIEW_LIMIT)
-            val r = renderBlocking(source, baseDir, index, FileFormat.PNG, scale, mapper)
-            val size = r.bytes?.let { pngSize(it) } ?: return@withContext r
-            if (size.first < PREVIEW_LIMIT && size.second < PREVIEW_LIMIT) return@withContext r
-            // Too big for [scale]x: measure the natural size and render at the largest scale that fits.
-            limitSize(EXPORT_LIMIT)
-            val natural = renderBlocking(source, baseDir, index, FileFormat.PNG, 1.0).bytes?.let { pngSize(it) }
-                ?: return@withContext r
-            val fit = (PREVIEW_LIMIT - 64.0) / maxOf(natural.first, natural.second)
-            limitSize(PREVIEW_LIMIT)
-            renderBlocking(source, baseDir, index, FileFormat.PNG, minOf(scale, fit), mapper)
-        }
+    fun renderPreview(source: String, baseDir: File?, index: Int, scale: Double, darkDiagram: Boolean = false): RenderResult {
+        val mapper = if (darkDiagram) ColorMapper.DARK_MODE else ColorMapper.IDENTITY
+        limitSize(PREVIEW_LIMIT)
+        val r = renderBlocking(source, baseDir, index, FileFormat.PNG, scale, mapper)
+        val size = r.bytes?.let { pngSize(it) } ?: return r
+        if (size.first < PREVIEW_LIMIT && size.second < PREVIEW_LIMIT) return r
+        // Too big for [scale]x: measure the natural size and render at the largest scale that fits.
+        limitSize(EXPORT_LIMIT)
+        val natural = renderBlocking(source, baseDir, index, FileFormat.PNG, 1.0).bytes?.let { pngSize(it) } ?: return r
+        val fit = (PREVIEW_LIMIT - 64.0) / maxOf(natural.first, natural.second)
+        limitSize(PREVIEW_LIMIT)
+        return renderBlocking(source, baseDir, index, FileFormat.PNG, minOf(scale, fit), mapper)
+    }
 
     /**
      * PlantUML silently CROPS images at PLANTUML_LIMIT_SIZE (4096 px by default), which cut
@@ -127,26 +71,23 @@ object PlantUmlRenderer {
         return int(16) to int(20)
     }
 
-    suspend fun export(source: String, baseDir: File?, index: Int, format: ExportFormat, target: File) =
-        withContext(thread) {
-            OfflineGuard.check(source)?.let { throw IllegalStateException(it.message) }
-            limitSize(EXPORT_LIMIT)
-            val reader = reader(source, baseDir)
-            if (format == ExportFormat.PDF) PdfFonts.install()
-            target.outputStream().use { out ->
-                reader.outputImage(out, index, FileFormatOption(format.plantUml))
-            }
-        }
+    /** Writes diagram [index] to [target]. Throws [OfflineIncludeException] for remote includes. */
+    fun export(source: String, baseDir: File?, index: Int, format: ExportFormat, target: File) {
+        OfflineGuard.check(source)?.let { throw OfflineIncludeException(it.line) }
+        limitSize(EXPORT_LIMIT)
+        val reader = reader(source, baseDir)
+        if (format == ExportFormat.PDF) PdfFonts.install()
+        target.outputStream().use { out -> reader.outputImage(out, index, FileFormatOption(format.plantUml)) }
+    }
 
-    /** PNG bytes of one diagram, e.g. for copying to the clipboard. */
-    suspend fun renderPng(source: String, baseDir: File?, index: Int): ByteArray =
-        withContext(thread) {
-            OfflineGuard.check(source)?.let { throw IllegalStateException(it.message) }
-            limitSize(EXPORT_LIMIT)
-            val out = ByteArrayOutputStream()
-            reader(source, baseDir).outputImage(out, index, FileFormatOption(FileFormat.PNG))
-            out.toByteArray()
-        }
+    /** PNG bytes of one diagram at its natural size, e.g. for copying to the clipboard. */
+    fun renderPng(source: String, baseDir: File?, index: Int): ByteArray {
+        OfflineGuard.check(source)?.let { throw OfflineIncludeException(it.line) }
+        limitSize(EXPORT_LIMIT)
+        val out = ByteArrayOutputStream()
+        reader(source, baseDir).outputImage(out, index, FileFormatOption(FileFormat.PNG))
+        return out.toByteArray()
+    }
 
     fun renderBlocking(
         source: String,
@@ -158,22 +99,18 @@ object PlantUmlRenderer {
     ): RenderResult {
         OfflineGuard.check(source)?.let { v ->
             return RenderResult(bytes = null, diagramCount = countBlocks(source), index = 0,
-                error = RenderError(v.line, v.message))
+                error = RenderError(v.line, RenderError.Kind.OFFLINE_INCLUDE))
         }
         if (source.isBlank()) return RenderResult(null, 0, 0, null)
 
         val reader = reader(source, baseDir)
         val blocks = reader.blocks
-        if (blocks.isEmpty()) {
-            return RenderResult(null, 0, 0,
-                RenderError(null, "No diagram found yet. Start with @startuml and end with @enduml."))
-        }
+        if (blocks.isEmpty()) return RenderResult(null, 0, 0, RenderError(null, RenderError.Kind.NO_DIAGRAM))
         val i = index.coerceIn(0, blocks.size - 1)
 
         val error = (blocks[i].diagram as? PSystemError)?.let { err ->
-            val first = err.firstError
             val pos = runCatching { err.lineLocation?.position }.getOrNull()
-            RenderError(line = pos?.let { it + 1 }, message = first?.error ?: "Syntax error")
+            RenderError(line = pos?.let { it + 1 }, kind = RenderError.Kind.PLANTUML, message = err.firstError?.error)
         }
 
         val out = ByteArrayOutputStream()
@@ -182,23 +119,18 @@ object PlantUmlRenderer {
         runCatching { scaled.outputImage(out, i, option) }
             .onFailure { t ->
                 return RenderResult(null, blocks.size, i,
-                    error ?: RenderError(null, t.message ?: t.javaClass.simpleName), scale)
+                    error ?: RenderError(null, RenderError.Kind.FAILED, t.message ?: t.javaClass.simpleName), scale)
             }
         return RenderResult(out.toByteArray(), blocks.size, i, error, scale)
     }
 
     /**
      * Every error PlantUML can find in [source], across all diagram blocks and all errors within
-     * each block — the data behind the Problems panel. Rendering only touches one block at a time,
-     * so this parses the whole file once. Returns an empty list when the file is clean.
-     *
-     * Runs on the PlantUML thread like [render]; PlantUML keeps global state and isn't concurrency-safe.
+     * each block -- the data behind the Problems panel. Rendering only touches one block at a time,
+     * so this parses the whole file. Returns an empty list when the file is clean.
      */
-    suspend fun collectProblems(source: String, baseDir: File?): List<Problem> =
-        withContext(thread) { collectProblemsBlocking(source, baseDir) }
-
     fun collectProblemsBlocking(source: String, baseDir: File?): List<Problem> {
-        OfflineGuard.check(source)?.let { return listOf(Problem(it.line, it.message, 0)) }
+        OfflineGuard.check(source)?.let { return listOf(Problem(it.line, "", 0, RenderError.Kind.OFFLINE_INCLUDE)) }
         if (source.isBlank()) return emptyList()
 
         val reader = reader(source, baseDir)
@@ -240,10 +172,10 @@ object PlantUmlRenderer {
         // the one it shows on its own bitmap. Fall back to firstError if the collection is empty.
         val errs: Collection<ErrorUml> = runCatching { err.errorsUml }.getOrNull()?.takeIf { it.isNotEmpty() }
             ?: listOfNotNull(err.firstError)
-        if (errs.isEmpty()) return listOf(Problem(lineOf(err.lineLocation?.position), "Syntax error", block))
+        if (errs.isEmpty()) return listOf(Problem(lineOf(err.lineLocation?.position), "", block))
         return errs.map { e ->
             val pos = runCatching { e.lineLocation?.position ?: e.position }.getOrNull()
-            Problem(lineOf(pos), e.error ?: "Syntax error", block)
+            Problem(lineOf(pos), e.error ?: "", block)
         }
     }
 

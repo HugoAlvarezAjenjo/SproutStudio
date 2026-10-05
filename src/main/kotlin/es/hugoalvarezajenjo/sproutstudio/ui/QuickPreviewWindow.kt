@@ -24,7 +24,7 @@ import androidx.compose.ui.window.rememberWindowState
 import es.hugoalvarezajenjo.sproutstudio.model.AppState
 import es.hugoalvarezajenjo.sproutstudio.model.AppWindow
 import es.hugoalvarezajenjo.sproutstudio.preview.PreviewPane
-import es.hugoalvarezajenjo.sproutstudio.preview.rememberLivePreview
+import es.hugoalvarezajenjo.sproutstudio.preview.rememberPreviewViewModel
 import kotlinx.coroutines.delay
 
 /**
@@ -76,10 +76,9 @@ fun QuickPreviewWindow(win: AppWindow.QuickPreview) {
                 if (missing) {
                     EmptyState(Icons.Outlined.ErrorOutline, "File not found", file.absolutePath)
                 } else {
-                    val preview = rememberLivePreview(text, file.parentFile, debounceMs = 50)
+                    val preview = rememberPreviewViewModel(text, file.parentFile, debounceMs = 50)
                     PreviewPane(
                         preview = preview,
-                        text = text,
                         baseDir = file.parentFile,
                         baseName = file.nameWithoutExtension,
                         leadingTools = {

@@ -39,7 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import es.hugoalvarezajenjo.sproutstudio.render.Problem
+import es.hugoalvarezajenjo.sproutstudio.features.preview.describe
+import es.hugoalvarezajenjo.sproutstudio.services.render.Problem
 
 /** Where the user clicks a problem to go: a line in a specific diagram block. */
 data class ProblemTarget(val line: Int?, val diagramIndex: Int)
@@ -146,7 +147,7 @@ private fun ProblemRow(p: Problem, multiBlock: Boolean, modifier: Modifier = Mod
     ) {
         Icon(Icons.Outlined.ErrorOutline, null, tint = c.error, modifier = Modifier.size(15.dp))
         Text(
-            p.message,
+            p.describe(),
             style = MaterialTheme.typography.bodyMedium,
             color = c.text,
             maxLines = 1,

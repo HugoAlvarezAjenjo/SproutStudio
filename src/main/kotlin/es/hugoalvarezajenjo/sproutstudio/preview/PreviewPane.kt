@@ -54,11 +54,13 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import es.hugoalvarezajenjo.sproutstudio.render.ExportFormat
+import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewViewModel
+import es.hugoalvarezajenjo.sproutstudio.features.preview.describe
+import es.hugoalvarezajenjo.sproutstudio.features.preview.label
 import es.hugoalvarezajenjo.sproutstudio.model.PreviewAction
-import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
-import es.hugoalvarezajenjo.sproutstudio.render.Problem
-import es.hugoalvarezajenjo.sproutstudio.render.RenderError
+import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
+import es.hugoalvarezajenjo.sproutstudio.services.render.OfflineIncludeException
+import es.hugoalvarezajenjo.sproutstudio.services.render.RenderError
 import es.hugoalvarezajenjo.sproutstudio.ui.EmptyState
 import es.hugoalvarezajenjo.sproutstudio.ui.DiagramPrefs
 import es.hugoalvarezajenjo.sproutstudio.ui.HLine
@@ -69,70 +71,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
-/** Pixel density of preview renders: crisp on Retina and when zooming in up to ~3x. */
-private const val PREVIEW_SCALE = 3.0
-
-/** Live render state for one document. */
-@Stable
-class PreviewState {
-    var image by mutableStateOf<DiagramImage?>(null)
-    /** True when [image] is an older, successful render shown while the current text has an error. */
-    var stale by mutableStateOf(false)
-    var error by mutableStateOf<RenderError?>(null)
-    /** Every error across all diagram blocks (the Problems panel); empty when the file is clean. */
-    var problems by mutableStateOf<List<Problem>>(emptyList())
-    var diagramCount by mutableStateOf(0)
-    var index by mutableStateOf(0)
-    var rendering by mutableStateOf(false)
-    var firstDone by mutableStateOf(false)
-    /** Colour mode of the last render, so toggling it skips the typing debounce. */
-    internal var renderedDark: Boolean? = null
-}
-
-/**
- * Re-renders [text] whenever it changes, debounced. LaunchedEffect restarts on every keystroke,
- * which cancels the pending delay — that's the debounce.
- */
-@Composable
-fun rememberLivePreview(
-    text: String,
-    baseDir: File?,
-    debounceMs: Long = 300,
-    darkDiagram: Boolean = DiagramPrefs.dark,
-): PreviewState {
-    val state = remember { PreviewState() }
-    LaunchedEffect(text, baseDir, state.index, darkDiagram) {
-        // A colour toggle re-renders at once; only typing is debounced.
-        if (state.firstDone && state.renderedDark == darkDiagram) delay(debounceMs)
-        state.rendering = true
-        // Problems first: they're a cheap parse and drive the editor's red lines, so they shouldn't
-        // wait for the image. (Done after the render, a keystroke cancelling the effect mid-way left
-        // them out of date next to the new image — red line and Problems panel disagreeing.)
-        state.problems = PlantUmlRenderer.collectProblems(text, baseDir)
-        val r = PlantUmlRenderer.renderPreview(text, baseDir, state.index, PREVIEW_SCALE, darkDiagram)
-        state.renderedDark = darkDiagram
-        state.diagramCount = r.diagramCount
-        if (r.index != state.index) state.index = r.index
-        state.error = r.error
-        val parsed = r.bytes?.let { DiagramImage.fromPng(it, r.scale) }
-        when {
-            r.error == null && parsed != null -> { state.image = parsed; state.stale = false }
-            // Keep the last good picture on screen while the user is mid-edit.
-            state.image != null && state.firstDone -> state.stale = true
-            // Never show PlantUML's own black-and-green error bitmap: the error strip says it better.
-            r.error != null -> { state.image = null; state.stale = false }
-            else -> { state.image = parsed; state.stale = false }
-        }
-        state.rendering = false
-        state.firstDone = true
-    }
-    return state
-}
-
 @Composable
 fun PreviewPane(
-    preview: PreviewState,
-    text: String,
+    preview: PreviewViewModel,
+    /** Folder the export dialog opens in. */
     baseDir: File?,
     baseName: String,
     modifier: Modifier = Modifier,
@@ -144,20 +86,22 @@ fun PreviewPane(
 ) {
     val c = ide
     val zoom = rememberZoomState()
-    val scope = rememberCoroutineScope()
+    // Copy and export run in the preview's own scope: closing a menu or a panel mid-export
+    // must not cancel it.
+    val scope = preview.scope
     var toast by remember { mutableStateOf<String?>(null) }
     var exportMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(toast) { if (toast != null) { delay(2200); toast = null } }
 
     fun copyImage() = scope.launch {
-        toast = runCatching { Export.copyPngToClipboard(text, baseDir, preview.index); "Image copied to clipboard" }
-            .getOrElse { "Couldn't copy: ${it.message}" }
+        toast = runCatching { Export.copyPngToClipboard(preview.png()); "Image copied to clipboard" }
+            .getOrElse { "Couldn't copy: ${exportFailure(it)}" }
     }
     fun export(f: ExportFormat) = scope.launch {
         val name = if (preview.diagramCount > 1) "$baseName-${preview.index + 1}" else baseName
-        toast = runCatching { Export.exportWithDialog(text, baseDir, preview.index, f, name) }
-            .fold({ it?.let { file -> "Saved ${file.name}" } }, { "Export failed: ${it.message}" })
+        toast = runCatching { Export.chooseTarget(baseDir, f, name)?.also { preview.export(f, it) } }
+            .fold({ it?.let { file -> "Saved ${file.name}" } }, { "Export failed: ${exportFailure(it)}" })
     }
 
     // Requests wait for the first render, so "export" right after opening a file still works.
@@ -183,13 +127,13 @@ fun PreviewPane(
         ) {
             leadingTools()
             if (preview.diagramCount > 1) {
-                ToolButton(Icons.Outlined.ChevronLeft, "Previous diagram", enabled = preview.index > 0) { preview.index-- }
+                ToolButton(Icons.Outlined.ChevronLeft, "Previous diagram", enabled = preview.index > 0) { preview.previousDiagram() }
                 Text(
                     "${preview.index + 1} of ${preview.diagramCount}",
                     style = MaterialTheme.typography.labelMedium,
                     color = c.textMuted,
                 )
-                ToolButton(Icons.Outlined.ChevronRight, "Next diagram", enabled = preview.index < preview.diagramCount - 1) { preview.index++ }
+                ToolButton(Icons.Outlined.ChevronRight, "Next diagram", enabled = preview.index < preview.diagramCount - 1) { preview.nextDiagram() }
             }
             Spacer(Modifier.weight(1f))
             if (preview.rendering && preview.firstDone) {
@@ -223,7 +167,7 @@ fun PreviewPane(
                 ToolButton(Icons.Outlined.FileDownload, "Export…", enabled = preview.image != null) { exportMenu = true }
                 DropdownMenu(exportMenu, onDismissRequest = { exportMenu = false }) {
                     ExportFormat.entries.forEach { f ->
-                        DropdownMenuItem(text = { Text(f.label, style = MaterialTheme.typography.bodyMedium) }, onClick = {
+                        DropdownMenuItem(text = { Text(f.label(), style = MaterialTheme.typography.bodyMedium) }, onClick = {
                             exportMenu = false
                             export(f)
                         })
@@ -246,12 +190,17 @@ fun PreviewPane(
                 img != null -> DiagramView(img, zoom, dimmed = preview.stale)
                 !preview.firstDone -> EmptyState(Icons.Outlined.Draw, "Rendering…", "Your diagram is on its way", Modifier.align(Alignment.Center))
                 preview.error != null -> EmptyState(Icons.Outlined.ErrorOutline, "Can't render yet", "Fix the error above to see the diagram", Modifier.align(Alignment.Center))
-                text.isBlank() -> EmptyState(Icons.Outlined.Draw, "Nothing to render", "Type @startuml to begin", Modifier.align(Alignment.Center))
+                preview.text.isBlank() -> EmptyState(Icons.Outlined.Draw, "Nothing to render", "Type @startuml to begin", Modifier.align(Alignment.Center))
                 else -> EmptyState(Icons.Outlined.Draw, "No diagram found", "Wrap your diagram in @startuml … @enduml", Modifier.align(Alignment.Center))
             }
             Toast(toast, Modifier.align(Alignment.BottomCenter).padding(16.dp))
         }
     }
+}
+
+private fun exportFailure(t: Throwable) = when (t) {
+    is OfflineIncludeException -> "line ${t.line} has a remote include, and SproutStudio works offline"
+    else -> t.message ?: t.javaClass.simpleName
 }
 
 @Composable
@@ -288,7 +237,7 @@ private fun ErrorStrip(err: RenderError, onJumpToLine: ((Int) -> Unit)?) {
             Text(
                 buildString {
                     append(if (err.line != null) "Line ${err.line}: " else "Syntax error: ")
-                    append(err.message)
+                    append(err.describe())
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = c.text,

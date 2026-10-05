@@ -1,4 +1,4 @@
-package es.hugoalvarezajenjo.sproutstudio.render
+package es.hugoalvarezajenjo.sproutstudio.services.render
 
 import kotlinx.coroutines.runBlocking
 import java.io.ByteArrayOutputStream
@@ -17,7 +17,7 @@ class PdfExportTest {
 
     private fun exportPdf(src: String, index: Int = 0): ByteArray {
         val target = Files.createTempFile("sprout", ".pdf").toFile().apply { deleteOnExit() }
-        runBlocking { PlantUmlRenderer.export(src, null, index, ExportFormat.PDF, target) }
+        runBlocking { PlantUmlEngine.export(src, null, index, ExportFormat.PDF, target) }
         return target.readBytes()
     }
 
@@ -112,7 +112,7 @@ class PdfExportTest {
         val target = File.createTempFile("sprout", ".pdf").apply { deleteOnExit() }
         assertFailsWith<IllegalStateException> {
             runBlocking {
-                PlantUmlRenderer.export(
+                PlantUmlEngine.export(
                     "@startuml\n!include https://example.com/x.puml\n@enduml\n", null, 0, ExportFormat.PDF, target,
                 )
             }

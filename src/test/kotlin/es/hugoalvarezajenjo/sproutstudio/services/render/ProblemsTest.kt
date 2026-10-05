@@ -1,4 +1,4 @@
-package es.hugoalvarezajenjo.sproutstudio.render
+package es.hugoalvarezajenjo.sproutstudio.services.render
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,20 +12,20 @@ class ProblemsTest {
 
     @Test
     fun `a clean file has no problems`() {
-        val p = PlantUmlRenderer.collectProblemsBlocking("@startuml\nAlice -> Bob: hi\n@enduml\n", null)
+        val p = PlantUmlEngine.collectProblemsBlocking("@startuml\nAlice -> Bob: hi\n@enduml\n", null)
         assertTrue(p.isEmpty(), "expected no problems, got $p")
     }
 
     @Test
     fun `blank and no-diagram files report nothing`() {
-        assertTrue(PlantUmlRenderer.collectProblemsBlocking("", null).isEmpty())
-        assertTrue(PlantUmlRenderer.collectProblemsBlocking("just prose, no @startuml\n", null).isEmpty())
+        assertTrue(PlantUmlEngine.collectProblemsBlocking("", null).isEmpty())
+        assertTrue(PlantUmlEngine.collectProblemsBlocking("just prose, no @startuml\n", null).isEmpty())
     }
 
     @Test
     fun `reports an error on its editor line`() {
         val src = "@startuml\nAlice -> Bob: ok\nthis is not plantuml ((\n@enduml\n"
-        val p = PlantUmlRenderer.collectProblemsBlocking(src, null)
+        val p = PlantUmlEngine.collectProblemsBlocking(src, null)
         assertTrue(p.isNotEmpty())
         assertEquals(3, p.first().line)
         assertEquals(0, p.first().diagramIndex)
@@ -39,7 +39,7 @@ class ProblemsTest {
             append("@startuml\nA -> B\nbroken ((\n@enduml\n\n") // lines 5-9, error on file line 7
             append("@startuml\nmore nonsense ))\n@enduml\n")  // lines 11-13, error on file line 12
         }
-        val p = PlantUmlRenderer.collectProblemsBlocking(src, null)
+        val p = PlantUmlEngine.collectProblemsBlocking(src, null)
         // Both broken blocks are reported; the clean one is not.
         val blocks = p.map { it.diagramIndex }.toSet()
         assertTrue(1 in blocks, "second block error missing: $p")
@@ -64,7 +64,7 @@ class ProblemsTest {
             cla sad
             @enduml
         """.trimIndent() + "\n"
-        val p = PlantUmlRenderer.collectProblemsBlocking(src, null)
+        val p = PlantUmlEngine.collectProblemsBlocking(src, null)
         assertEquals(listOf(9, 11), p.map { it.line }, "got $p")
         assertTrue(p.all { it.diagramIndex == 1 })
     }
@@ -72,7 +72,7 @@ class ProblemsTest {
     @Test
     fun `a broken block opener does not loop or touch other diagrams`() {
         val src = "@startuml\nclass A {\n  x\n@enduml\n\n@startuml\nA -> B\n@enduml\n"
-        val p = PlantUmlRenderer.collectProblemsBlocking(src, null)
+        val p = PlantUmlEngine.collectProblemsBlocking(src, null)
         assertTrue(p.isNotEmpty() && p.size <= 20, "got $p")
         assertTrue(p.none { it.diagramIndex == 1 }, "clean second diagram flagged: $p")
     }
@@ -80,7 +80,7 @@ class ProblemsTest {
     @Test
     fun `a remote include is a problem`() {
         val src = "@startuml\n!include https://example.com/x.puml\nA -> B\n@enduml\n"
-        val p = PlantUmlRenderer.collectProblemsBlocking(src, null)
+        val p = PlantUmlEngine.collectProblemsBlocking(src, null)
         assertEquals(1, p.size)
         assertEquals(2, p.first().line)
     }

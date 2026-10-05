@@ -56,9 +56,10 @@ import es.hugoalvarezajenjo.sproutstudio.model.AppWindow
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
 import es.hugoalvarezajenjo.sproutstudio.model.isDiagram
 import es.hugoalvarezajenjo.sproutstudio.preview.DiagramView
-import es.hugoalvarezajenjo.sproutstudio.preview.PreviewState
+import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewViewModel
+import es.hugoalvarezajenjo.sproutstudio.features.preview.describe
 import es.hugoalvarezajenjo.sproutstudio.preview.ZoomState
-import es.hugoalvarezajenjo.sproutstudio.preview.rememberLivePreview
+import es.hugoalvarezajenjo.sproutstudio.preview.rememberPreviewViewModel
 import es.hugoalvarezajenjo.sproutstudio.preview.rememberZoomState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -194,10 +195,10 @@ private fun DiagramsSideBySide(
     leftTitle: String, leftSub: String, rightTitle: String, rightSub: String,
 ) {
     val c = ide
-    val leftP = rememberLivePreview(leftText.orEmpty(), file.parentFile, debounceMs = 50)
-    val rightP = rememberLivePreview(rightText.orEmpty(), file.parentFile)
+    val leftP = rememberPreviewViewModel(leftText.orEmpty(), file.parentFile, debounceMs = 50)
+    val rightP = rememberPreviewViewModel(rightText.orEmpty(), file.parentFile)
     val count = max(leftP.diagramCount, rightP.diagramCount)
-    LaunchedEffect(rightP.index) { if (leftP.index != rightP.index) leftP.index = rightP.index }
+    LaunchedEffect(rightP.index) { if (leftP.index != rightP.index) leftP.showDiagram(rightP.index) }
     val zoom = rememberZoomState()
     val fitW = max(leftP.image?.width ?: 0f, rightP.image?.width ?: 0f)
     val fitH = max(leftP.image?.height ?: 0f, rightP.image?.height ?: 0f)
@@ -208,9 +209,9 @@ private fun DiagramsSideBySide(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             if (count > 1) {
-                ToolButton(Icons.Outlined.ChevronLeft, "Previous diagram", enabled = rightP.index > 0) { rightP.index-- }
+                ToolButton(Icons.Outlined.ChevronLeft, "Previous diagram", enabled = rightP.index > 0) { rightP.previousDiagram() }
                 Text("${rightP.index + 1} of $count", style = MaterialTheme.typography.labelMedium, color = c.textMuted)
-                ToolButton(Icons.Outlined.ChevronRight, "Next diagram", enabled = rightP.index < count - 1) { rightP.index++ }
+                ToolButton(Icons.Outlined.ChevronRight, "Next diagram", enabled = rightP.index < count - 1) { rightP.showDiagram(rightP.index + 1) }
             }
             Spacer(Modifier.weight(1f))
             ToolButton(Icons.Outlined.Remove, "Zoom out (mouse wheel)") { zoom.zoomBy(1 / 1.25f) }
@@ -238,7 +239,7 @@ private fun DiagramsSideBySide(
 
 @Composable
 private fun Side(
-    title: String, subtitle: String, preview: PreviewState, zoom: ZoomState,
+    title: String, subtitle: String, preview: PreviewViewModel, zoom: ZoomState,
     fitW: Float, fitH: Float, modifier: Modifier, missing: String? = null,
 ) {
     val c = ide
@@ -261,7 +262,7 @@ private fun Side(
                     fitWidth = if (fitW > 0f) fitW else img.width, fitHeight = if (fitH > 0f) fitH else img.height,
                 )
                 !preview.firstDone -> EmptyState(Icons.Outlined.Draw, "Rendering…", "", Modifier.align(Alignment.Center))
-                else -> EmptyState(Icons.Outlined.ErrorOutline, "Can't render", preview.error?.message ?: "No diagram found", Modifier.align(Alignment.Center))
+                else -> EmptyState(Icons.Outlined.ErrorOutline, "Can't render", preview.error?.describe() ?: "No diagram found", Modifier.align(Alignment.Center))
             }
         }
     }

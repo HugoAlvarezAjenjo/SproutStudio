@@ -8,7 +8,7 @@ import androidx.compose.ui.window.application
 import es.hugoalvarezajenjo.sproutstudio.model.AppState
 import es.hugoalvarezajenjo.sproutstudio.model.AppWindow
 import es.hugoalvarezajenjo.sproutstudio.model.AutoSave
-import es.hugoalvarezajenjo.sproutstudio.render.PlantUmlRenderer
+import es.hugoalvarezajenjo.sproutstudio.services.render.PlantUmlEngine
 import es.hugoalvarezajenjo.sproutstudio.ui.ProjectWindow
 import es.hugoalvarezajenjo.sproutstudio.ui.QuickPreviewWindow
 import kotlinx.coroutines.delay
@@ -18,7 +18,7 @@ import javax.swing.SwingUtilities
 
 fun main(args: Array<String>) {
     // Offline lockdown before any PlantUML class reads its configuration.
-    PlantUmlRenderer.configureOffline()
+    PlantUmlEngine.configureOffline()
     System.setProperty("apple.awt.application.name", "SproutStudio")
     // Native title bar follows the app theme (read once at startup; AWT can't switch it live).
     System.setProperty(
