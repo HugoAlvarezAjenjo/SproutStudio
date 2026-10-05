@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.templates
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -19,7 +21,7 @@ import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Templates
 import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateGallery
 import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateSidebar
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import java.io.File
@@ -38,7 +40,7 @@ class TemplateGalleryTest {
         setContent {
             PumlTheme(dark = true) {
                 Surface(Modifier.size(1100.dp, 760.dp), color = ide.panel) {
-                    TemplateGallery(onDismiss = { dismissed = true }, onPick = { picked = it })
+                    TemplateGallery(TestGraph.thumbnails, onDismiss = { dismissed = true }, onPick = { picked = it })
                 }
             }
         }
@@ -93,7 +95,7 @@ class TemplateGalleryTest {
         setContent {
             PumlTheme(dark = true) {
                 Surface(Modifier.size(300.dp, 700.dp), color = ide.panel) {
-                    TemplateSidebar(onPick = { picked = it })
+                    TemplateSidebar(TestGraph.thumbnails, onPick = { picked = it })
                 }
             }
         }
@@ -115,7 +117,7 @@ class TemplateGalleryTest {
     }
 
     @Test fun modelInsertTemplateOpensADocWhenNoneIsActive() {
-        val p = ProjectState()
+        val p = TestGraph.workspace()
         assertNull(p.active)
         p.insertTemplate(Templates.all.first { it.id == "seq" })
         assertTrue(p.active != null)

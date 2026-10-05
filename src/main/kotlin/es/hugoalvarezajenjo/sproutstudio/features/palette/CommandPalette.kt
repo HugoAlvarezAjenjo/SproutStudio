@@ -75,7 +75,7 @@ fun CommandPalette(
     commands: List<Command>,
     onDismiss: () -> Unit,
     onRun: (Command) -> Unit,
-    recentIds: List<String> = remember { PaletteRecents.ids() },
+    recentIds: List<String>,
     initialQuery: String = "",
 ) {
     val c = ide

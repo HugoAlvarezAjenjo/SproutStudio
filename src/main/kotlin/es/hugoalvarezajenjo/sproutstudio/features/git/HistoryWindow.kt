@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.core.os.Os
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,13 +43,9 @@ import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
 import es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AppState
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AppWindow
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.Dialogs
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.git.CommitInfo
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.AppIcon
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.DiagramPrefs
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.HLine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
@@ -57,22 +55,23 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import java.io.File
 
 @Composable
-fun HistoryWindow(win: AppWindow.History) {
+fun HistoryWindow(project: WorkspaceViewModel, file: File, onClose: () -> Unit) {
+    val deps = project.deps
     Window(
-        onCloseRequest = { AppState.close(win) },
-        title = "History: ${win.file.name} — SproutStudio",
+        onCloseRequest = onClose,
+        title = "History: ${file.name} — SproutStudio",
         icon = AppIcon.painter,
         state = rememberWindowState(size = DpSize(1440.dp, 840.dp)),
     ) {
         MenuBar {
             Menu("File") {
-                Item("Close", shortcut = KeyShortcut(Key.W, meta = Dialogs.isMac, ctrl = !Dialogs.isMac)) { AppState.close(win) }
+                Item("Close", shortcut = KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
             }
             Menu("View") {
-                CheckboxItem("Dark Diagram Preview", checked = DiagramPrefs.dark) { DiagramPrefs.toggle() }
+                CheckboxItem("Dark Diagram Preview", checked = deps.diagram.dark.value) { deps.diagram.toggle() }
             }
         }
-        PumlTheme { Surface(Modifier.fillMaxSize(), color = ide.panel) { HistoryView(win.project, win.file) } }
+        PumlTheme(dark = deps.theme.dark.value) { Surface(Modifier.fillMaxSize(), color = ide.panel) { HistoryView(project, file) } }
     }
 }
 
@@ -81,7 +80,7 @@ fun HistoryWindow(win: AppWindow.History) {
  * (its parent → it), or that version against today's file.
  */
 @Composable
-internal fun HistoryView(p: ProjectState, file: File) {
+internal fun HistoryView(p: WorkspaceViewModel, file: File) {
     val c = ide
     var commits by remember { mutableStateOf<List<CommitInfo>?>(null) }
     var selected by remember { mutableStateOf<CommitInfo?>(null) }

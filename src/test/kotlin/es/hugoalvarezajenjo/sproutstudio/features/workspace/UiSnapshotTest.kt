@@ -1,14 +1,15 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.material3.Surface
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
 import es.hugoalvarezajenjo.sproutstudio.features.palette.CommandPalette
 import es.hugoalvarezajenjo.sproutstudio.features.palette.projectCommands
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Welcome
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.DiagramPrefs
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import java.io.File
@@ -34,7 +35,7 @@ class UiSnapshotTest {
         assertTrue(bytes.size > 10_000)
     }
 
-    private fun pizzaProject() = ProjectState().apply {
+    private fun pizzaProject() = TestGraph.workspace().apply {
         openRoot(File("samples").absoluteFile)
         open(File("samples/pizza.puml").absoluteFile)
         open(File("samples/morning.puml").absoluteFile)
@@ -42,7 +43,7 @@ class UiSnapshotTest {
     }
 
     @Test
-    fun welcome() = shoot("welcome", listOf(100)) { Welcome(ProjectState()) }
+    fun welcome() = shoot("welcome", listOf(100)) { Welcome(TestGraph.workspace()) }
 
     @Test
     fun workspace() {
@@ -52,12 +53,12 @@ class UiSnapshotTest {
 
     @Test
     fun workspacePreviewOnly() {
-        val saved = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs.editorLayout
+        val saved = TestGraph.graph.layout.editorLayout.value
         try {
             val p = pizzaProject().apply { changeLayout(es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout.PREVIEW) }
             shoot("workspace-preview-only", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
         } finally {
-            es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs.editorLayout = saved
+            TestGraph.graph.layout.editorLayout.value = saved
         }
     }
 
@@ -69,15 +70,15 @@ class UiSnapshotTest {
 
     @Test
     fun workspaceDarkDiagram() {
-        val wasDark = DiagramPrefs.dark
-        val savedLayout = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs.editorLayout
-        if (!wasDark) DiagramPrefs.toggle()
+        val wasDark = TestGraph.graph.diagram.dark.value
+        val savedLayout = TestGraph.graph.layout.editorLayout.value
+        if (!wasDark) TestGraph.graph.diagram.toggle()
         try {
             val p = pizzaProject().apply { changeLayout(es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout.SPLIT) }
             shoot("workspace-dark-diagram", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
         } finally {
-            if (DiagramPrefs.dark != wasDark) DiagramPrefs.toggle() // leave the user's choice as it was
-            es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs.editorLayout = savedLayout
+            if (TestGraph.graph.diagram.dark.value != wasDark) TestGraph.graph.diagram.toggle() // leave the user's choice as it was
+            TestGraph.graph.layout.editorLayout.value = savedLayout
         }
     }
 
@@ -124,7 +125,7 @@ class UiSnapshotTest {
 
     @Test
     fun workspaceWithError() {
-        val p = ProjectState().apply {
+        val p = TestGraph.workspace().apply {
             openRoot(File("samples").absoluteFile)
             open(File("samples/morning.puml").absoluteFile)
             val d = active!!
@@ -135,8 +136,8 @@ class UiSnapshotTest {
 
     @Test
     fun workspaceProblemsPanel() {
-        val saved = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs.problemsExpanded
-        val p = ProjectState().apply {
+        val saved = TestGraph.graph.layout.problemsExpanded.value
+        val p = TestGraph.workspace().apply {
             openRoot(File("samples").absoluteFile)
             open(File("samples/morning.puml").absoluteFile)
             val d = active!!
@@ -146,7 +147,7 @@ class UiSnapshotTest {
         try {
             shoot("workspace-problems-panel", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
         } finally {
-            es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs.problemsExpanded = saved
+            TestGraph.graph.layout.problemsExpanded.value = saved
         }
     }
 }

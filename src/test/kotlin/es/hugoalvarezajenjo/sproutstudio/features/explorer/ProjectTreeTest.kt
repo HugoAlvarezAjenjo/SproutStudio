@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -16,8 +18,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileOps
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
@@ -36,22 +37,22 @@ import kotlin.test.assertTrue
 class ProjectTreeTest {
 
     private lateinit var dir: File
-    private val realTrash = FileOps.trash
+    private val realTrash = TestGraph.graph.trash
 
     @BeforeTest fun setUp() {
         dir = Files.createTempDirectory("tree").toFile().canonicalFile
         File(dir, "a.puml").writeText("@startuml\nA -> B\n@enduml\n")
         File(dir, "docs").mkdirs(); File(dir, "docs/b.puml").writeText("@startuml\nB -> C\n@enduml\n")
-        FileOps.trash = { it.deleteRecursively() }
+        TestGraph.graph.trash = { it.deleteRecursively() }
     }
 
-    @AfterTest fun tearDown() { FileOps.trash = realTrash; dir.deleteRecursively() }
+    @AfterTest fun tearDown() { TestGraph.graph.trash = realTrash; dir.deleteRecursively() }
 
     private fun count(tag: String, t: androidx.compose.ui.test.ComposeUiTest) =
         t.onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().size
 
     @Test fun rootFolderCollapsesAndExpands() = runComposeUiTest {
-        val p = ProjectState().apply { openRoot(dir) }
+        val p = TestGraph.workspace().apply { openRoot(dir) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         assertEquals(1, count("tree-row-a.puml", this))
         onNodeWithTag("tree-root", useUnmergedTree = true).performClick()
@@ -63,7 +64,7 @@ class ProjectTreeTest {
     }
 
     @Test fun newFolderFromTheDialogShowsUpEvenWhenEmpty() = runComposeUiTest {
-        val p = ProjectState().apply { openRoot(dir); fileAction = FileAction.NewFolder(dir) }
+        val p = TestGraph.workspace().apply { openRoot(dir); fileAction = FileAction.NewFolder(dir) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         waitForIdle()
         run {
@@ -82,7 +83,7 @@ class ProjectTreeTest {
     }
 
     @Test fun anExistingNameIsRefusedInTheDialog() = runComposeUiTest {
-        val p = ProjectState().apply { openRoot(dir); fileAction = FileAction.NewFolder(dir) }
+        val p = TestGraph.workspace().apply { openRoot(dir); fileAction = FileAction.NewFolder(dir) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         onNodeWithTag("file-name-field").performTextClearance()
         onNodeWithTag("file-name-field").performTextInput("docs")
@@ -94,7 +95,7 @@ class ProjectTreeTest {
     }
 
     @Test fun renameAndDeleteFromTheDialogs() = runComposeUiTest {
-        val p = ProjectState().apply { openRoot(dir); open(File(dir, "a.puml")); fileAction = FileAction.Rename(File(dir, "a.puml")) }
+        val p = TestGraph.workspace().apply { openRoot(dir); open(File(dir, "a.puml")); fileAction = FileAction.Rename(File(dir, "a.puml")) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         onNodeWithTag("file-name-field").performTextClearance()
         onNodeWithTag("file-name-field").performTextInput("order.puml")
@@ -133,7 +134,7 @@ class ProjectTreeTest {
     }
 
     @Test fun draggingAFileOntoAFolderMovesIt() = runComposeUiTest {
-        val p = ProjectState().apply { openRoot(dir); open(File(dir, "a.puml")) }
+        val p = TestGraph.workspace().apply { openRoot(dir); open(File(dir, "a.puml")) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         waitForIdle()
         dragMouse(center("tree-row-a.puml"), center("tree-row-docs"), snapshot = "tree-drag")
@@ -144,7 +145,7 @@ class ProjectTreeTest {
     }
 
     @Test fun draggingBackOntoTheProjectFolderRowMovesToTheRoot() = runComposeUiTest {
-        val p = ProjectState().apply { openRoot(dir); toggleDir(File(dir, "docs")) }
+        val p = TestGraph.workspace().apply { openRoot(dir); toggleDir(File(dir, "docs")) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         waitForIdle()
         dragMouse(center("tree-row-b.puml"), center("tree-root"))
@@ -153,7 +154,7 @@ class ProjectTreeTest {
     }
 
     @Test fun aShortDragOrAClickDoesNotMoveAnything() = runComposeUiTest {
-        val p = ProjectState().apply { openRoot(dir) }
+        val p = TestGraph.workspace().apply { openRoot(dir) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         waitForIdle()
         onNodeWithTag("tree-row-a.puml", useUnmergedTree = true).performClick()
@@ -167,7 +168,7 @@ class ProjectTreeTest {
     }
 
     @Test fun newDiagramWithATemplateChosenFromTheGallery() = runComposeUiTest {
-        val p = ProjectState().apply { openRoot(dir); fileAction = FileAction.NewDiagram(dir) }
+        val p = TestGraph.workspace().apply { openRoot(dir); fileAction = FileAction.NewDiagram(dir) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1100.dp, 760.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         onNodeWithTag("file-name-field").performTextClearance()
         onNodeWithTag("file-name-field").performTextInput("login")
@@ -192,7 +193,7 @@ class ProjectTreeTest {
     }
 
     @Test fun newDiagramWithoutATemplateIsEmpty() = runComposeUiTest {
-        val p = ProjectState().apply { openRoot(dir); fileAction = FileAction.NewDiagram(dir) }
+        val p = TestGraph.workspace().apply { openRoot(dir); fileAction = FileAction.NewDiagram(dir) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1100.dp, 760.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         onNodeWithTag("file-name-confirm").performClick()
         waitForIdle()

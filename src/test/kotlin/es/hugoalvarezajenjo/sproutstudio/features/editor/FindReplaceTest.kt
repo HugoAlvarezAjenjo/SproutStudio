@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.material3.Surface
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -114,7 +116,7 @@ class FindBarUiTest {
 
     @Test
     fun `typing selects the first hit, Enter cycles, counter follows`() {
-        val doc = Document(null, text)
+        val doc = TestGraph.document(null, text)
         runComposeUiTest {
             setContent { PumlTheme(dark = true) { Surface(color = ide.panel) { CodeEditor(doc, errorLine = null) } } }
             waitForIdle()
@@ -135,7 +137,7 @@ class FindBarUiTest {
 
     @Test
     fun `replace all from the bar`() {
-        val doc = Document(null, text)
+        val doc = TestGraph.document(null, text)
         runComposeUiTest {
             setContent { PumlTheme(dark = true) { Surface(color = ide.panel) { CodeEditor(doc, errorLine = null) } } }
             waitForIdle()

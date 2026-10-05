@@ -62,7 +62,6 @@ import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
 import es.hugoalvarezajenjo.sproutstudio.services.render.OfflineIncludeException
 import es.hugoalvarezajenjo.sproutstudio.services.render.RenderError
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.DiagramPrefs
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.HLine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolSeparator
@@ -98,12 +97,12 @@ fun PreviewPane(
     LaunchedEffect(toast) { if (toast != null) { delay(2200); toast = null } }
 
     fun copyImage() = scope.launch {
-        toast = runCatching { Export.copyPngToClipboard(preview.png()); "Image copied to clipboard" }
+        toast = runCatching { preview.copyImage(); "Image copied to clipboard" }
             .getOrElse { "Couldn't copy: ${exportFailure(it)}" }
     }
     fun export(f: ExportFormat) = scope.launch {
         val name = if (preview.diagramCount > 1) "$baseName-${preview.index + 1}" else baseName
-        toast = runCatching { Export.chooseTarget(baseDir, f, name)?.also { preview.export(f, it) } }
+        toast = runCatching { chooseExportTarget(preview, baseDir, f, name)?.also { preview.export(f, it) } }
             .fold({ it?.let { file -> "Saved ${file.name}" } }, { "Export failed: ${exportFailure(it)}" })
     }
 
@@ -157,11 +156,11 @@ fun PreviewPane(
             ToolButton(Icons.Outlined.ImageSearch, "Actual size") { preview.image?.let { zoom.actualSize(it.width, it.height) } }
             ToolSeparator()
             ToolButton(
-                if (DiagramPrefs.dark) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
-                if (DiagramPrefs.dark) "Dark diagram (exports keep original colours) — click for light"
+                if (preview.diagram.dark.value) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
+                if (preview.diagram.dark.value) "Dark diagram (exports keep original colours) — click for light"
                 else "Light diagram — click for dark",
-                selected = DiagramPrefs.dark,
-            ) { DiagramPrefs.toggle() }
+                selected = preview.diagram.dark.value,
+            ) { preview.diagram.toggle() }
             ToolSeparator()
             ToolButton(Icons.Outlined.ContentCopy, "Copy image to clipboard", enabled = preview.image != null) {
                 copyImage()
@@ -199,6 +198,13 @@ fun PreviewPane(
             Toast(toast, Modifier.align(Alignment.BottomCenter).padding(16.dp))
         }
     }
+}
+
+/** The export dialog, with the format's extension added when the user drops it. */
+private fun chooseExportTarget(preview: PreviewViewModel, baseDir: File?, format: ExportFormat, baseName: String): File? {
+    val dir = baseDir ?: File(System.getProperty("user.home"))
+    val f = preview.chooseExportTarget("Export diagram as ${format.label()}", "$baseName.${format.extension}", dir) ?: return null
+    return if (f.name.endsWith(".${format.extension}")) f else File(f.parentFile, "${f.name}.${format.extension}")
 }
 
 private fun exportFailure(t: Throwable) = when (t) {

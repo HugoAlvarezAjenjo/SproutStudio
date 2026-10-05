@@ -62,7 +62,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import es.hugoalvarezajenjo.sproutstudio.features.git.describe
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.StatusText
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
@@ -73,7 +73,7 @@ import kotlinx.coroutines.launch
  * (click to switch), "New Branch…" and delete. Local only: no fetch, pull or push.
  */
 @Composable
-internal fun BranchButton(p: ProjectState, initiallyOpen: Boolean = false) {
+internal fun BranchButton(p: WorkspaceViewModel, initiallyOpen: Boolean = false) {
     val branch = p.git.status.branch ?: return
     val c = ide
     var open by remember { mutableStateOf(initiallyOpen) }
@@ -108,7 +108,7 @@ private object AboveAnchor : PopupPositionProvider {
 }
 
 @Composable
-private fun BranchPopup(p: ProjectState, onDismiss: () -> Unit) {
+private fun BranchPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
     val c = ide
     val git = p.git
     val scope = git.scope
@@ -284,11 +284,11 @@ private fun BranchRow(name: String, current: Boolean, enabled: Boolean, onClick:
  * or block the switch), and afterwards open tabs take the new branch's files from disk; a tab
  * whose file doesn't exist on that branch is closed.
  */
-internal suspend fun ProjectState.switchingBranches(op: suspend () -> Boolean): Boolean {
+internal suspend fun WorkspaceViewModel.switchingBranches(op: suspend () -> Boolean): Boolean {
     docs.filter { it.file != null && it.dirty }.forEach { it.save() }
     // No save may write an open file while git rewrites the working tree.
     val open = docs.mapNotNull { it.file }.toTypedArray()
-    val ok = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.documents.exclusive(*open) { op() }
+    val ok = deps.documents.exclusive(*open) { op() }
     if (ok) {
         docs.toList().forEach { d ->
             val f = d.file ?: return@forEach

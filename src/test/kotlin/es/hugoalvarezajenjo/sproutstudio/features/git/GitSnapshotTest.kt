@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
@@ -11,8 +13,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.git.DiagramDiffView
 import es.hugoalvarezajenjo.sproutstudio.features.git.DiffView
 import es.hugoalvarezajenjo.sproutstudio.features.git.HistoryView
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
 import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
@@ -33,8 +34,8 @@ class GitSnapshotTest {
     private val dir: File = Files.createTempDirectory("sprout-gitshot").toFile()
     private var sidebar = true
     private lateinit var layout: EditorLayout
-    @BeforeTest fun save() { sidebar = LayoutPrefs.sidebarVisible; layout = LayoutPrefs.editorLayout }
-    @AfterTest fun cleanup() { LayoutPrefs.sidebarVisible = sidebar; LayoutPrefs.editorLayout = layout; dir.deleteRecursively() }
+    @BeforeTest fun save() { sidebar = TestGraph.graph.layout.sidebarVisible.value; layout = TestGraph.graph.layout.editorLayout.value }
+    @AfterTest fun cleanup() { TestGraph.graph.layout.sidebarVisible.value = sidebar; TestGraph.graph.layout.editorLayout.value = layout; dir.deleteRecursively() }
 
     private fun shoot(name: String, content: @androidx.compose.runtime.Composable () -> Unit) {
         val scene = ImageComposeScene(1320, 840, Density(1f)) { PumlTheme(dark = true) { Surface(color = ide.panel) { content() } } }
@@ -47,7 +48,7 @@ class GitSnapshotTest {
         assertTrue(bytes.size > 10_000)
     }
 
-    private fun repo(): ProjectState {
+    private fun repo(): WorkspaceViewModel {
         JGitService().init(dir).close()
         File(dir, ".git/config").appendText("[user]\n\tname = Hugo\n\temail = hugo@example.com\n[commit]\n\tgpgsign = false\n")
         File(dir, ".gitignore").writeText("archive/\n")
@@ -60,7 +61,7 @@ class GitSnapshotTest {
         order.writeText("@startuml\nactor Customer\nparticipant Shop\nparticipant Kitchen\nparticipant Rider\n\nCustomer -> Shop: order pizza\nShop -> Kitchen: bake (12 min)\nKitchen --> Shop: ready\nShop -> Rider: pick up\nRider --> Customer: deliver\n@enduml\n")
         File(dir, "model/states.puml").writeText("@startuml\n[*] --> Ordered\nOrdered --> Baking\nBaking --> Delivered\n@enduml\n")
         File(dir, "archive").mkdirs(); File(dir, "archive/old.puml").writeText("@startuml\nA -> B\n@enduml\n")
-        return ProjectState().apply {
+        return TestGraph.workspace().apply {
             openRoot(dir)
             expanded.add(File(dir, "model")); expanded.add(File(dir, "archive")); refreshTree()
             open(order)

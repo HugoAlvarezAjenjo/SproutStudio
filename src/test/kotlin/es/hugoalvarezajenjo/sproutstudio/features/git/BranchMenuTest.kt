@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -12,7 +14,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.features.git.switchingBranches
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitError
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitException
@@ -71,7 +73,7 @@ class BranchMenuTest {
 
     @Test fun conflictingEditsBlockTheSwitchAndSayWhy() {
         twoBranches()
-        val p = ProjectState().apply { openRoot(dir) }
+        val p = TestGraph.workspace().apply { openRoot(dir) }
         runBlocking {
             p.git.open(dir)
             a.writeText("uncommitted\n")
@@ -86,7 +88,7 @@ class BranchMenuTest {
 
     @Test fun switchingReloadsOpenTabsAndClosesMissingOnes() {
         twoBranches()
-        val p = ProjectState().apply { openRoot(dir); open(a) }
+        val p = TestGraph.workspace().apply { openRoot(dir); open(a) }
         runBlocking {
             p.git.open(dir)
             assertTrue(p.switchingBranches { p.git.checkout("feature") })
@@ -101,7 +103,7 @@ class BranchMenuTest {
 
     @Test fun popupSwitchesAndCreatesBranches() {
         twoBranches()
-        val p = ProjectState().apply { openRoot(dir); open(a) }
+        val p = TestGraph.workspace().apply { openRoot(dir); open(a) }
         runComposeUiTest {
             setContent {
                 PumlTheme(dark = true) { Surface(Modifier.size(1200.dp, 700.dp), color = ide.panel) { Workspace(p, onSave = {}, onCloseTab = {}) } }

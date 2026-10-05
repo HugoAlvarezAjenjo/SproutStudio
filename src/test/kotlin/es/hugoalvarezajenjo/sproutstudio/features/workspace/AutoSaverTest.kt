@@ -1,10 +1,10 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.text.input.TextFieldValue
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSave
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSavePrefs
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -19,27 +19,27 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
-class AutoSaveTest {
+class AutoSaverTest {
     private lateinit var dir: File
     private var savedPref = true
 
     @BeforeTest
     fun setUp() {
         dir = Files.createTempDirectory("sprout-autosave").toFile()
-        savedPref = AutoSavePrefs.enabled // don't clobber the user's real setting
-        AutoSavePrefs.enabled = true
+        savedPref = TestGraph.graph.autoSave.enabled.value // don't clobber the user's real setting
+        TestGraph.graph.autoSave.enabled.value = true
     }
 
     @AfterTest
     fun tearDown() {
-        AutoSavePrefs.enabled = savedPref
+        TestGraph.graph.autoSave.enabled.value = savedPref
         dir.setWritable(true)
         dir.deleteRecursively()
     }
 
     private fun fileDoc(text: String = "@startuml\nA -> B\n@enduml\n"): Document {
         val f = File(dir, "d.puml").apply { writeText(text) }
-        return Document.open(f)
+        return TestGraph.openDocument(f)
     }
 
     private fun Document.type(text: String) {
@@ -49,7 +49,7 @@ class AutoSaveTest {
 
     /** Runs [AutoSave.watch] with a short idle time while [body] executes. */
     private fun watching(docs: List<Document>, body: suspend () -> Unit) = runBlocking {
-        val job = launch { AutoSave.watch({ docs }, idleMs = 100) }
+        val job = launch { TestGraph.graph.autoSaver.watch({ docs }, idleMs = 100) }
         delay(50)
         body()
         job.cancel()
@@ -80,27 +80,27 @@ class AutoSaveTest {
 
     @Test
     fun `untitled diagrams are never autosaved`() = runBlocking<Unit> {
-        val doc = Document(null, "@startuml\n@enduml\n")
+        val doc = TestGraph.document(null, "@startuml\n@enduml\n")
         watching(listOf(doc)) {
             doc.type("@startuml\nX -> Y\n@enduml\n")
             delay(400)
         }
         assertTrue(doc.dirty)
-        AutoSave.flush(listOf(doc))
+        TestGraph.graph.autoSaver.flush(listOf(doc))
         assertTrue(doc.dirty)
         assertTrue(dir.list()!!.isEmpty(), "nothing written anywhere")
     }
 
     @Test
     fun `turned off means nothing is written`() = runBlocking<Unit> {
-        AutoSavePrefs.enabled = false
+        TestGraph.graph.autoSave.enabled.value = false
         val original = "@startuml\n@enduml\n"
         val doc = fileDoc(original)
         watching(listOf(doc)) {
             doc.type("@startuml\nchanged\n@enduml\n")
             delay(400)
         }
-        AutoSave.flush(listOf(doc))
+        TestGraph.graph.autoSaver.flush(listOf(doc))
         assertEquals(original, doc.file!!.readText())
         assertTrue(doc.dirty)
     }
@@ -109,7 +109,7 @@ class AutoSaveTest {
     fun `flush saves immediately (tab switch, focus loss, quit)`() = runBlocking<Unit> {
         val doc = fileDoc()
         doc.value = TextFieldValue("@startuml\nnow\n@enduml\n")
-        AutoSave.flush(listOf(doc))
+        TestGraph.graph.autoSaver.flush(listOf(doc))
         assertEquals("@startuml\nnow\n@enduml\n", doc.file!!.readText())
         assertFalse(doc.dirty)
     }

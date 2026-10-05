@@ -1,29 +1,15 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.SyntaxColors
+
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.PlantUmlLanguage
 
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-
-/** Colors for each token category. */
-data class SyntaxColors(
-    val keyword: Color,
-    val directive: Color,
-    val preprocessor: Color,
-    val string: Color,
-    val comment: Color,
-    val arrow: Color,
-    val color: Color,
-    val stereotype: Color,
-    val symbol: Color,
-    val error: Color,
-    val bracketMatch: Color,
-)
 
 enum class TokenType { KEYWORD, DIRECTIVE, PREPROCESSOR, STRING, COMMENT, ARROW, COLOR, STEREOTYPE, SYMBOL }
 

@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.material3.Surface
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasSetTextAction
@@ -91,7 +93,7 @@ class FoldingTest {
 
     @Test
     fun foldsFollowEditsAboveAndAreDroppedWhenTheirLineIsEdited() {
-        val d = Document(null, seq)
+        val d = TestGraph.document(null, seq)
         val r = d.folds.regions(d.text).first { it.kind == FoldRegion.Kind.BRACES }
         d.foldRegion(r)
         d.value = d.value.copy(text = "' top\n" + d.text, selection = TextRange(0))
@@ -109,7 +111,7 @@ class FoldingTest {
 
     @Test
     fun caretLandingInsideAFoldExpandsIt() {
-        val d = Document(null, seq)
+        val d = TestGraph.document(null, seq)
         val r = d.folds.regions(d.text).first { it.kind == FoldRegion.Kind.BRACES }
         d.foldRegion(r)
         d.value = d.value.copy(selection = TextRange(d.text.indexOf("+price")))
@@ -118,7 +120,7 @@ class FoldingTest {
 
     @Test
     fun foldingParksAHiddenCaretOnTheOpener() {
-        val d = Document(null, seq)
+        val d = TestGraph.document(null, seq)
         d.value = d.value.copy(selection = TextRange(d.text.indexOf("+size")))
         assertTrue(d.foldAtCaret())
         val r = d.folds.active(d.text).single()
@@ -130,7 +132,7 @@ class FoldingTest {
 
     @Test
     fun foldAllThenUnfoldAll() {
-        val d = Document(null, seq)
+        val d = TestGraph.document(null, seq)
         d.foldAll()
         assertEquals(Folding.regions(seq).size, d.folds.active(d.text).size)
         d.unfoldAll()
@@ -139,7 +141,7 @@ class FoldingTest {
 
     @Test
     fun typingInTheEditorWithFoldsDoesNotCrash() {
-        val d = Document(null, seq)
+        val d = TestGraph.document(null, seq)
         d.folds.set(Folding.regions(seq).filter { it.kind != FoldRegion.Kind.DIAGRAM })
         d.value = d.value.copy(selection = TextRange(seq.length))
         runComposeUiTest {

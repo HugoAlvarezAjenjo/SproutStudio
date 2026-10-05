@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.palette
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
@@ -9,8 +11,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.palette.CommandSearch
 import es.hugoalvarezajenjo.sproutstudio.features.palette.DoubleShiftDetector
 import es.hugoalvarezajenjo.sproutstudio.features.palette.projectCommands
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -125,16 +126,16 @@ class InsertSnippetTest {
 /** The real command list of a project window. */
 class ProjectCommandsTest {
     private lateinit var savedLayout: EditorLayout
-    @BeforeTest fun save() { savedLayout = LayoutPrefs.editorLayout }
-    @AfterTest fun restore() { LayoutPrefs.editorLayout = savedLayout }
+    @BeforeTest fun save() { savedLayout = TestGraph.graph.layout.editorLayout.value }
+    @AfterTest fun restore() { TestGraph.graph.layout.editorLayout.value = savedLayout }
 
-    private fun project() = ProjectState().apply {
+    private fun project() = TestGraph.workspace().apply {
         openRoot(File("samples").absoluteFile)
         open(File("samples/pizza.puml"))
         changeLayout(EditorLayout.SPLIT)
     }
-    private fun ProjectState.commands() = projectCommands(this, {}, {}, {})
-    private fun ProjectState.run(query: String) =
+    private fun WorkspaceViewModel.commands() = projectCommands(this, {}, {}, {})
+    private fun WorkspaceViewModel.run(query: String) =
         CommandSearch.search(query, commands()).first().command.also { it.run() }
 
     @Test fun everyCommandHasAUniqueId() {

@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -23,8 +25,7 @@ import es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange
 import es.hugoalvarezajenjo.sproutstudio.features.editor.changeAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.editor.rollbackAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
 import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
@@ -42,18 +43,18 @@ import kotlin.test.assertNull
 class RollbackLinesUiTest {
     private val dir: File = Files.createTempDirectory("sprout-rollback").toFile()
     private lateinit var layout: EditorLayout
-    @BeforeTest fun save() { layout = LayoutPrefs.editorLayout }
-    @AfterTest fun cleanup() { LayoutPrefs.editorLayout = layout; dir.deleteRecursively() }
+    @BeforeTest fun save() { layout = TestGraph.graph.layout.editorLayout.value }
+    @AfterTest fun cleanup() { TestGraph.graph.layout.editorLayout.value = layout; dir.deleteRecursively() }
 
     private val committed = "@startuml\nA -> B\nB -> C\nC -> D\n@enduml\n"
     private val a get() = File(dir, "a.puml")
 
-    private fun project(): ProjectState {
+    private fun project(): WorkspaceViewModel {
         JGitService().init(dir).close()
         File(dir, ".git/config").appendText("[user]\n\tname = T\n\temail = t@e\n[commit]\n\tgpgsign = false\n")
         a.writeText(committed)
         JGitService().find(dir)!!.use { it.commit(listOf(a), "init") }
-        return ProjectState().apply { openRoot(dir); open(a); changeLayout(EditorLayout.EDITOR) }
+        return TestGraph.workspace().apply { openRoot(dir); open(a); changeLayout(EditorLayout.EDITOR) }
     }
 
     @Test fun clickingTheGutterBarRollsThatBlockBackAndUndoRestoresIt() {

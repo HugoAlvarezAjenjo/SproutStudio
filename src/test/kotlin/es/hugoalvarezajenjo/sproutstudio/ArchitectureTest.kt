@@ -33,6 +33,8 @@ class ArchitectureTest {
         }.toList()
     }
 
+    private val managed = listOf("app", "core", "domain", "services", "platform", "features", "ui.designsystem")
+
     private fun layer(name: String) = sources.filter { it.pkg == "$base.$name" || it.pkg.startsWith("$base.$name.") }
 
     private fun assertNoImports(layer: String, forbidden: List<String>, allowed: Set<String> = emptySet()) {
@@ -82,9 +84,20 @@ class ArchitectureTest {
         listOf("$base.services", "$base.features", "$base.app", "$base.domain"),
     )
 
-    // ── One class per file ────────────────────────────────────────────────────────────────
+    @Test
+    fun everyFileIsInALayer() {
+        val outside = sources.filter { s -> managed.none { s.pkg == "$base.$it" || s.pkg.startsWith("$base.$it.") } }
+        assertTrue(outside.isEmpty(), "files outside the layers: " + outside.joinToString { "${it.file.name} (${it.pkg})" })
+    }
 
-    private val managed = listOf("app", "core", "domain", "services", "platform", "features", "ui.designsystem")
+    @Test
+    fun onlyMainReadsTheGlobalGraph() {
+        // Everything else gets its dependencies handed in; AppGraph.default is for main() alone.
+        val readers = sources.filter { "AppGraph.default" in it.text && it.file.name !in setOf("Main.kt", "AppGraph.kt") }
+        assertTrue(readers.isEmpty(), "AppGraph.default read in: " + readers.joinToString { it.file.name })
+    }
+
+    // ── One class per file ────────────────────────────────────────────────────────────────
 
     private val typeDecl = Regex(
         """^((?:public|internal|private)\s+)?((?:data|enum|sealed|abstract|open|value|annotation|fun)\s+)*(class|interface|object)\s+(\w+)([^\n{]*)""",
@@ -102,7 +115,14 @@ class ArchitectureTest {
                 .toList()
             if (types.isEmpty()) continue
             val names = types.map { it.groupValues[4] }
-            if (name !in names) { bad += "${s.file.name}: no public type named $name (has ${names.joinToString()})"; continue }
+            if (name !in names) {
+                // A screen file (ProblemsPanel.kt holding fun ProblemsPanel) may carry the small
+                // value types of its own API.
+                val screen = Regex("""^fun\s+$name\(""", RegexOption.MULTILINE).containsMatchIn(s.text)
+                val allSmall = types.all { "data" in it.groupValues[2] || "enum" in it.groupValues[2] }
+                if (!(screen && allSmall)) bad += "${s.file.name}: no public type named $name (has ${names.joinToString()})"
+                continue
+            }
             for (t in types) {
                 val n = t.groupValues[4]
                 if (n == name) continue

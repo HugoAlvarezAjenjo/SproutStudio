@@ -1,5 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
+import es.hugoalvarezajenjo.sproutstudio.core.os.Os
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -58,12 +61,8 @@ import es.hugoalvarezajenjo.sproutstudio.features.preview.ZoomState
 import es.hugoalvarezajenjo.sproutstudio.features.preview.describe
 import es.hugoalvarezajenjo.sproutstudio.features.preview.rememberPreviewViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.preview.rememberZoomState
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AppState
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AppWindow
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.Dialogs
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.AppIcon
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.DiagramPrefs
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.HLine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
@@ -80,24 +79,32 @@ import kotlinx.coroutines.withContext
 
 /** Compare window: by default the committed version next to today's. */
 @Composable
-fun DiagramDiffWindow(win: AppWindow.DiagramDiff) {
+fun DiagramDiffWindow(
+    project: WorkspaceViewModel,
+    file: File,
+    left: DiffSide,
+    right: DiffSide,
+    textFirst: Boolean,
+    onClose: () -> Unit,
+) {
+    val deps = project.deps
     Window(
-        onCloseRequest = { AppState.close(win) },
-        title = "${win.file.name}: ${sideTitle(win.left)} ↔ ${sideTitle(win.right)} — SproutStudio",
+        onCloseRequest = onClose,
+        title = "${file.name}: ${sideTitle(left)} ↔ ${sideTitle(right)} — SproutStudio",
         icon = AppIcon.painter,
         state = rememberWindowState(size = DpSize(1400.dp, 820.dp)),
     ) {
         MenuBar {
             Menu("File") {
-                Item("Close", shortcut = KeyShortcut(Key.W, meta = Dialogs.isMac, ctrl = !Dialogs.isMac)) { AppState.close(win) }
+                Item("Close", shortcut = KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
             }
             Menu("View") {
-                CheckboxItem("Dark Diagram Preview", checked = DiagramPrefs.dark) { DiagramPrefs.toggle() }
+                CheckboxItem("Dark Diagram Preview", checked = deps.diagram.dark.value) { deps.diagram.toggle() }
             }
         }
-        PumlTheme {
+        PumlTheme(dark = deps.theme.dark.value) {
             Surface(Modifier.fillMaxSize(), color = ide.panel) {
-                DiffView(win.project, win.file, win.left, win.right, textFirst = win.textFirst)
+                DiffView(project, file, left, right, textFirst = textFirst)
             }
         }
     }
@@ -105,7 +112,7 @@ fun DiagramDiffWindow(win: AppWindow.DiagramDiff) {
 
 /** Kept for callers/tests that compare with HEAD directly. */
 @Composable
-internal fun DiagramDiffView(p: ProjectState, file: File) = DiffView(p, file, DiffSide.Head, DiffSide.WorkingCopy)
+internal fun DiagramDiffView(p: WorkspaceViewModel, file: File) = DiffView(p, file, DiffSide.Head, DiffSide.WorkingCopy)
 
 internal fun sideTitle(s: DiffSide) = when (s) {
     DiffSide.Head -> "HEAD"
@@ -116,7 +123,7 @@ internal fun sideTitle(s: DiffSide) = when (s) {
 
 /** Text of one side; null = the file doesn't exist there. Re-reads when HEAD or the editor change. */
 @Composable
-private fun rememberSideText(p: ProjectState, file: File, side: DiffSide): Pair<String?, Boolean> {
+private fun rememberSideText(p: WorkspaceViewModel, file: File, side: DiffSide): Pair<String?, Boolean> {
     val git = p.git
     val doc = p.docs.firstOrNull { it.file?.absoluteFile == file.absoluteFile }
     var text by remember(side) { mutableStateOf<String?>(null) }
@@ -127,7 +134,7 @@ private fun rememberSideText(p: ProjectState, file: File, side: DiffSide): Pair<
             LaunchedEffect(file, doc) {
                 if (doc != null) return@LaunchedEffect
                 // Outside edits show up; the disk is read off the UI thread.
-                val io = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.dispatchers.io
+                val io = p.deps.dispatchers.io
                 var stamp = withContext(io) { file.lastModified() }
                 while (true) {
                     delay(700)
@@ -153,7 +160,7 @@ private fun rememberSideText(p: ProjectState, file: File, side: DiffSide): Pair<
  */
 @Composable
 internal fun DiffView(
-    p: ProjectState,
+    p: WorkspaceViewModel,
     file: File,
     left: DiffSide,
     right: DiffSide,
@@ -185,7 +192,7 @@ internal fun DiffView(
         if (textMode) {
             TextDiff(leftText, rightText, leftLoaded && rightLoaded, left, right)
         } else {
-            DiagramsSideBySide(
+            DiagramsSideBySide(p.deps, 
                 file, leftText, rightText, leftLoaded,
                 leftTitle = sideTitle(left), leftSub = sideSubtitle(p, left),
                 rightTitle = sideTitle(right),
@@ -195,7 +202,7 @@ internal fun DiffView(
     }
 }
 
-private fun sideSubtitle(p: ProjectState, s: DiffSide) = when (s) {
+private fun sideSubtitle(p: WorkspaceViewModel, s: DiffSide) = when (s) {
     DiffSide.Head -> p.git.status.head?.take(7)?.let { "last commit · $it" } ?: ""
     DiffSide.WorkingCopy -> ""
     is DiffSide.At -> "commit"
@@ -204,12 +211,12 @@ private fun sideSubtitle(p: ProjectState, s: DiffSide) = when (s) {
 
 @Composable
 private fun DiagramsSideBySide(
-    file: File, leftText: String?, rightText: String?, leftLoaded: Boolean,
+    deps: WorkspaceDeps, file: File, leftText: String?, rightText: String?, leftLoaded: Boolean,
     leftTitle: String, leftSub: String, rightTitle: String, rightSub: String,
 ) {
     val c = ide
-    val leftP = rememberPreviewViewModel(leftText.orEmpty(), file.parentFile, debounceMs = 50)
-    val rightP = rememberPreviewViewModel(rightText.orEmpty(), file.parentFile)
+    val leftP = rememberPreviewViewModel(deps, leftText.orEmpty(), file.parentFile, debounceMs = 50)
+    val rightP = rememberPreviewViewModel(deps, rightText.orEmpty(), file.parentFile)
     val count = max(leftP.diagramCount, rightP.diagramCount)
     LaunchedEffect(rightP.index) { if (leftP.index != rightP.index) leftP.showDiagram(rightP.index) }
     val zoom = rememberZoomState()

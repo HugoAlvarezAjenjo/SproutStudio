@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileOps
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.delete
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.describe
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.fileError
@@ -46,25 +45,26 @@ import es.hugoalvarezajenjo.sproutstudio.features.explorer.newDiagramIn
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.newFolderIn
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.rename
 import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateGallery
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateThumbnails
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.files.FileError
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-/** Shows the dialog for [ProjectState.fileAction]: a name prompt, or a Trash confirmation. */
+/** Shows the dialog for [WorkspaceViewModel.fileAction]: a name prompt, or a Trash confirmation. */
 @Composable
-internal fun FileActionDialog(p: ProjectState) {
+internal fun FileActionDialog(p: WorkspaceViewModel) {
     when (val a = p.fileAction ?: return) {
         is FileAction.NewDiagram -> NewDiagramDialog(p, a.dir)
 
         is FileAction.NewFolder -> NameDialog(
             title = "New Folder", label = "Name", confirm = "Create",
-            initial = FileOps.freeName(a.dir, "new-folder"), selectBase = false,
-            state = remember(a) { mutableStateOf(selected(FileOps.freeName(a.dir, "new-folder"), false)) },
+            initial = p.deps.files.freeName(a.dir, "new-folder"), selectBase = false,
+            state = remember(a) { mutableStateOf(selected(p.deps.files.freeName(a.dir, "new-folder"), false)) },
             hint = "in ${where(p, a.dir)}",
-            check = { FileOps.validate(a.dir, it)?.describe() },
+            check = { p.deps.files.validate(a.dir, it)?.describe() },
             onDismiss = { p.fileAction = null },
             scope = p.scope,
         ) { p.newFolderIn(a.dir, it).exceptionOrNull()?.fileError?.describe() }
@@ -74,7 +74,7 @@ internal fun FileActionDialog(p: ProjectState) {
             initial = a.target.name, selectBase = !a.target.isDirectory,
             state = remember(a) { mutableStateOf(selected(a.target.name, !a.target.isDirectory)) },
             hint = null,
-            check = { FileOps.validate(a.target.absoluteFile.parentFile, it, except = a.target)?.describe() },
+            check = { p.deps.files.validate(a.target.absoluteFile.parentFile, it, except = a.target)?.describe() },
             onDismiss = { p.fileAction = null },
             scope = p.scope,
         ) { p.rename(a.target, it).exceptionOrNull()?.fileError?.describe() }
@@ -88,13 +88,14 @@ internal fun FileActionDialog(p: ProjectState) {
  * The name field's state lives here so it survives the dialog stepping aside for the gallery.
  */
 @Composable
-private fun NewDiagramDialog(p: ProjectState, dir: File) {
-    val initial = remember(dir) { FileOps.freeName(dir, "new-diagram", ".puml") }
+private fun NewDiagramDialog(p: WorkspaceViewModel, dir: File) {
+    val initial = remember(dir) { p.deps.files.freeName(dir, "new-diagram", ".puml") }
     val name = remember(dir) { mutableStateOf(selected(initial, selectBase = true)) }
     var template by remember(dir) { mutableStateOf<Template?>(null) }
     var picking by remember(dir) { mutableStateOf(false) }
     if (picking) {
         TemplateGallery(
+            thumbnails = TemplateThumbnails(p.deps.render, p.deps.diagram),
             onDismiss = { picking = false },
             onPick = { template = it; picking = false },
             wholeOnly = true,
@@ -105,7 +106,7 @@ private fun NewDiagramDialog(p: ProjectState, dir: File) {
         title = "New Diagram", label = "Name", confirm = "Create",
         state = name, initial = initial,
         hint = "in ${where(p, dir)} · .puml is added if missing",
-        check = { n -> (if (n.isBlank()) FileError.EmptyName else FileOps.validate(dir, FileOps.diagramName(n)))?.describe() },
+        check = { n -> (if (n.isBlank()) FileError.EmptyName else p.deps.files.validate(dir, p.deps.files.diagramName(n)))?.describe() },
         onDismiss = { p.fileAction = null },
         scope = p.scope,
         extra = {
@@ -136,7 +137,7 @@ private fun selected(text: String, selectBase: Boolean): TextFieldValue {
 }
 
 /** "project/sub" for the hint line under a name field. */
-private fun where(p: ProjectState, dir: File): String {
+private fun where(p: WorkspaceViewModel, dir: File): String {
     val root = p.root?.absoluteFile ?: return dir.name
     val rel = dir.absoluteFile.relativeTo(root).path
     return if (rel.isEmpty()) root.name else "${root.name}/$rel"
@@ -220,7 +221,7 @@ private fun NameDialog(
 }
 
 @Composable
-private fun DeleteDialog(p: ProjectState, target: File) {
+private fun DeleteDialog(p: WorkspaceViewModel, target: File) {
     val c = ide
     var failed by remember { mutableStateOf<String?>(null) }
     val f = target.absoluteFile
@@ -257,5 +258,3 @@ private fun DeleteDialog(p: ProjectState, target: File) {
     )
 }
 
-/** Shows [f] selected in Finder (or opens its folder elsewhere). */
-internal fun revealInFinder(f: File) = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.platform.reveal(f)

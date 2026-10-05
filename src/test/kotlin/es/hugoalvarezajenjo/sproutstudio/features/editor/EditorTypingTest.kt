@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.material3.Surface
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasSetTextAction
@@ -18,7 +20,7 @@ import kotlin.test.assertEquals
 class EditorTypingTest {
 
     private fun typeAtEnd(initial: String, chars: String): String {
-        val doc = Document(null, initial)
+        val doc = TestGraph.document(null, initial)
         doc.value = doc.value.copy(selection = TextRange(initial.length))
         runComposeUiTest {
             setContent { PumlTheme(dark = true) { Surface(color = ide.panel) { CodeEditor(doc, errorLine = null) } } }

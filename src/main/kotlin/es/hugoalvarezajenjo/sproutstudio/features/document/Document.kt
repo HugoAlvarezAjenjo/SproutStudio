@@ -7,7 +7,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import java.io.File
 import java.io.IOException
-import es.hugoalvarezajenjo.sproutstudio.app.AppGraph
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -23,7 +22,7 @@ class Document(
     file: File?,
     initialText: String,
     /** Where saves go: the one writer of diagram files, which keeps writes to a file in order. */
-    private val store: DocumentStore = AppGraph.default.documents,
+    private val store: DocumentStore,
 ) {
     /** Folded blocks; declared first because the [value] setter uses it. */
     val folds = es.hugoalvarezajenjo.sproutstudio.features.editor.FoldState()
@@ -139,7 +138,7 @@ class Document(
     }
 
     companion object {
-        fun open(file: File) = Document(file, file.readText())
+        fun open(file: File, store: DocumentStore) = Document(file, file.readText(), store)
     }
 }
 

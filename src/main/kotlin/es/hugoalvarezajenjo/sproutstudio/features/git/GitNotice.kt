@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import androidx.compose.runtime.getValue
+
 /** What the last Commit-window action did, worded by the UI. */
 sealed interface GitNotice {
     data class Committed(val files: Int, val id: String) : GitNotice

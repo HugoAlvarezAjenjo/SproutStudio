@@ -1,60 +1,23 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.hoverable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
+import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateThumbnails
+import es.hugoalvarezajenjo.sproutstudio.core.os.Os
+
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.CallSplit
-import androidx.compose.material.icons.automirrored.outlined.NoteAdd
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Commit
-import androidx.compose.material.icons.outlined.CreateNewFolder
-import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Remove
-import androidx.compose.material.icons.outlined.Schema
-import androidx.compose.material.icons.outlined.UnfoldLess
-import androidx.compose.material.icons.outlined.VerticalSplit
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,20 +25,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.KeyShortcut
@@ -84,24 +37,12 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
-import androidx.compose.ui.zIndex
-import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.PlantUmlLanguage
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
-import es.hugoalvarezajenjo.sproutstudio.features.editor.CodeEditor
 import es.hugoalvarezajenjo.sproutstudio.features.editor.changeAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.editor.findNext
 import es.hugoalvarezajenjo.sproutstudio.features.editor.foldAll
@@ -110,78 +51,43 @@ import es.hugoalvarezajenjo.sproutstudio.features.editor.rollbackAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.editor.selectedText
 import es.hugoalvarezajenjo.sproutstudio.features.editor.unfoldAll
 import es.hugoalvarezajenjo.sproutstudio.features.editor.unfoldAtCaret
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileActionDialog
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.TreeDrag
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.describe
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.fileError
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.move
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.revealInFinder
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.treeDrag
-import es.hugoalvarezajenjo.sproutstudio.features.git.BranchButton
-import es.hugoalvarezajenjo.sproutstudio.features.git.CommitPanel
 import es.hugoalvarezajenjo.sproutstudio.features.git.canCompareWithHead
 import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
-import es.hugoalvarezajenjo.sproutstudio.features.git.rememberLineChanges
-import es.hugoalvarezajenjo.sproutstudio.features.git.vcsColor
 import es.hugoalvarezajenjo.sproutstudio.features.palette.CommandPalette
 import es.hugoalvarezajenjo.sproutstudio.features.palette.DoubleShiftDetector
-import es.hugoalvarezajenjo.sproutstudio.features.palette.PaletteRecents
 import es.hugoalvarezajenjo.sproutstudio.features.palette.projectCommands
-import es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint
-import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewPane
-import es.hugoalvarezajenjo.sproutstudio.features.preview.rememberPreviewViewModel
-import es.hugoalvarezajenjo.sproutstudio.features.problems.ProblemsPanel
 import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateGallery
-import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateSidebar
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AppState
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AppWindow
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSave
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSavePrefs
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.Recents
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool
-import es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.AppIcon
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.DiagramPrefs
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.Dot
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.HLine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.Splitter
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.StatusText
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ThemePrefs
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.VLine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
-import java.awt.Cursor
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import kotlinx.coroutines.launch
 
 private fun shortcut(key: Key, shift: Boolean = false) =
-    KeyShortcut(key, meta = Dialogs.isMac, ctrl = !Dialogs.isMac, shift = shift)
+    KeyShortcut(key, meta = Os.isMac, ctrl = !Os.isMac, shift = shift)
 
 /** What to do once the user answers the "unsaved changes" question. */
 private class PendingClose(val docs: List<Document>, val then: () -> Unit)
 
 @Composable
-fun ProjectWindow(win: AppWindow.Project) {
-    val p = win.state
+fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit) {
     var pending by remember { mutableStateOf<PendingClose?>(null) }
 
     fun closeDocs(docs: List<Document>, then: () -> Unit) {
         p.scope.launch {
-            AutoSave.flush(docs) // with autosave on, only untitled diagrams still need the question
+            p.deps.autoSaver.flush(docs) // with autosave on, only untitled diagrams still need the question
             val dirty = docs.filter { it.dirty }
             if (dirty.isEmpty()) then() else pending = PendingClose(dirty, then)
         }
     }
 
     // Autosave: 1 s after you stop typing, and whenever you switch tab (see below).
-    LaunchedEffect(p) { AutoSave.watch({ p.docs.toList() }) }
-    LaunchedEffect(p.activeIndex) { AutoSave.flush(p.docs.toList()) }
+    LaunchedEffect(p) { p.deps.autoSaver.watch({ p.docs.toList() }) }
+    LaunchedEffect(p.activeIndex) { p.deps.autoSaver.flush(p.docs.toList()) }
 
     DisposableEffect(p) { onDispose { p.close() } }
 
@@ -201,10 +107,10 @@ fun ProjectWindow(win: AppWindow.Project) {
     /** Save (asks where for an untitled diagram); the write itself runs off the UI thread. */
     suspend fun save(doc: Document?) {
         doc ?: return
-        if (doc.file == null) Dialogs.saveAs(doc.name, p.root)?.let { doc.save(it); p.refreshTree() } else doc.save()
+        if (doc.file == null) p.chooseSaveTarget(doc.name, p.root)?.let { doc.save(it); p.refreshTree() } else doc.save()
     }
     fun saveAs(d: Document) {
-        Dialogs.saveAs(d.name, d.dir ?: p.root)?.let { target -> p.scope.launch { d.save(target); p.refreshTree() } }
+        p.chooseSaveTarget(d.name, d.dir ?: p.root)?.let { target -> p.scope.launch { d.save(target); p.refreshTree() } }
     }
 
     val title = buildString {
@@ -213,18 +119,18 @@ fun ProjectWindow(win: AppWindow.Project) {
     }
 
     Window(
-        onCloseRequest = { closeDocs(p.docs.toList()) { AppState.close(win) } },
+        onCloseRequest = { closeDocs(p.docs.toList()) { onClose() } },
         title = title,
         icon = AppIcon.painter,
         state = rememberWindowState(size = DpSize(1320.dp, 840.dp)),
-        visible = win.revealed,
+        visible = revealed,
         onPreviewKeyEvent = { e ->
             val isShift = e.key == Key.ShiftLeft || e.key == Key.ShiftRight
             when {
                 doubleShift.onKey(isShift, down = e.type == KeyEventType.KeyDown) -> { paletteOpen = true; true }
                 // ⇧⌘A (IntelliJ's Find Action) as a second way in; ⇧⌘P is on the menu item.
                 e.type == KeyEventType.KeyDown && e.key == Key.A && e.isShiftPressed &&
-                    (if (Dialogs.isMac) e.isMetaPressed else e.isCtrlPressed) -> { paletteOpen = true; true }
+                    (if (Os.isMac) e.isMetaPressed else e.isCtrlPressed) -> { paletteOpen = true; true }
                 else -> false
             }
         },
@@ -232,7 +138,7 @@ fun ProjectWindow(win: AppWindow.Project) {
         // ...and when the window loses focus (you go to another app), like IntelliJ.
         DisposableEffect(window) {
             val l = object : WindowAdapter() {
-                override fun windowLostFocus(e: WindowEvent?) { p.scope.launch { AutoSave.flush(p.docs.toList()) } }
+                override fun windowLostFocus(e: WindowEvent?) { p.scope.launch { p.deps.autoSaver.flush(p.docs.toList()) } }
                 // Back from the terminal (a commit, a checkout...): re-read git status.
                 override fun windowGainedFocus(e: WindowEvent?) = p.git.requestRefresh()
             }
@@ -243,14 +149,14 @@ fun ProjectWindow(win: AppWindow.Project) {
             Menu("File") {
                 Item("New Diagram", shortcut = shortcut(Key.N)) { p.newDocument() }
                 Item("New from Template…", shortcut = shortcut(Key.N, shift = true)) { galleryOpen = true }
-                Item("Open Diagram…", shortcut = shortcut(Key.O, shift = true)) { Dialogs.openDiagram()?.let { AppState.openFile(it) } }
-                Item("Open Folder…", shortcut = shortcut(Key.O)) { Dialogs.openFolder()?.let { p.openRoot(it) } }
-                Item("New Window") { AppState.newProjectWindow() }
+                Item("Open Diagram…", shortcut = shortcut(Key.O, shift = true)) { p.openDiagramDialog() }
+                Item("Open Folder…", shortcut = shortcut(Key.O)) { p.chooseFolder()?.let { p.openRoot(it) } }
+                Item("New Window") { p.deps.windows.newProjectWindow() }
                 Separator()
                 Item("Save", shortcut = shortcut(Key.S), enabled = p.active != null) { p.scope.launch { save(p.active) } }
-                CheckboxItem("Save Automatically", checked = AutoSavePrefs.enabled) {
-                    AutoSavePrefs.enabled = it
-                    if (it) p.scope.launch { AutoSave.flush(p.docs.toList()) }
+                CheckboxItem("Save Automatically", checked = p.deps.autoSaver.enabled) {
+                    p.deps.autoSaver.setEnabled(it)
+                    if (it) p.scope.launch { p.deps.autoSaver.flush(p.docs.toList()) }
                 }
                 Item("Save As…", shortcut = shortcut(Key.S, shift = true), enabled = p.active != null) {
                     p.active?.let { saveAs(it) }
@@ -280,7 +186,7 @@ fun ProjectWindow(win: AppWindow.Project) {
                     RadioButtonItem(
                         l.label,
                         selected = p.layout == l,
-                        shortcut = KeyShortcut(l.shortcutKey, meta = Dialogs.isMac, ctrl = !Dialogs.isMac, alt = true),
+                        shortcut = KeyShortcut(l.shortcutKey, meta = Os.isMac, ctrl = !Os.isMac, alt = true),
                     ) { p.changeLayout(l) }
                 }
                 CheckboxItem("Show Preview", checked = p.previewVisible, shortcut = shortcut(Key.P)) { p.togglePreview() }
@@ -289,27 +195,27 @@ fun ProjectWindow(win: AppWindow.Project) {
                 CheckboxItem("Show Commit Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT, shortcut = shortcut(Key.Zero)) { p.toggleTool(SidebarTool.COMMIT) }
                 CheckboxItem("Show Templates Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.TEMPLATES) { p.toggleTool(SidebarTool.TEMPLATES) }
                 CheckboxItem("Show Problems", checked = p.problemsExpanded, shortcut = shortcut(Key.Six)) { p.toggleProblems() }
-                CheckboxItem("Dark Theme", checked = ThemePrefs.dark) { ThemePrefs.toggle() }
-                CheckboxItem("Dark Diagram Preview", checked = DiagramPrefs.dark) { DiagramPrefs.toggle() }
+                CheckboxItem("Dark Theme", checked = p.deps.theme.dark.value) { p.deps.theme.toggle() }
+                CheckboxItem("Dark Diagram Preview", checked = p.deps.diagram.dark.value) { p.deps.diagram.toggle() }
                 Separator()
-                Item("Refresh Files", shortcut = KeyShortcut(Key.Y, meta = Dialogs.isMac, ctrl = !Dialogs.isMac, alt = true)) { p.refreshTree() }
+                Item("Refresh Files", shortcut = KeyShortcut(Key.Y, meta = Os.isMac, ctrl = !Os.isMac, alt = true)) { p.refreshTree() }
             }
             Menu("Git") {
                 val g = p.git
                 Item("Commit…", shortcut = shortcut(Key.K), enabled = p.root != null) { p.focusCommit() }
                 Item("Compare Diagram with HEAD", enabled = canCompareWithHead(p, p.active?.file)) {
-                    p.active?.file?.let { AppState.compareWithHead(p, it) }
+                    p.active?.file?.let { p.deps.windows.compareWithHead(p, it) }
                 }
                 Item(
                     "Rollback Lines",
-                    shortcut = KeyShortcut(Key.Z, meta = Dialogs.isMac, ctrl = !Dialogs.isMac, alt = true),
+                    shortcut = KeyShortcut(Key.Z, meta = Os.isMac, ctrl = !Os.isMac, alt = true),
                     enabled = p.active?.changeAtCaret() != null,
                 ) { p.revealEditor(); p.active?.rollbackAtCaret() }
                 Item("Show Diff with HEAD", enabled = hasCommittedChanges(p, p.active?.file)) {
-                    p.active?.file?.let { AppState.compareWithHead(p, it, textFirst = true) }
+                    p.active?.file?.let { p.deps.windows.compareWithHead(p, it, textFirst = true) }
                 }
                 Item("Show History for Current File", enabled = g.status.head != null && p.active?.file != null) {
-                    p.active?.file?.let { AppState.showHistory(p, it) }
+                    p.active?.file?.let { p.deps.windows.showHistory(p, it) }
                 }
                 Separator()
                 Item("Undo Last Commit", enabled = (g.lastCommit?.parents ?: 0) > 0) {
@@ -331,7 +237,7 @@ fun ProjectWindow(win: AppWindow.Project) {
             }
         }
 
-        PumlTheme {
+        PumlTheme(dark = p.deps.theme.dark.value) {
             Box(Modifier.fillMaxSize()) {
             Surface(color = ide.panel) {
                 if (p.root == null && p.docs.isEmpty()) {
@@ -352,10 +258,11 @@ fun ProjectWindow(win: AppWindow.Project) {
                 )
                 CommandPalette(
                     commands,
+                    recentIds = remember { p.deps.paletteHistory.ids() },
                     onDismiss = { paletteOpen = false; p.active?.requestFocus() },
                     onRun = { cmd ->
                         paletteOpen = false
-                        PaletteRecents.add(cmd.id)
+                        p.deps.paletteHistory.add(cmd.id)
                         cmd.run()
                         // Hand the keyboard back to the (possibly new) active editor.
                         if (cmd.restoresFocus) p.active?.requestFocus()
@@ -364,7 +271,7 @@ fun ProjectWindow(win: AppWindow.Project) {
             }
 
             if (galleryOpen) {
-                TemplateGallery(onDismiss = { galleryOpen = false; p.active?.requestFocus() }, onPick = { pickTemplate(it) })
+                TemplateGallery(TemplateThumbnails(p.deps.render, p.deps.diagram), onDismiss = { galleryOpen = false; p.active?.requestFocus() }, onPick = { pickTemplate(it) })
             }
             }
 
@@ -397,557 +304,6 @@ fun ProjectWindow(win: AppWindow.Project) {
 // Welcome — modelled on the JetBrains "Welcome to IntelliJ IDEA" screen
 // ─────────────────────────────────────────────────────────────────────────────
 
-@Composable
-internal fun Welcome(p: ProjectState) {
-    val c = ide
-    Box(Modifier.fillMaxSize().background(c.editor), contentAlignment = Alignment.Center) {
-        Column(
-            Modifier.widthIn(max = 520.dp).padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                AppMark(44)
-                Column {
-                    Text("SproutStudio", style = MaterialTheme.typography.headlineMedium, color = c.text)
-                    Text("PlantUML, offline. Version 0.1", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ToolButton(Icons.Outlined.FolderOpen, label = "Open Folder", primary = true) { Dialogs.openFolder()?.let { p.openRoot(it) } }
-                ToolButton(Icons.Outlined.Description, label = "Open File") { Dialogs.openDiagram()?.let { AppState.openFile(it) } }
-                ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, label = "New Diagram") { p.newDocument() }
-            }
-            val recents = remember { Recents.folders() }
-            if (recents.isNotEmpty()) {
-                Spacer(Modifier.height(14.dp))
-                Text("Recent", style = MaterialTheme.typography.labelMedium, color = c.textMuted)
-                Column {
-                    recents.forEach { dir ->
-                        ListRow(onClick = { p.openRoot(dir) }) {
-                            Initials(dir.name)
-                            Column(Modifier.weight(1f)) {
-                                Text(dir.name, style = MaterialTheme.typography.labelLarge, color = c.text)
-                                Text(
-                                    dir.parent?.replace(System.getProperty("user.home"), "~") ?: "",
-                                    fontSize = 11.sp, color = c.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Text("Tip: double-click any .puml file in Finder for an instant preview.", fontSize = 12.sp, color = c.textMuted)
-        }
-    }
-}
-
-/** Gradient-free app mark: rounded square with an accent "S". */
-@Composable
-private fun AppMark(size: Int) {
-    Box(
-        Modifier.size(size.dp).clip(RoundedCornerShape((size / 4).dp)).background(Color(0xFF2FA36B)),
-        contentAlignment = Alignment.Center,
-    ) { Text("S", color = Color.White, fontSize = (size * 0.5).sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
-}
-
-/** JetBrains recent-project tile: two initials on a tinted square. */
-@Composable
-private fun Initials(name: String) {
-    val hues = listOf(0xFF3574F0, 0xFF2FA36B, 0xFFC77DBB, 0xFFCF8E6D, 0xFF2AACB8)
-    val tint = Color(hues[(name.hashCode() and 0x7fffffff) % hues.size])
-    val letters = name.split('-', '_', ' ', '.').filter { it.isNotEmpty() }.take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "?" }
-    Box(Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).background(tint), contentAlignment = Alignment.Center) {
-        Text(letters, color = Color.White, fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-    }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Workspace: project panel | tabs + editor | preview
 // ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: (Document) -> Unit) {
-    var caretLine by remember { mutableStateOf(1) }
-    var caretCol by remember { mutableStateOf(1) }
-    var status by remember { mutableStateOf<StatusInfo?>(null) }
-    val c = ide
-
-    // Git: find the repository of the folder, and re-read status on demand / after each save.
-    LaunchedEffect(p.root) { p.git.openIn(p.root) }
-    LaunchedEffect(p) { snapshotFlow { p.docs.map { it.savedText } }.collect { p.git.requestRefresh() } }
-
-    Column(Modifier.fillMaxSize().background(c.panel)) {
-        Row(Modifier.weight(1f)) {
-            if (p.root != null) {
-                ToolStripe(p)
-                VLine()
-                if (p.sidebarVisible) {
-                    when (p.sidebarTool) {
-                        SidebarTool.COMMIT -> CommitPanel(p)
-                        SidebarTool.TEMPLATES -> TemplateSidebar(onPick = { p.insertTemplate(it) })
-                        SidebarTool.PROJECT -> Sidebar(p)
-                    }
-                    SidebarSplitter(p)
-                }
-            }
-            Column(Modifier.weight(1f).fillMaxHeight().background(c.editor)) {
-                TabsBar(p, onCloseTab)
-                val doc = p.active
-                if (doc == null) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        EmptyState(Icons.Outlined.Schema, "No file open", "Pick a diagram on the left, or press ⌘N")
-                    }
-                } else {
-                    key(doc) {
-                        val preview = rememberPreviewViewModel(doc.text, doc.dir)
-                        Box(Modifier.weight(1f).fillMaxWidth()) {
-                            EditorAndPreview(p, doc, preview, onCaret = { l, col -> caretLine = l; caretCol = col })
-                        }
-                        HLine()
-                        ProblemsPanel(
-                            problems = preview.problems,
-                            expanded = p.problemsExpanded,
-                            multiBlock = preview.diagramCount > 1,
-                            onToggle = { p.toggleProblems() },
-                            onGoTo = { target ->
-                                p.revealEditor()
-                                if (target.diagramIndex != preview.index && target.diagramIndex < preview.diagramCount) {
-                                    preview.showDiagram(target.diagramIndex)
-                                }
-                                target.line?.let { doc.jumpTo(it) }
-                            },
-                            // Expanded: capped height so the editor keeps most of the window. Collapsed: just the bar.
-                            modifier = if (p.problemsExpanded) Modifier.height(200.dp) else Modifier,
-                        )
-                        val info = StatusInfo(
-                            kind = PlantUmlLanguage.kindAt(doc.text, doc.value.selection.start).label,
-                            diagrams = preview.diagramCount,
-                            errorLine = preview.error?.let { it.line ?: 0 },
-                            problems = preview.problems.size,
-                        )
-                        SideEffect { status = info }
-                    }
-                }
-            }
-        }
-        HLine()
-        StatusBar(p, caretLine, caretCol, status)
-    }
-}
-
-/** What the active editor knows, for the status bar. */
-private data class StatusInfo(val kind: String, val diagrams: Int, val errorLine: Int?, val problems: Int)
-
-@Composable
-private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewViewModel, onCaret: (Int, Int) -> Unit) {
-    val c = ide
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val total = maxWidth
-        val density = LocalDensity.current
-        val split = p.layout == EditorLayout.SPLIT
-        Row(Modifier.fillMaxSize()) {
-            if (p.editorVisible) {
-                CodeEditor(
-                    doc,
-                    // Red lines come from the Problems list (every block), not only the error of the
-                    // diagram the preview happens to show; it's also computed before the image.
-                    errorLine = null,
-                    errorLines = preview.problems.mapNotNull { it.line }.toSet(),
-                    lineChanges = rememberLineChanges(p.git, doc.file, doc.text),
-                    modifier = Modifier.weight(if (split) 1f - p.previewFraction else 1f).fillMaxHeight(),
-                    onCaretMoved = onCaret,
-                )
-            }
-            if (split) {
-                Splitter(onDrag = { deltaPx ->
-                    val deltaFrac = with(density) { deltaPx.toDp() } / total
-                    p.previewFraction = (p.previewFraction - deltaFrac).coerceIn(0.2f, 0.8f)
-                })
-            }
-            if (p.previewVisible) {
-                PreviewPane(
-                    preview = preview,
-                    baseDir = doc.dir,
-                    baseName = doc.baseName,
-                    modifier = Modifier.weight(if (split) p.previewFraction else 1f).fillMaxHeight(),
-                    // An error link needs the code: from preview-only, open the editor beside it.
-                    onJumpToLine = { p.revealEditor(); doc.jumpTo(it) },
-                    requests = doc.previewCommandFlow,
-                    leadingTools = {
-                        Text("Preview", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.padding(start = 6.dp, end = 4.dp))
-                    },
-                )
-            }
-        }
-    }
-}
-
-/**
- * JetBrains-style tool window stripe: always visible on the left, its button toggles the
- * Project panel, so a collapsed panel is one click (or ⌘1) away.
- */
-@Composable
-private fun ToolStripe(p: ProjectState) {
-    Column(
-        Modifier.width(40.dp).fillMaxHeight().background(ide.panel).padding(top = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        val project = p.sidebarVisible && p.sidebarTool == SidebarTool.PROJECT
-        val commit = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT
-        ToolButton(
-            Icons.Outlined.Folder,
-            if (project) "Hide Project (${shortcutHint("1")})" else "Show Project (${shortcutHint("1")})",
-            selected = project,
-        ) { p.toggleTool(SidebarTool.PROJECT) }
-        ToolButton(
-            Icons.Outlined.Commit,
-            if (commit) "Hide Commit (${shortcutHint("0")})" else "Commit (${shortcutHint("0")})",
-            selected = commit,
-        ) { p.toggleTool(SidebarTool.COMMIT) }
-        val templates = p.sidebarVisible && p.sidebarTool == SidebarTool.TEMPLATES
-        ToolButton(
-            Icons.Outlined.Dashboard,
-            if (templates) "Hide Templates" else "Templates",
-            selected = templates,
-        ) { p.toggleTool(SidebarTool.TEMPLATES) }
-    }
-}
-
-/** Drag to resize the Project panel, double-click to collapse it. */
-@Composable
-private fun SidebarSplitter(p: ProjectState) {
-    val density = LocalDensity.current
-    Splitter(
-        onDrag = { deltaPx -> p.resizeSidebar(p.sidebarWidth + with(density) { deltaPx.toDp() }.value) },
-        onDragStopped = { p.persistSidebarWidth() },
-        onDoubleClick = { p.showSidebar(false) },
-    )
-}
-
-@Composable
-private fun Sidebar(p: ProjectState) {
-    val c = ide
-    val root = p.root ?: return
-    val drag = remember(p) { TreeDrag() }
-    var message by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(message) { if (message != null) { kotlinx.coroutines.delay(4000); message = null } }
-    val onDrop: (java.io.File, java.io.File) -> Unit = { what, where ->
-        p.scope.launch { p.move(what, where).exceptionOrNull()?.let { message = it.fileError.describe() } }
-    }
-    var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-    // zIndex: the drag label may run past the panel, over the editor.
-    Box(Modifier.width(p.sidebarWidth.dp).fillMaxHeight().zIndex(if (drag.source != null) 2f else 0f).onGloballyPositioned { origin = it.positionInWindow() }) {
-    Column(Modifier.fillMaxSize().background(c.panel).testTag("project-tree")) {
-        // Tool window header: title + actions, 36dp like IntelliJ.
-        Row(
-            Modifier.fillMaxWidth().height(36.dp).padding(start = 12.dp, end = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("Project", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
-            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New Diagram…") { p.fileAction = FileAction.NewDiagram(targetDir(p)) }
-            ToolButton(Icons.Outlined.CreateNewFolder, "New Folder…") { p.fileAction = FileAction.NewFolder(targetDir(p)) }
-            ToolButton(Icons.Outlined.UnfoldLess, "Collapse All") { p.expanded.clear(); p.refreshTree() }
-            ToolButton(Icons.Outlined.Refresh, "Refresh (⌥⌘Y)") { p.refreshTree() }
-            ToolButton(Icons.Outlined.Remove, "Hide (⌘1)") { p.showSidebar(false) }
-        }
-        // Root row: a folder like any other, so it collapses too.
-        androidx.compose.foundation.ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
-            ListRow(
-                onClick = { p.rootCollapsed = !p.rootCollapsed }, height = 26, startPadding = 6,
-                modifier = Modifier.treeDrag(drag, "root", root, file = null, onDrop).dropHighlight(drag.target == root.absoluteFile),
-            ) {
-                Icon(if (p.rootCollapsed) Icons.Outlined.ChevronRight else Icons.Outlined.ExpandMore, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
-                Icon(if (p.rootCollapsed) Icons.Outlined.Folder else Icons.Outlined.FolderOpen, null, tint = c.textMuted, modifier = Modifier.size(16.dp))
-                Text(root.name, style = MaterialTheme.typography.labelLarge, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testTag("tree-root"))
-                Text(
-                    root.parent?.replace(System.getProperty("user.home"), "~") ?: "",
-                    fontSize = 12.sp, color = c.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        if (!p.rootCollapsed) {
-            if (p.tree.isEmpty()) {
-                Text("No diagrams in this folder", fontSize = 12.sp, color = c.textMuted, modifier = Modifier.padding(start = 34.dp, top = 6.dp))
-            }
-            LazyColumn(Modifier.weight(1f, fill = false).padding(horizontal = 4.dp)) {
-                items(p.tree, key = { it.file.absolutePath }) { node -> TreeRow(p, node, drag, onDrop) }
-            }
-        }
-        // The empty space below the tree: right-click creates in the project folder.
-        androidx.compose.foundation.ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
-            Box(Modifier.weight(1f).fillMaxWidth().treeDrag(drag, "empty", root, file = null, onDrop))
-        }
-        message?.let {
-            Text(it, color = c.error, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().background(c.errorBg).padding(horizontal = 12.dp, vertical = 6.dp).testTag("tree-message"))
-        }
-    }
-    // What's being dragged, following the pointer.
-    drag.source?.let { src ->
-        val d = LocalDensity.current
-        val at = drag.pointer - origin
-        Row(
-            Modifier.offset { androidx.compose.ui.unit.IntOffset(at.x.toInt() + with(d) { 14.dp.roundToPx() }, at.y.toInt() + with(d) { 6.dp.roundToPx() }) }
-                .clip(RoundedCornerShape(6.dp)).background(c.popup).border(1.dp, if (drag.target != null) c.accent else c.popupBorder, RoundedCornerShape(6.dp))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(if (src.isDirectory) Icons.Outlined.Folder else Icons.Outlined.Schema, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
-            Text(drag.target?.let { "${src.name} → ${if (it == root.absoluteFile) root.name else it.name}" } ?: src.name, color = c.text, fontSize = 12.sp)
-        }
-    }
-    }
-    FileActionDialog(p)
-}
-
-/** Accent outline on the folder row a drag would drop into. */
-private fun Modifier.dropHighlight(on: Boolean) = composed {
-    if (on) border(1.5.dp, ide.accent, RoundedCornerShape(4.dp)).background(ide.accent.copy(alpha = 0.12f), RoundedCornerShape(4.dp)) else this
-}
-
-/** Where the header's New buttons create: the active file's folder inside the project, else the root. */
-private fun targetDir(p: ProjectState): java.io.File {
-    val root = p.root!!.absoluteFile
-    val dir = p.active?.file?.absoluteFile?.parentFile
-    return if (dir != null && (dir == root || dir.startsWith(root))) dir else root
-}
-
-private fun folderMenu(p: ProjectState, dir: java.io.File, isRoot: Boolean) = buildList {
-    add(androidx.compose.foundation.ContextMenuItem("New Diagram…") { p.fileAction = FileAction.NewDiagram(dir) })
-    add(androidx.compose.foundation.ContextMenuItem("New Folder…") { p.fileAction = FileAction.NewFolder(dir) })
-    if (!isRoot) {
-        add(androidx.compose.foundation.ContextMenuItem("Rename…") { p.fileAction = FileAction.Rename(dir) })
-        add(androidx.compose.foundation.ContextMenuItem("Move to Trash…") { p.fileAction = FileAction.Delete(dir) })
-    } else {
-        add(androidx.compose.foundation.ContextMenuItem(if (p.rootCollapsed) "Expand" else "Collapse") { p.rootCollapsed = !p.rootCollapsed })
-    }
-    add(androidx.compose.foundation.ContextMenuItem(if (Dialogs.isMac) "Reveal in Finder" else "Open Containing Folder") { revealInFinder(dir) })
-}
-
-@Composable
-private fun TreeRow(p: ProjectState, node: TreeNode, drag: TreeDrag, onDrop: (java.io.File, java.io.File) -> Unit) {
-    val f = node.file
-    DisposableEffect(f) { onDispose { drag.forget(f.absolutePath) } }
-    androidx.compose.foundation.ContextMenuArea(items = {
-        if (node.isDir) folderMenu(p, f, isRoot = false) else buildList {
-            val dir = f.absoluteFile.parentFile
-            add(androidx.compose.foundation.ContextMenuItem("Open") { p.open(f) })
-            add(androidx.compose.foundation.ContextMenuItem("New Diagram…") { p.fileAction = FileAction.NewDiagram(dir) })
-            add(androidx.compose.foundation.ContextMenuItem("New Folder…") { p.fileAction = FileAction.NewFolder(dir) })
-            add(androidx.compose.foundation.ContextMenuItem("Rename…") { p.fileAction = FileAction.Rename(f) })
-            add(androidx.compose.foundation.ContextMenuItem("Move to Trash…") { p.fileAction = FileAction.Delete(f) })
-            add(androidx.compose.foundation.ContextMenuItem(if (Dialogs.isMac) "Reveal in Finder" else "Open Containing Folder") { revealInFinder(f) })
-            if (p.git.status.head != null) {
-                if (canCompareWithHead(p, f)) add(androidx.compose.foundation.ContextMenuItem("Compare Diagram with HEAD") { AppState.compareWithHead(p, f) })
-                if (hasCommittedChanges(p, f)) add(androidx.compose.foundation.ContextMenuItem("Show Diff with HEAD") { AppState.compareWithHead(p, f, textFirst = true) })
-                add(androidx.compose.foundation.ContextMenuItem("Show History") { AppState.showHistory(p, f) })
-            }
-        }
-    }) { TreeRowContent(p, node, drag, onDrop) }
-}
-
-@Composable
-private fun TreeRowContent(p: ProjectState, node: TreeNode, drag: TreeDrag, onDrop: (java.io.File, java.io.File) -> Unit) {
-    val c = ide
-    val isActive = p.active?.file?.absoluteFile == node.file.absoluteFile
-    val open = node.isDir && node.file in p.expanded
-    ListRow(
-        selected = isActive,
-        onClick = { if (node.isDir) p.toggleDir(node.file) else p.open(node.file) },
-        height = 26,
-        startPadding = 6 + (node.depth + 1) * 16,
-        modifier = Modifier.testTag("tree-row-${node.file.name}")
-            .treeDrag(drag, node.file.absolutePath, folder = if (node.isDir) node.file else node.file.absoluteFile.parentFile, file = node.file, onDrop)
-            .dropHighlight(node.isDir && drag.target == node.file.absoluteFile)
-            .then(if (drag.source?.absoluteFile == node.file.absoluteFile) Modifier.alpha(0.45f) else Modifier),
-    ) {
-        if (node.isDir) {
-            Icon(if (open) Icons.Outlined.ExpandMore else Icons.Outlined.ChevronRight, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
-            Icon(if (open) Icons.Outlined.FolderOpen else Icons.Outlined.Folder, null, tint = c.textMuted, modifier = Modifier.size(16.dp))
-        } else {
-            Spacer(Modifier.width(14.dp))
-            Icon(Icons.Outlined.Schema, null, tint = c.syntax.arrow, modifier = Modifier.size(16.dp))
-        }
-        val git = p.git
-        val vcs = when {
-            node.isDir -> if (git.dirChanged(node.file)) c.vcsModified else if (git.isIgnored(node.file)) c.vcsIgnored else null
-            else -> c.vcsColor(git.changeOf(node.file)?.type) ?: if (git.isIgnored(node.file)) c.vcsIgnored else null
-        }
-        Text(
-            node.file.name,
-            style = MaterialTheme.typography.bodyMedium,
-            color = vcs ?: c.text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        if (!node.isDir && p.docs.any { it.file?.absoluteFile == node.file.absoluteFile && it.dirty }) Dot(c.accent, 6)
-    }
-}
-
-@Composable
-private fun TabsBar(p: ProjectState, onCloseTab: (Document) -> Unit) {
-    if (p.docs.isEmpty()) return
-    val c = ide
-    Column {
-        Row(Modifier.fillMaxWidth().height(36.dp).background(c.panel), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState())) {
-            p.docs.forEachIndexed { i, d ->
-                val active = i == p.activeIndex
-                val interaction = remember { MutableInteractionSource() }
-                val hovered by interaction.collectIsHoveredAsState()
-                Box(
-                    Modifier
-                        .fillMaxHeight()
-                        .background(if (active) c.editor else if (hovered) c.hover else Color.Transparent)
-                        .hoverable(interaction)
-                        .clickable { p.activeIndex = i },
-                ) {
-                    Row(
-                        Modifier.fillMaxHeight().padding(start = 12.dp, end = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Icon(Icons.Outlined.Schema, null, tint = c.syntax.arrow, modifier = Modifier.size(15.dp))
-                        Text(d.name, style = MaterialTheme.typography.bodyMedium, color = if (active) c.text else c.textMuted)
-                        Box(
-                            Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).clickable { onCloseTab(d) },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            when {
-                                d.dirty && !hovered -> Dot(c.accent, 6)
-                                hovered || active -> Icon(Icons.Outlined.Close, "Close", tint = c.textMuted, modifier = Modifier.size(13.dp))
-                            }
-                        }
-                    }
-                    // Active-tab indicator, like the New UI.
-                    if (active) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(2.dp).background(c.accent))
-                }
-                VLine()
-            }
-        }
-            LayoutSwitcher(p)
-        }
-        HLine()
-    }
-}
-
-/** IntelliJ's top-right editor switcher: code only, code + preview, preview only. */
-@Composable
-private fun LayoutSwitcher(p: ProjectState) {
-    Row(Modifier.padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        LAYOUT_BUTTONS.forEach { (l, icon) ->
-            ToolButton(icon, "${l.label} (${l.shortcutHint})", selected = p.layout == l) { p.changeLayout(l) }
-        }
-    }
-}
-
-private val LAYOUT_BUTTONS = listOf(
-    EditorLayout.EDITOR to Icons.Outlined.Code,
-    EditorLayout.SPLIT to Icons.Outlined.VerticalSplit,
-    EditorLayout.PREVIEW to Icons.Outlined.Image,
-)
-
-private val EditorLayout.shortcutKey: Key
-    get() = when (this) { EditorLayout.EDITOR -> Key.One; EditorLayout.SPLIT -> Key.Two; EditorLayout.PREVIEW -> Key.Three }
-
-private val EditorLayout.shortcutHint: String
-    get() = (if (Dialogs.isMac) "⌥⌘" else "Ctrl+Alt+") + (ordinal + 1)
-
-@Composable
-private fun StatusBar(p: ProjectState, line: Int, col: Int, info: StatusInfo?) {
-    val c = ide
-    Row(
-        Modifier.fillMaxWidth().height(26.dp).background(c.panel).padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        // Breadcrumb: folder › file
-        val doc = p.active
-        StatusText(listOfNotNull(p.root?.name, doc?.name).joinToString("  ›  "))
-        Spacer(Modifier.weight(1f))
-        if (doc != null) {
-            info?.let {
-                val problemText = when {
-                    it.problems == 0 -> "No problems"
-                    it.problems == 1 -> "1 problem"
-                    else -> "${it.problems} problems"
-                }
-                StatusClickable(
-                    text = problemText,
-                    color = if (it.problems == 0) c.textMuted else c.error,
-                    icon = if (it.problems == 0) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
-                    onClick = { p.showProblems(true) },
-                )
-                StatusText(if (it.diagrams > 1) "${it.kind} · ${it.diagrams} diagrams" else it.kind)
-            }
-            StatusText("$line:$col")
-            when {
-                doc.saveError != null -> StatusText("Save failed: ${doc.saveError}", c.error, Icons.Outlined.ErrorOutline)
-                doc.dirty -> StatusText(if (doc.file == null) "Not saved yet" else "Modified")
-                else -> StatusText(if (AutoSavePrefs.enabled) "Saved automatically" else "Saved")
-            }
-        }
-        BranchButton(p)
-        StatusText("Offline", icon = Icons.Outlined.Lock)
-    }
-}
-
-/** A status-bar segment that behaves like a button: hover tint, hand cursor, click. */
-@Composable
-private fun StatusClickable(text: String, color: Color, icon: ImageVector, onClick: () -> Unit) {
-    val c = ide
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    Row(
-        Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(if (hovered) c.hover else Color.Transparent)
-            .hoverable(interaction)
-            .pointerHoverIcon(PointerIcon.Hand)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Icon(icon, null, tint = color, modifier = Modifier.size(13.dp))
-        Text(text, color = color, fontSize = 12.sp)
-    }
-}
-
-/** IntelliJ list/tree row: fixed height, 4dp-rounded selection, hover tint. */
-@Composable
-private fun ListRow(
-    selected: Boolean = false,
-    onClick: () -> Unit,
-    height: Int = 44,
-    startPadding: Int = 8,
-    modifier: Modifier = Modifier,
-    content: @Composable RowScope.() -> Unit,
-) {
-    val c = ide
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    Row(
-        modifier
-            .fillMaxWidth()
-            .height(height.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(
-                when {
-                    selected -> c.selection
-                    hovered -> c.hover
-                    else -> Color.Transparent
-                },
-            )
-            .hoverable(interaction)
-            .clickable(onClick = onClick)
-            .padding(start = startPadding.dp, end = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        content = content,
-    )
-}

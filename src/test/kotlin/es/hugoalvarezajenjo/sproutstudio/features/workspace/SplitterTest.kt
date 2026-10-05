@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -9,8 +11,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
@@ -25,12 +26,12 @@ import kotlin.test.assertTrue
 class SplitterTest {
 
     private var savedWidth = 0f
-    @BeforeTest fun save() { savedWidth = LayoutPrefs.sidebarWidth }
-    @AfterTest fun restore() { LayoutPrefs.sidebarWidth = savedWidth } // don't leave the user's prefs changed
+    @BeforeTest fun save() { savedWidth = TestGraph.graph.layout.sidebarWidth.value }
+    @AfterTest fun restore() { TestGraph.graph.layout.sidebarWidth.value = savedWidth } // don't leave the user's prefs changed
 
     /** Presses [dxFromLine] px from the sidebar's border line, drags 60px right, returns the new width. */
     private fun dragFrom(dxFromLine: Float): Float {
-        val p = ProjectState().apply {
+        val p = TestGraph.workspace().apply {
             openRoot(File("samples").absoluteFile)
             resizeSidebar(240f)
         }

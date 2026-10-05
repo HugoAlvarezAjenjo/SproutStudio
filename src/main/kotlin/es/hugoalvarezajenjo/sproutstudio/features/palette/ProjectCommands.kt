@@ -1,5 +1,11 @@
 package es.hugoalvarezajenjo.sproutstudio.features.palette
 
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.chooseFolder
+
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.openDiagramDialog
+
+import es.hugoalvarezajenjo.sproutstudio.core.os.Os
+
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Templates
 import es.hugoalvarezajenjo.sproutstudio.features.document.PreviewAction
@@ -13,20 +19,13 @@ import es.hugoalvarezajenjo.sproutstudio.features.editor.unfoldAll
 import es.hugoalvarezajenjo.sproutstudio.features.editor.unfoldAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.git.canCompareWithHead
 import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AppState
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSave
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSavePrefs
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.Dialogs
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.Recents
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.DiagramPrefs
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ThemePrefs
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import kotlinx.coroutines.launch
 
 /** Shortcut label in the platform's style: "⇧⌘F" on macOS, "Ctrl+Shift+F" elsewhere. */
 internal fun shortcutHint(key: String, shift: Boolean = false, alt: Boolean = false): String =
-    if (Dialogs.isMac) buildString { if (alt) append('⌥'); if (shift) append('⇧'); append('⌘'); append(key) }
+    if (Os.isMac) buildString { if (alt) append('⌥'); if (shift) append('⇧'); append('⌘'); append(key) }
     else buildString { append("Ctrl+"); if (alt) append("Alt+"); if (shift) append("Shift+"); append(key) }
 
 /**
@@ -35,7 +34,7 @@ internal fun shortcutHint(key: String, shift: Boolean = false, alt: Boolean = fa
  * titles and enabled states reflect the current window.
  */
 internal fun projectCommands(
-    p: ProjectState,
+    p: WorkspaceViewModel,
     onSave: () -> Unit,
     onSaveAs: () -> Unit,
     onCloseTab: () -> Unit,
@@ -53,9 +52,9 @@ internal fun projectCommands(
     // File
     cmd("file.new", "New Diagram", "File", shortcutHint("N")) { p.newDocument() }
     cmd("file.gallery", "New from Template…", "File", shortcutHint("N", shift = true), restoresFocus = false) { onOpenGallery() }
-    cmd("file.openDiagram", "Open Diagram…", "File", shortcutHint("O", shift = true)) { Dialogs.openDiagram()?.let { AppState.openFile(it) } }
-    cmd("file.openFolder", "Open Folder…", "File", shortcutHint("O")) { Dialogs.openFolder()?.let { p.openRoot(it) } }
-    cmd("file.newWindow", "New Window", "File") { AppState.newProjectWindow() }
+    cmd("file.openDiagram", "Open Diagram…", "File", shortcutHint("O", shift = true)) { p.openDiagramDialog() }
+    cmd("file.openFolder", "Open Folder…", "File", shortcutHint("O")) { p.chooseFolder()?.let { p.openRoot(it) } }
+    cmd("file.newWindow", "New Window", "File") { p.deps.windows.newProjectWindow() }
     p.root?.let { root ->
         val dir = d?.file?.absoluteFile?.parentFile?.takeIf { it == root.absoluteFile || it.startsWith(root.absoluteFile) } ?: root
         cmd("file.newNamed", "New Diagram in Folder…", "File", restoresFocus = false) { p.fileAction = es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.NewDiagram(dir) }
@@ -67,9 +66,9 @@ internal fun projectCommands(
     }
     cmd("file.save", "Save", "File", shortcutHint("S"), enabled = has) { onSave() }
     cmd("file.saveAs", "Save As…", "File", shortcutHint("S", shift = true), enabled = has) { onSaveAs() }
-    cmd("file.autosave", if (AutoSavePrefs.enabled) "Turn Off Save Automatically" else "Turn On Save Automatically", "File") {
-        AutoSavePrefs.enabled = !AutoSavePrefs.enabled
-        if (AutoSavePrefs.enabled) p.scope.launch { AutoSave.flush(p.docs.toList()) }
+    cmd("file.autosave", if (p.deps.autoSaver.enabled) "Turn Off Save Automatically" else "Turn On Save Automatically", "File") {
+        p.deps.autoSaver.setEnabled(!p.deps.autoSaver.enabled)
+        if (p.deps.autoSaver.enabled) p.scope.launch { p.deps.autoSaver.flush(p.docs.toList()) }
     }
     cmd("file.closeTab", "Close Tab", "File", shortcutHint("W"), enabled = has) { onCloseTab() }
     cmd("file.closeProject", "Close Project", "File", enabled = p.root != null || has, restoresFocus = false) { onCloseProject() }
@@ -113,16 +112,16 @@ internal fun projectCommands(
         // Git
         cmd("git.commit", "Commit…", "Git", shortcutHint("K"), restoresFocus = false) { p.focusCommit() }
         cmd("git.compare", "Compare Diagram with HEAD", "Git", enabled = canCompareWithHead(p, d?.file)) {
-            d?.file?.let { AppState.compareWithHead(p, it) }
+            d?.file?.let { p.deps.windows.compareWithHead(p, it) }
         }
         cmd("git.rollbackLines", "Rollback Lines", "Git", shortcutHint("Z", alt = true), enabled = d?.let { it.changeAtCaret() } != null) {
             p.revealEditor(); d?.let { it.rollbackAtCaret() }
         }
         cmd("git.diff", "Show Diff with HEAD", "Git", enabled = hasCommittedChanges(p, d?.file)) {
-            d?.file?.let { AppState.compareWithHead(p, it, textFirst = true) }
+            d?.file?.let { p.deps.windows.compareWithHead(p, it, textFirst = true) }
         }
         cmd("git.history", "Show History for Current File", "Git", enabled = p.git.status.head != null && d?.file != null) {
-            d?.file?.let { AppState.showHistory(p, it) }
+            d?.file?.let { p.deps.windows.showHistory(p, it) }
         }
         cmd("git.undo", "Undo Last Commit", "Git", enabled = (p.git.lastCommit?.parents ?: 0) > 0, restoresFocus = false) {
             kotlinx.coroutines.MainScope().launch {
@@ -141,8 +140,8 @@ internal fun projectCommands(
             kotlinx.coroutines.MainScope().launch { p.git.init() }
         }
     }
-    cmd("view.theme", if (ThemePrefs.dark) "Switch to Light Theme" else "Switch to Dark Theme", "View") { ThemePrefs.toggle() }
-    cmd("view.diagramDark", if (DiagramPrefs.dark) "Light Diagram Preview" else "Dark Diagram Preview", "Preview") { DiagramPrefs.toggle() }
+    cmd("view.theme", if (p.deps.theme.dark.value) "Switch to Light Theme" else "Switch to Dark Theme", "View") { p.deps.theme.toggle() }
+    cmd("view.diagramDark", if (p.deps.diagram.dark.value) "Light Diagram Preview" else "Dark Diagram Preview", "Preview") { p.deps.diagram.toggle() }
 
     // Preview: export goes through the preview pane (it knows which diagram is showing).
     fun previewCmd(id: String, title: String, a: PreviewAction) = cmd(id, title, "Preview", enabled = has) {
@@ -171,8 +170,8 @@ internal fun projectCommands(
             searchOnly = true,
         ) { p.open(f) }
     }
-    Recents.folders().filter { it.absoluteFile != root?.absoluteFile }.forEach { dir ->
-        out += Command("recent:${dir.path}", dir.name, "Recent Project", searchOnly = true) { AppState.openFolder(dir) }
+    p.deps.recents.folders().filter { it.absoluteFile != root?.absoluteFile }.forEach { dir ->
+        out += Command("recent:${dir.path}", dir.name, "Recent Project", searchOnly = true) { p.deps.windows.openFolder(dir) }
     }
     return out
 }

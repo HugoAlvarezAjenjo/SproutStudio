@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -15,8 +17,7 @@ import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide
 import es.hugoalvarezajenjo.sproutstudio.features.git.DiffView
 import es.hugoalvarezajenjo.sproutstudio.features.git.HistoryView
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
 import es.hugoalvarezajenjo.sproutstudio.services.git.ChangeType
@@ -36,13 +37,13 @@ import kotlin.test.assertTrue
 class GitToolsUiTest {
     private val dir: File = Files.createTempDirectory("sprout-tools").toFile()
     private var sidebar = true
-    @BeforeTest fun save() { sidebar = LayoutPrefs.sidebarVisible }
-    @AfterTest fun cleanup() { LayoutPrefs.sidebarVisible = sidebar; dir.deleteRecursively() }
+    @BeforeTest fun save() { sidebar = TestGraph.graph.layout.sidebarVisible.value }
+    @AfterTest fun cleanup() { TestGraph.graph.layout.sidebarVisible.value = sidebar; dir.deleteRecursively() }
 
     private val a get() = File(dir, "a.puml")
 
     /** Two commits of a.puml ("one" -> v1, "two" -> v2), then an uncommitted edit (v3). */
-    private fun repo(): ProjectState {
+    private fun repo(): WorkspaceViewModel {
         JGitService().init(dir).close()
         File(dir, ".git/config").appendText("[user]\n\tname = T\n\temail = t@e\n[commit]\n\tgpgsign = false\n")
         JGitService().find(dir)!!.use { r ->
@@ -50,10 +51,10 @@ class GitToolsUiTest {
             a.writeText("@startuml\nA -> B: v2\n@enduml\n"); r.commit(listOf(a), "two")
         }
         a.writeText("@startuml\nA -> B: v3\n@enduml\n")
-        return ProjectState().apply { openRoot(dir); showTool(SidebarTool.COMMIT) }
+        return TestGraph.workspace().apply { openRoot(dir); showTool(SidebarTool.COMMIT) }
     }
 
-    private fun androidx.compose.ui.test.ComposeUiTest.workspace(p: ProjectState) = setContent {
+    private fun androidx.compose.ui.test.ComposeUiTest.workspace(p: WorkspaceViewModel) = setContent {
         PumlTheme(dark = true) { Surface(Modifier.size(1300.dp, 760.dp), color = ide.panel) { Workspace(p, onSave = {}, onCloseTab = {}) } }
     }
 

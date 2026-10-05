@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -10,8 +12,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
@@ -26,10 +27,10 @@ import kotlin.test.assertEquals
 class EditorLayoutTest {
 
     private lateinit var saved: EditorLayout
-    @BeforeTest fun save() { saved = LayoutPrefs.editorLayout }
-    @AfterTest fun restore() { LayoutPrefs.editorLayout = saved } // don't leave the user's prefs changed
+    @BeforeTest fun save() { saved = TestGraph.graph.layout.editorLayout.value }
+    @AfterTest fun restore() { TestGraph.graph.layout.editorLayout.value = saved } // don't leave the user's prefs changed
 
-    private fun project() = ProjectState().apply {
+    private fun project() = TestGraph.workspace().apply {
         openRoot(File("samples").absoluteFile)
         open(File("samples/pizza.puml"))
         changeLayout(EditorLayout.SPLIT)
@@ -53,7 +54,7 @@ class EditorLayoutTest {
 
     @Test fun layoutIsRemembered() {
         project().changeLayout(EditorLayout.PREVIEW)
-        assertEquals(EditorLayout.PREVIEW, ProjectState().layout)
+        assertEquals(EditorLayout.PREVIEW, TestGraph.workspace().layout)
     }
 
     @Test fun switcherButtonsShowAndHideTheEditorAndPreview() {

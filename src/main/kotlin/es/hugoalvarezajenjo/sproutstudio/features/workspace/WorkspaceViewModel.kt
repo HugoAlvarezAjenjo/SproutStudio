@@ -10,138 +10,25 @@ import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.delete
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.rename
 import java.io.File
+import es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel
+import es.hugoalvarezajenjo.sproutstudio.features.git.GitViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.receiveAsFlow
 
-/** A window the app is showing. */
-sealed class AppWindow {
-    val id: Long = nextId++
-
-    class QuickPreview(val file: File) : AppWindow()
-    /** [file] at [left] next to [right] (by default: last commit vs now), from [project]'s repository. */
-    class DiagramDiff(
-        val project: ProjectState,
-        val file: File,
-        val left: es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide = es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide.Head,
-        val right: es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide = es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide.WorkingCopy,
-        val textFirst: Boolean = false,
-    ) : AppWindow()
-    /** Commits that touched [file], each viewable as a diagram or text diff. */
-    class History(val project: ProjectState, val file: File) : AppWindow()
-    class Project(val state: ProjectState, revealed: Boolean = true) : AppWindow() {
-        /** False while composed-but-hidden (the boot welcome waiting to see if a file arrives). */
-        var revealed by mutableStateOf(revealed)
-    }
-
-    private companion object { var nextId = 1L }
-}
-
-object AppState {
-    val windows = mutableStateListOf<AppWindow>()
-
-    /**
-     * Welcome window for a plain launch. Compose quits if its first composition has no window,
-     * so it is composed at once but kept HIDDEN: a Finder double-click on a cold start reaches us
-     * as an Apple "open file" event that can arrive seconds after main(). If it does, the hidden
-     * welcome is discarded and only the preview ever appears; otherwise [revealBootWelcome] shows it.
-     */
-    private var bootWelcome: AppWindow.Project? = null
-
-    fun openBootWelcome() {
-        val w = AppWindow.Project(ProjectState(), revealed = false)
-        bootWelcome = w
-        windows += w
-    }
-
-    /** Called once the app has settled with no file to open: show the welcome after all. */
-    fun revealBootWelcome() {
-        bootWelcome?.revealed = true
-    }
-
-    /** A file arrived: the boot welcome isn't wanted, unless the user already started using it. */
-    private fun dropBootWelcome() {
-        val w = bootWelcome ?: return
-        bootWelcome = null
-        val untouched = w.state.root == null && w.state.docs.isEmpty()
-        if (untouched) windows.remove(w)
-    }
-
-    /** Double-click / single file: open the lightweight preview, or focus an open tab. */
-    fun openFile(file: File) {
-        val f = file.absoluteFile
-        when {
-            f.isDirectory -> openFolder(f)
-            windows.any { it is AppWindow.QuickPreview && it.file == f } -> Unit
-            else -> { windows += AppWindow.QuickPreview(f); dropBootWelcome() }
-        }
-    }
-
-    fun openFolder(dir: File) {
-        val d = dir.absoluteFile
-        windows.filterIsInstance<AppWindow.Project>().firstOrNull { it.state.root == d }?.let { return }
-        // Reuse an empty welcome window if there is one.
-        val empty = windows.filterIsInstance<AppWindow.Project>().firstOrNull { it.state.root == null && it.state.docs.isEmpty() }
-        if (empty != null) {
-            empty.state.openRoot(d)
-            empty.revealed = true
-        } else {
-            windows += AppWindow.Project(ProjectState().apply { openRoot(d) })
-        }
-    }
-
-    fun newProjectWindow() {
-        windows += AppWindow.Project(ProjectState())
-    }
-
-    /** "Edit" from Quick Preview: open the file's folder as a project with the file in a tab. */
-    fun editFile(file: File, from: AppWindow?) {
-        val dir = file.absoluteFile.parentFile
-        val existing = windows.filterIsInstance<AppWindow.Project>().firstOrNull { it.state.root == dir }
-        val target = existing?.state ?: ProjectState().apply { openRoot(dir) }.also { windows += AppWindow.Project(it) }
-        target.open(file)
-        if (from != null) windows.remove(from)
-    }
-
-    /** "Compare Diagram with HEAD": one window per file, reused if already open. */
-    fun compareWithHead(project: ProjectState, file: File, textFirst: Boolean = false) {
-        val f = file.absoluteFile
-        if (windows.any { it is AppWindow.DiagramDiff && it.file == f && it.left == es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide.Head }) return
-        windows += AppWindow.DiagramDiff(project, f, textFirst = textFirst)
-    }
-
-    fun showHistory(project: ProjectState, file: File) {
-        val f = file.absoluteFile
-        if (windows.any { it is AppWindow.History && it.file == f }) return
-        windows += AppWindow.History(project, f)
-    }
-
-    fun close(w: AppWindow) {
-        windows.remove(w)
-    }
-}
-
-/** Legacy access to [es.hugoalvarezajenjo.sproutstudio.features.workspace.RecentProjects]. */
-object Recents {
-    private val s get() = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.recents
-
-    fun folders(): List<File> = s.folders()
-
-    fun add(dir: File) = s.add(dir)
-}
-
 /**
- * One project window's state and actions. (Legacy name: it is the workspace ViewModel, and
- * gets that name when the window is split by feature.)
+ * One project window: its folder, open tabs, layout and tool panels, and the actions on them.
+ * Every service it needs comes in [deps]; child ViewModels (git) share its lifetime.
  */
 @Stable
-class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
-    es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.dispatchers.main,
-) {
+class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.main) {
+    private val layoutSettings get() = deps.layout
+
     var root by mutableStateOf<File?>(null)
         private set
     val docs = mutableStateListOf<Document>()
     var activeIndex by mutableStateOf(0)
     /** Editor only / editor + preview / preview only, like IntelliJ's split-editor switcher. */
-    var layout by mutableStateOf(LayoutPrefs.editorLayout)
+    var layout by mutableStateOf(deps.layout.editorLayout.value)
         private set
 
     val previewVisible: Boolean get() = layout != EditorLayout.EDITOR
@@ -149,7 +36,7 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
 
     fun changeLayout(l: EditorLayout) {
         layout = l
-        LayoutPrefs.editorLayout = l
+        layoutSettings.editorLayout.value = l
     }
 
     /** ⌘P: show the preview next to the code, or hide it. */
@@ -163,26 +50,26 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
         if (layout == EditorLayout.PREVIEW) changeLayout(EditorLayout.SPLIT)
     }
 
-    var sidebarVisible by mutableStateOf(LayoutPrefs.sidebarVisible)
+    var sidebarVisible by mutableStateOf(deps.layout.sidebarVisible.value)
         private set
     /** Project panel width in dp; dragged by the user, remembered across launches. */
-    var sidebarWidth by mutableStateOf(LayoutPrefs.sidebarWidth)
+    var sidebarWidth by mutableStateOf(LayoutSettings.clampWidth(deps.layout.sidebarWidth.value))
         private set
 
     fun showSidebar(show: Boolean) {
         sidebarVisible = show
-        LayoutPrefs.sidebarVisible = show
+        layoutSettings.sidebarVisible.value = show
     }
 
     /** Bottom Problems panel: the 1-line header always shows; this is whether the list is open. */
-    var problemsExpanded by mutableStateOf(LayoutPrefs.problemsExpanded)
+    var problemsExpanded by mutableStateOf(deps.layout.problemsExpanded.value)
         private set
 
     fun toggleProblems() = showProblems(!problemsExpanded)
 
     fun showProblems(open: Boolean) {
         problemsExpanded = open
-        LayoutPrefs.problemsExpanded = open
+        layoutSettings.problemsExpanded.value = open
     }
 
     /** Which tool window the left panel shows: the file tree or the Commit window. */
@@ -211,7 +98,7 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
     }
 
     /** Git status of the project folder; opened by the window when [root] changes. */
-    val git = es.hugoalvarezajenjo.sproutstudio.features.git.GitViewModel(es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.git, es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.dispatchers)
+    val git = GitViewModel(deps.git, deps.dispatchers, parent = scope.coroutineContext[Job])
 
     fun resizeSidebar(widthDp: Float) {
         sidebarWidth = widthDp.coerceIn(SIDEBAR_MIN, SIDEBAR_MAX)
@@ -219,7 +106,7 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
 
     /** Called when a drag ends, so we don't write preferences on every pixel. */
     fun persistSidebarWidth() {
-        LayoutPrefs.sidebarWidth = sidebarWidth
+        layoutSettings.sidebarWidth.value = sidebarWidth
     }
     var previewFraction by mutableStateOf(0.5f)
     val expanded = mutableStateListOf<File>()
@@ -236,7 +123,7 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
         root = dir
         rootCollapsed = false
         expanded.clear()
-        Recents.add(dir)
+        deps.recents.add(dir)
         refreshTree()
     }
 
@@ -258,7 +145,7 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
         val f = file.absoluteFile
         val i = docs.indexOfFirst { it.file?.absoluteFile == f }
         if (i >= 0) { activeIndex = i; return }
-        docs += Document.open(f)
+        docs += Document.open(f, deps.documents)
         activeIndex = docs.lastIndex
     }
 
@@ -270,8 +157,8 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
             while (f.exists()) f = File(dir, "new-diagram-${++n}.puml")
             f.writeText("") // empty: content only comes from a template you pick
             refreshTree()
-            Document.open(f)
-        } else Document(null, "")
+            Document.open(f, deps.documents)
+        } else Document(null, "", deps.documents)
         docs += doc
         activeIndex = docs.lastIndex
         return doc
@@ -305,13 +192,13 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
     fun refreshTree() {
         git.requestRefresh()
         val r = root ?: run { tree = emptyList(); return }
-        tree = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.files.tree(r, expanded)
+        tree = deps.files.tree(r, expanded)
     }
 
     /** Every diagram under the root, expanded or not (for the command palette's "go to file"). */
     fun allDiagrams(limit: Int = 2000): List<File> {
         val r = root ?: return emptyList()
-        return es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.files.allDiagrams(r, limit)
+        return deps.files.allDiagrams(r, limit)
     }
 
     /** Closes the window's state: its git ViewModel and anything still running. */
@@ -324,34 +211,4 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
         const val SIDEBAR_MIN = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings.SIDEBAR_MIN
         const val SIDEBAR_MAX = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings.SIDEBAR_MAX
     }
-}
-
-/** Legacy access to [es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings]. */
-object LayoutPrefs {
-    private val s get() = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.layout
-
-    var sidebarVisible: Boolean
-        get() = s.sidebarVisible.value
-        set(v) { s.sidebarVisible.value = v }
-
-    var sidebarWidth: Float
-        get() = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings.clampWidth(s.sidebarWidth.value)
-        set(v) { s.sidebarWidth.value = v }
-
-    var editorLayout: EditorLayout
-        get() = s.editorLayout.value
-        set(v) { s.editorLayout.value = v }
-
-    var problemsExpanded: Boolean
-        get() = s.problemsExpanded.value
-        set(v) { s.problemsExpanded.value = v }
-}
-
-enum class SidebarTool { PROJECT, COMMIT, TEMPLATES }
-
-/** How the active tab is shown. */
-enum class EditorLayout(val label: String) {
-    EDITOR("Editor Only"),
-    SPLIT("Editor and Preview"),
-    PREVIEW("Preview Only"),
 }

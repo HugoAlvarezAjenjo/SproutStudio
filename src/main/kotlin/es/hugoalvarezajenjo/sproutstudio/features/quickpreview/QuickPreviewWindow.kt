@@ -1,5 +1,12 @@
 package es.hugoalvarezajenjo.sproutstudio.features.quickpreview
 
+
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.openDiagramDialog
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.openFolderDialog
+import java.io.File
+import es.hugoalvarezajenjo.sproutstudio.core.os.Os
+
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
@@ -23,15 +30,10 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
 import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewPane
 import es.hugoalvarezajenjo.sproutstudio.features.preview.rememberPreviewViewModel
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AppState
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AppWindow
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.Dialogs
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.AppIcon
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.DiagramPrefs
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.Tag
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ThemePrefs
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import kotlinx.coroutines.delay
@@ -41,14 +43,13 @@ import kotlinx.coroutines.delay
  * It watches the file, so editing it anywhere else refreshes the picture.
  */
 @Composable
-fun QuickPreviewWindow(win: AppWindow.QuickPreview) {
-    val file = win.file
+fun QuickPreviewWindow(file: File, deps: WorkspaceDeps, onClose: () -> Unit) {
     var text by remember { mutableStateOf(runCatching { file.readText() }.getOrDefault("")) }
     var missing by remember { mutableStateOf(!file.exists()) }
 
     // Watch the file for outside edits; the disk is read off the UI thread.
     LaunchedEffect(file) {
-        val io = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.dispatchers.io
+        val io = deps.dispatchers.io
         var stamp = kotlinx.coroutines.withContext(io) { file.lastModified() }
         while (true) {
             delay(700)
@@ -62,32 +63,32 @@ fun QuickPreviewWindow(win: AppWindow.QuickPreview) {
     }
 
     Window(
-        onCloseRequest = { AppState.close(win) },
+        onCloseRequest = onClose,
         title = "${file.name} — SproutStudio",
         icon = AppIcon.painter,
         state = rememberWindowState(size = DpSize(980.dp, 720.dp)),
     ) {
         MenuBar {
             Menu("File") {
-                Item("Edit This Diagram", shortcut = androidx.compose.ui.input.key.KeyShortcut(Key.E, meta = Dialogs.isMac, ctrl = !Dialogs.isMac)) {
-                    AppState.editFile(file, win)
+                Item("Edit This Diagram", shortcut = androidx.compose.ui.input.key.KeyShortcut(Key.E, meta = Os.isMac, ctrl = !Os.isMac)) {
+                    deps.windows.editFile(file)
                 }
-                Item("Open Diagram…") { Dialogs.openDiagram()?.let { AppState.openFile(it) } }
-                Item("Open Folder…") { Dialogs.openFolder()?.let { AppState.openFolder(it) } }
+                Item("Open Diagram…") { deps.openDiagramDialog() }
+                Item("Open Folder…") { deps.openFolderDialog() }
                 Separator()
-                Item("Close", shortcut = androidx.compose.ui.input.key.KeyShortcut(Key.W, meta = Dialogs.isMac, ctrl = !Dialogs.isMac)) { AppState.close(win) }
+                Item("Close", shortcut = androidx.compose.ui.input.key.KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
             }
             Menu("View") {
-                CheckboxItem("Dark Theme", checked = ThemePrefs.dark) { ThemePrefs.toggle() }
-                CheckboxItem("Dark Diagram Preview", checked = DiagramPrefs.dark) { DiagramPrefs.toggle() }
+                CheckboxItem("Dark Theme", checked = deps.theme.dark.value) { deps.theme.toggle() }
+                CheckboxItem("Dark Diagram Preview", checked = deps.diagram.dark.value) { deps.diagram.toggle() }
             }
         }
-        PumlTheme {
+        PumlTheme(dark = deps.theme.dark.value) {
             Surface(Modifier.fillMaxSize(), color = ide.panel) {
                 if (missing) {
                     EmptyState(Icons.Outlined.ErrorOutline, "File not found", file.absolutePath)
                 } else {
-                    val preview = rememberPreviewViewModel(text, file.parentFile, debounceMs = 50)
+                    val preview = rememberPreviewViewModel(deps, text, file.parentFile, debounceMs = 50)
                     PreviewPane(
                         preview = preview,
                         baseDir = file.parentFile,
@@ -95,7 +96,7 @@ fun QuickPreviewWindow(win: AppWindow.QuickPreview) {
                         leadingTools = {
                             Tag(file.name, Icons.Outlined.Schema)
                             Spacer(Modifier.width(4.dp))
-                            ToolButton(Icons.Outlined.Edit, "Open in the editor (⌘E)", label = "Edit") { AppState.editFile(file, win) }
+                            ToolButton(Icons.Outlined.Edit, "Open in the editor (⌘E)", label = "Edit") { deps.windows.editFile(file) }
                         },
                     )
                 }

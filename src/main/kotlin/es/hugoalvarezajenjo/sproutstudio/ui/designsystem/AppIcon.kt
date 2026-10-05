@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.ui.designsystem
 
+import androidx.compose.runtime.getValue
+
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toComposeImageBitmap

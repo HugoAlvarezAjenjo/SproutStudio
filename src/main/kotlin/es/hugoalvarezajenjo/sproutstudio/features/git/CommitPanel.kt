@@ -75,8 +75,7 @@ import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.features.document.isDiagram
 import es.hugoalvarezajenjo.sproutstudio.features.git.GitNotice
 import es.hugoalvarezajenjo.sproutstudio.features.git.describe
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AppState
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.git.ChangeType
 import es.hugoalvarezajenjo.sproutstudio.services.git.FileChange
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
@@ -91,7 +90,7 @@ import kotlinx.coroutines.launch
  * what goes in, a message and Commit. Local only, nothing is pushed.
  */
 @Composable
-internal fun CommitPanel(p: ProjectState) {
+internal fun CommitPanel(p: WorkspaceViewModel) {
     val c = ide
     val git = p.git
     // Git work runs in the git ViewModel's scope: hiding the panel mid-commit must not cancel it.
@@ -146,7 +145,7 @@ internal fun CommitPanel(p: ProjectState) {
             val doc = p.docs.firstOrNull { it.file != null && git.changeOf(it.file!!)?.path == ch.path }
             doc?.takeIf { it.dirty }?.save()
             // Hold the file: an autosave landing mid-rollback would write the old text back.
-            val restored = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.documents.exclusive(ch.file) { git.rollback(ch.file) }
+            val restored = p.deps.documents.exclusive(ch.file) { git.rollback(ch.file) }
             if (restored) {
                 doc?.replaceFromDisk()
                 p.refreshTree()
@@ -298,7 +297,7 @@ internal fun CommitPanel(p: ProjectState) {
 
 /** "Changes  3 files" with a tri-state checkbox for the whole group. */
 @Composable
-private fun GroupHeader(p: ProjectState, title: String, items: List<FileChange>) {
+private fun GroupHeader(p: WorkspaceViewModel, title: String, items: List<FileChange>) {
     val c = ide
     val git = p.git
     val on = items.count { git.isIncluded(it) }
@@ -317,7 +316,7 @@ private fun GroupHeader(p: ProjectState, title: String, items: List<FileChange>)
 }
 
 @Composable
-private fun ChangeRow(p: ProjectState, ch: FileChange, onRollback: ((FileChange) -> Unit)?) {
+private fun ChangeRow(p: WorkspaceViewModel, ch: FileChange, onRollback: ((FileChange) -> Unit)?) {
     val c = ide
     val git = p.git
     val canOpen = ch.file.isDiagram()
@@ -328,9 +327,9 @@ private fun ChangeRow(p: ProjectState, ch: FileChange, onRollback: ((FileChange)
     val hasHead = ch.type == ChangeType.MODIFIED || ch.type == ChangeType.DELETED
     val menu = buildList {
         if (canOpen) add(ContextMenuItem("Open") { p.open(ch.file) })
-        if (canCompare) add(ContextMenuItem("Compare Diagram with HEAD") { AppState.compareWithHead(p, ch.file) })
-        if (hasHead) add(ContextMenuItem("Show Diff") { AppState.compareWithHead(p, ch.file, textFirst = true) })
-        if (hasHead) add(ContextMenuItem("Show History") { AppState.showHistory(p, ch.file) })
+        if (canCompare) add(ContextMenuItem("Compare Diagram with HEAD") { p.deps.windows.compareWithHead(p, ch.file) })
+        if (hasHead) add(ContextMenuItem("Show Diff") { p.deps.windows.compareWithHead(p, ch.file, textFirst = true) })
+        if (hasHead) add(ContextMenuItem("Show History") { p.deps.windows.showHistory(p, ch.file) })
         if (onRollback != null) add(ContextMenuItem("Rollback…") { onRollback(ch) })
     }
     ContextMenuArea(items = { menu }) {
@@ -346,8 +345,8 @@ private fun ChangeRow(p: ProjectState, ch: FileChange, onRollback: ((FileChange)
                         // IntelliJ opens a diff on double-click; ours compares the two pictures.
                         onDoubleTap = {
                             when {
-                                canCompare -> AppState.compareWithHead(p, ch.file)
-                                hasHead -> AppState.compareWithHead(p, ch.file, textFirst = true)
+                                canCompare -> p.deps.windows.compareWithHead(p, ch.file)
+                                hasHead -> p.deps.windows.compareWithHead(p, ch.file, textFirst = true)
                                 canOpen -> p.open(ch.file)
                             }
                         },
@@ -399,7 +398,7 @@ private fun Check(checked: Boolean?, label: String, enabled: Boolean = true, onT
 
 /** Who the commit will be signed as; warns when git has no user configured. */
 @Composable
-private fun AuthorLine(p: ProjectState) {
+private fun AuthorLine(p: WorkspaceViewModel) {
     val c = ide
     var author by remember { mutableStateOf<es.hugoalvarezajenjo.sproutstudio.services.git.GitAuthor?>(null) }
     LaunchedEffect(p.git.repo) { author = p.git.author() }
@@ -417,11 +416,11 @@ private fun AuthorLine(p: ProjectState) {
 }
 
 /** True when [f] is committed and differs from that version (a text diff is meaningful). */
-internal fun hasCommittedChanges(p: ProjectState, f: File?): Boolean =
+internal fun hasCommittedChanges(p: WorkspaceViewModel, f: File?): Boolean =
     f != null && p.git.changeOf(f)?.type.let { it == ChangeType.MODIFIED || it == ChangeType.DELETED }
 
 /** Opens [f] next to its committed version. */
-internal fun canCompareWithHead(p: ProjectState, f: File?): Boolean =
+internal fun canCompareWithHead(p: WorkspaceViewModel, f: File?): Boolean =
     f != null && f.isDiagram() && p.git.changeOf(f)?.type == ChangeType.MODIFIED
 
 /**
@@ -429,7 +428,7 @@ internal fun canCompareWithHead(p: ProjectState, f: File?): Boolean =
  * them back later. Opens below the Commit panel's stash button.
  */
 @Composable
-private fun StashPopup(p: ProjectState, onDismiss: () -> Unit) {
+private fun StashPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
     val c = ide
     val git = p.git
     val scope = git.scope

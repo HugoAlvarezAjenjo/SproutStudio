@@ -1,6 +1,5 @@
 package es.hugoalvarezajenjo.sproutstudio
 
-import es.hugoalvarezajenjo.sproutstudio.app.main
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -25,7 +24,7 @@ class StartupOrderTest {
 
     @Test
     fun `boot welcome is decided on the UI thread`() {
-        val boot = main.indexOf("AppState.openBootWelcome()")
+        val boot = main.indexOf("windows.openBootWelcome()")
         val edt = main.indexOf("SwingUtilities.invokeAndWait")
         assertTrue(edt in 0 until boot, "openBootWelcome() must run inside SwingUtilities.invokeAndWait")
     }

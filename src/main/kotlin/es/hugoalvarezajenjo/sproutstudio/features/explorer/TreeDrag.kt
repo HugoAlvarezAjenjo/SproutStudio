@@ -12,7 +12,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.canMove
 import java.io.File
 
 /**
@@ -21,7 +20,7 @@ import java.io.File
  * its own row and the empty space) is the drop target, if the move would be valid.
  */
 @Stable
-internal class TreeDrag {
+internal class TreeDrag(private val canMove: (File, File) -> Boolean) {
     var source by mutableStateOf<File?>(null)
         private set
     /** Pointer position in window coordinates, while dragging. */

@@ -1,5 +1,9 @@
 package es.hugoalvarezajenjo.sproutstudio.features.templates
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,11 +33,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,7 +62,6 @@ import androidx.compose.ui.window.PopupProperties
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Templates
 import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramImage
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.DiagramPrefs
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.editorTextStyle
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
@@ -74,6 +75,7 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun TemplateGallery(
+    thumbnails: TemplateThumbnails,
     onDismiss: () -> Unit,
     onPick: (Template) -> Unit,
     /** Only complete diagrams (for a new file), no blocks. */
@@ -143,7 +145,7 @@ fun TemplateGallery(
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                                 Text(cat, fontSize = 12.sp, color = c.textMuted, modifier = Modifier.padding(top = 4.dp))
                             }
-                            items(items, key = { it.id }) { t -> TemplateCard(t) { onPick(t) } }
+                            items(items, key = { it.id }) { t -> TemplateCard(thumbnails, t) { onPick(t) } }
                         }
                     }
                 }
@@ -153,10 +155,10 @@ fun TemplateGallery(
 }
 
 @Composable
-private fun TemplateCard(template: Template, onPick: () -> Unit) {
+private fun TemplateCard(thumbnails: TemplateThumbnails, template: Template, onPick: () -> Unit) {
     val c = ide
     var hovered by remember { mutableStateOf(false) }
-    val thumb = rememberThumbnail(template)
+    val thumb = rememberThumbnail(thumbnails, template)
     Column(
         Modifier.clip(RoundedCornerShape(8.dp))
             .border(1.dp, if (hovered) c.accent else c.popupBorder, RoundedCornerShape(8.dp))
@@ -185,13 +187,13 @@ private fun TemplateCard(template: Template, onPick: () -> Unit) {
 
 /** Renders a template's thumbnail in the background; null until it's ready. */
 @Composable
-private fun rememberThumbnail(template: Template): DiagramImage? {
-    val dark = DiagramPrefs.dark
+internal fun rememberThumbnail(thumbnails: TemplateThumbnails, template: Template): DiagramImage? {
+    val dark = thumbnails.diagram.dark.value
     return produceState<DiagramImage?>(null, template.id, dark) {
         // The render service draws thumbnails only when the editor's own renders are done, and
         // draws each template once.
         val bytes = runCatching {
-            es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.render.thumbnail(template.previewSource, dark)
+            thumbnails.render.thumbnail(template.previewSource, dark)
         }.getOrNull()
         value = bytes?.let { withContext(Dispatchers.Default) { DiagramImage.fromPng(it, 1.0) } }
     }.value
@@ -199,7 +201,7 @@ private fun rememberThumbnail(template: Template): DiagramImage? {
 
 /** Draws a thumbnail scaled to fit its box, or a "…" placeholder while it renders. */
 @Composable
-private fun Thumbnail(img: DiagramImage?) {
+internal fun Thumbnail(img: DiagramImage?) {
     val c = ide
     if (img != null) {
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize().background(img.background).padding(6.dp)) {
@@ -219,75 +221,5 @@ private fun Thumbnail(img: DiagramImage?) {
         Box(Modifier.fillMaxSize().background(c.editor), contentAlignment = Alignment.Center) {
             Text("…", fontSize = 20.sp, color = c.textMuted)
         }
-    }
-}
-
-/**
- * The templates as a left-side tool panel: the same catalogue as the gallery, but a narrow
- * vertical list with a small thumbnail per row. Picking a row inserts the template.
- */
-@Composable
-fun TemplateSidebar(onPick: (Template) -> Unit) {
-    val c = ide
-    var query by remember { mutableStateOf("") }
-    val groups = remember(query) {
-        val q = query.trim().lowercase()
-        Templates.byCategory
-            .map { (cat, items) -> cat to items.filter { q.isEmpty() || it.name.lowercase().contains(q) || it.category.lowercase().contains(q) } }
-            .filter { it.second.isNotEmpty() }
-    }
-    Column(Modifier.fillMaxSize().background(c.panel).testTag("template-sidebar")) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 10.dp, end = 8.dp, top = 8.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(Icons.Outlined.Search, null, tint = c.textMuted, modifier = Modifier.width(14.dp))
-            Box(Modifier.weight(1f)) {
-                if (query.isEmpty()) Text("Templates", fontSize = 12.sp, color = c.textMuted)
-                BasicTextField(
-                    query, { query = it }, singleLine = true,
-                    textStyle = editorTextStyle.copy(fontSize = 12.sp, color = c.text),
-                    cursorBrush = SolidColor(c.text), modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(c.border))
-        androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 4.dp)) {
-            groups.forEach { (cat, items) ->
-                item(key = "h-$cat") {
-                    Text(
-                        cat.uppercase(), fontSize = 10.sp, color = c.textMuted,
-                        modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 2.dp),
-                    )
-                }
-                items.forEach { t ->
-                    item(key = t.id) { TemplateRow(t) { onPick(t) } }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TemplateRow(template: Template, onPick: () -> Unit) {
-    val c = ide
-    var hovered by remember { mutableStateOf(false) }
-    val thumb = rememberThumbnail(template)
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onPick).pointerHoverIcon(PointerIcon.Hand)
-            .background(if (hovered) c.hover else Color.Transparent)
-            .pointerInput(template.id) {
-                awaitPointerEventScope {
-                    while (true) { val e = awaitPointerEvent(); hovered = e.type != androidx.compose.ui.input.pointer.PointerEventType.Exit }
-                }
-            }
-            .padding(horizontal = 8.dp, vertical = 4.dp).testTag("template-row-${template.id}"),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(
-            Modifier.width(56.dp).height(38.dp).clip(RoundedCornerShape(4.dp)).border(1.dp, c.border, RoundedCornerShape(4.dp)),
-            contentAlignment = Alignment.Center,
-        ) { Thumbnail(thumb) }
-        Text(template.name, fontSize = 13.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
     }
 }

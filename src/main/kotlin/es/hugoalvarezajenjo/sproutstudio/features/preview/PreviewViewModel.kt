@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import es.hugoalvarezajenjo.sproutstudio.core.concurrency.AppDispatchers
 import es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel
+import es.hugoalvarezajenjo.sproutstudio.platform.Platform
 import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramImage
 import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
 import es.hugoalvarezajenjo.sproutstudio.services.render.PreviewRequest
@@ -33,7 +34,8 @@ import java.io.File
 @Stable
 class PreviewViewModel(
     private val render: RenderService,
-    private val diagram: DiagramSettings,
+    val diagram: DiagramSettings,
+    private val platform: Platform,
     private val dispatchers: AppDispatchers,
     parent: Job? = null,
     private val debounceMs: Long = 300,
@@ -84,6 +86,13 @@ class PreviewViewModel(
         val s = source()
         return render.png(s.text, s.baseDir, index)
     }
+
+    /** Copies the shown diagram to the clipboard as an image. */
+    suspend fun copyImage() = platform.copyImageToClipboard(png())
+
+    /** Native save dialog for an export (the view supplies the words). Null if cancelled. */
+    fun chooseExportTarget(title: String, suggested: String, dir: File?): File? =
+        platform.chooseSaveTarget(title, suggested, dir)
 
     private data class Input(val source: Source, val index: Int, val dark: Boolean)
 

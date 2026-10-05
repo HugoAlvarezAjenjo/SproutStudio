@@ -9,6 +9,8 @@ import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.RecentProjects
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSaver
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.platform.DesktopPlatform
 import es.hugoalvarezajenjo.sproutstudio.platform.Platform
 import es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles
@@ -27,6 +29,7 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ThemeSettings
 class AppGraph(
     val store: SettingsStore,
     val dispatchers: AppDispatchers = AppDispatchers.Production,
+    val platform: Platform = DesktopPlatform(),
 ) {
     val theme = ThemeSettings(store)
     val diagram = DiagramSettings(store)
@@ -35,7 +38,6 @@ class AppGraph(
     val recents = RecentProjects(store)
     val paletteHistory = PaletteHistory(store)
 
-    val platform: Platform = DesktopPlatform()
     val render: RenderService = PlantUmlRenderService()
     val git: GitService = JGitService()
     val documents = DocumentStore(dispatchers.io)
@@ -43,6 +45,18 @@ class AppGraph(
     var trash: (java.io.File) -> Boolean = { platform.moveToTrash(it) }
     val files = ProjectFiles(trash = { trash(it) })
     val autoSaver = AutoSaver(autoSave)
+
+    val windows = WindowManager { newWorkspace() }
+
+    /** Everything a window needs, in one bundle (see [WorkspaceDeps]). */
+    val deps: WorkspaceDeps by lazy {
+        WorkspaceDeps(
+            dispatchers, platform, render, git, documents, files, autoSaver,
+            theme, diagram, layout, recents, paletteHistory, windows,
+        )
+    }
+
+    fun newWorkspace() = WorkspaceViewModel(deps)
 
     companion object {
         /**
@@ -53,6 +67,7 @@ class AppGraph(
             AppGraph(if (System.getProperty("sproutstudio.settings") == "memory") InMemorySettingsStore() else PreferencesSettingsStore())
         }
 
-        fun forTests(dispatchers: AppDispatchers = AppDispatchers.Production) = AppGraph(InMemorySettingsStore(), dispatchers)
+        fun forTests(dispatchers: AppDispatchers = AppDispatchers.Production, platform: Platform = DesktopPlatform()) =
+            AppGraph(InMemorySettingsStore(), dispatchers, platform)
     }
 }

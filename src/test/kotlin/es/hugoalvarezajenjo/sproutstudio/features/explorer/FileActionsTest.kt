@@ -1,13 +1,13 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileOps
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.canMove
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.delete
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.move
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.newDiagramIn
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.newFolderIn
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.rename
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -20,23 +20,23 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 
-class FileOpsTest {
+class FileActionsTest {
 
     private lateinit var dir: File
-    private lateinit var p: ProjectState
+    private lateinit var p: WorkspaceViewModel
     private val trashed = ArrayList<File>()
-    private val realTrash = FileOps.trash
+    private val realTrash = TestGraph.graph.trash
 
     @BeforeTest fun setUp() {
         dir = Files.createTempDirectory("fileops").toFile().canonicalFile
         File(dir, "a.puml").writeText("@startuml\nA -> B\n@enduml\n")
         File(dir, "docs").mkdirs(); File(dir, "docs/b.puml").writeText("@startuml\nB -> C\n@enduml\n")
         // Tests never touch the real Trash: record and delete.
-        FileOps.trash = { f -> trashed += f; f.deleteRecursively() }
-        p = ProjectState().apply { openRoot(dir) }
+        TestGraph.graph.trash = { f -> trashed += f; f.deleteRecursively() }
+        p = TestGraph.workspace().apply { openRoot(dir) }
     }
 
-    @AfterTest fun tearDown() { FileOps.trash = realTrash; dir.deleteRecursively() }
+    @AfterTest fun tearDown() { TestGraph.graph.trash = realTrash; dir.deleteRecursively() }
 
     @Test fun `new diagram is empty, gets puml, opens in a tab and shows in the tree`() = runBlocking<Unit> {
         val f = p.newDiagramIn(File(dir, "docs"), "flow").getOrThrow()
@@ -76,7 +76,7 @@ class FileOpsTest {
         assertNotNull(p.newFolderIn(dir, "a/b").exceptionOrNull())    // slash
         assertNotNull(p.newDiagramIn(dir, "  ").exceptionOrNull())    // blank
         assertNotNull(p.newDiagramIn(dir, "a").exceptionOrNull())     // a.puml exists
-        assertNull(FileOps.validate(dir, "fresh.puml"))
+        assertNull(TestGraph.graph.files.validate(dir, "fresh.puml"))
     }
 
     @Test fun `renaming an open file keeps the tab, with its unsaved edits`() = runBlocking<Unit> {
@@ -118,7 +118,7 @@ class FileOpsTest {
     }
 
     @Test fun `a failing Trash leaves the file`() = runBlocking<Unit> {
-        FileOps.trash = { false }
+        TestGraph.graph.trash = { false }
         assertNotNull(p.delete(File(dir, "a.puml")).exceptionOrNull())
         assertTrue(File(dir, "a.puml").exists())
     }
@@ -132,14 +132,14 @@ class FileOpsTest {
 
 class FileMoveTest {
     private lateinit var dir: File
-    private lateinit var p: ProjectState
+    private lateinit var p: WorkspaceViewModel
 
     @BeforeTest fun setUp() {
         dir = Files.createTempDirectory("filemove").toFile().canonicalFile
         File(dir, "a.puml").writeText("@startuml\nA -> B\n@enduml\n")
         File(dir, "docs/inner").mkdirs(); File(dir, "docs/b.puml").writeText("@startuml\nB\n@enduml\n")
         File(dir, "other").mkdirs()
-        p = ProjectState().apply { openRoot(dir) }
+        p = TestGraph.workspace().apply { openRoot(dir) }
     }
 
     @AfterTest fun tearDown() { dir.deleteRecursively() }
@@ -177,9 +177,9 @@ class FileMoveTest {
 
     @Test fun `same folder is a no-op and canMove says so`() = runBlocking<Unit> {
         assertEquals(File(dir, "a.puml"), p.move(File(dir, "a.puml"), dir).getOrThrow())
-        assertFalse(canMove(File(dir, "a.puml"), dir))
-        assertFalse(canMove(File(dir, "docs"), File(dir, "docs/inner")))
-        assertTrue(canMove(File(dir, "a.puml"), File(dir, "docs")))
+        assertFalse(p.canMove(File(dir, "a.puml"), dir))
+        assertFalse(p.canMove(File(dir, "docs"), File(dir, "docs/inner")))
+        assertTrue(p.canMove(File(dir, "a.puml"), File(dir, "docs")))
     }
 }
 
@@ -188,7 +188,7 @@ class CloseProjectTest {
         val dir = Files.createTempDirectory("close").toFile().canonicalFile
         try {
             File(dir, "a.puml").writeText("@startuml\nA -> B\n@enduml\n"); File(dir, "d").mkdirs()
-            val p = ProjectState().apply { openRoot(dir); open(File(dir, "a.puml")); toggleDir(File(dir, "d")); rootCollapsed = true }
+            val p = TestGraph.workspace().apply { openRoot(dir); open(File(dir, "a.puml")); toggleDir(File(dir, "d")); rootCollapsed = true }
             p.closeProject()
             assertNull(p.root); assertTrue(p.docs.isEmpty()); assertTrue(p.tree.isEmpty()); assertTrue(p.expanded.isEmpty())
             assertFalse(p.rootCollapsed)

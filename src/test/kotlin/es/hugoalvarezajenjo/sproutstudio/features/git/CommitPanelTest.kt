@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.TestGraph
+
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -12,8 +14,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutPrefs
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
 import es.hugoalvarezajenjo.sproutstudio.services.git.ChangeType
@@ -36,8 +37,8 @@ import kotlinx.coroutines.runBlocking
 class CommitPanelTest {
     private val dir: File = Files.createTempDirectory("sprout-commit").toFile()
     private var sidebar = true
-    @BeforeTest fun save() { sidebar = LayoutPrefs.sidebarVisible }
-    @AfterTest fun cleanup() { LayoutPrefs.sidebarVisible = sidebar; dir.deleteRecursively() }
+    @BeforeTest fun save() { sidebar = TestGraph.graph.layout.sidebarVisible.value }
+    @AfterTest fun cleanup() { TestGraph.graph.layout.sidebarVisible.value = sidebar; dir.deleteRecursively() }
 
     private fun configure() =
         File(dir, ".git/config").appendText("[user]\n\tname = Test\n\temail = test@example.com\n[commit]\n\tgpgsign = false\n")
@@ -54,7 +55,7 @@ class CommitPanelTest {
         return a to b
     }
 
-    private fun project() = ProjectState().apply { openRoot(dir); showTool(SidebarTool.COMMIT) }
+    private fun project() = TestGraph.workspace().apply { openRoot(dir); showTool(SidebarTool.COMMIT) }
 
     @Test fun commitsTheCheckedFilesWithTheMessage() {
         val (a, b) = repoWithChanges()
@@ -128,7 +129,7 @@ class CommitPanelTest {
 
     @Test fun rollbackRestoresTheFileAndTheOpenEditor() {
         val (a, _) = repoWithChanges()
-        val p = ProjectState().apply { openRoot(dir); open(a) }
+        val p = TestGraph.workspace().apply { openRoot(dir); open(a) }
         val doc = p.active!!
         runBlocking {
             p.git.open(dir)

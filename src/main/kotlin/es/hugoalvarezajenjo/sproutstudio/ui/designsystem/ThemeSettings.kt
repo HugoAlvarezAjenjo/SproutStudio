@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.ui.designsystem
 
+import androidx.compose.runtime.getValue
+
 import es.hugoalvarezajenjo.sproutstudio.core.settings.SettingsStore
 import es.hugoalvarezajenjo.sproutstudio.core.settings.boolean
 

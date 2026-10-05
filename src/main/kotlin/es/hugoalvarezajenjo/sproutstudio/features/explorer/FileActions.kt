@@ -1,10 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
 import androidx.compose.ui.text.TextRange
-import es.hugoalvarezajenjo.sproutstudio.app.AppGraph
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSave
-import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectState
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.files.FileError
 import es.hugoalvarezajenjo.sproutstudio.services.files.FileOpException
 import java.io.File
@@ -13,30 +11,18 @@ import java.io.File
  * Create / rename / move / delete in the project tree, keeping the open tabs in step (renamed
  * files follow, deleted ones close). Disk work goes through the project-files service and the
  * document store; refusals come back as a [FileError]. Deleting moves to the Trash, never a
- * permanent delete. (Legacy home: these move to the explorer ViewModel.)
+ * permanent delete.
  */
-object FileOps {
-    private val files get() = AppGraph.default.files
-
-    /** Moves a file to the Trash. Tests swap it to watch instead of trashing for real. */
-    var trash: (File) -> Boolean
-        get() = AppGraph.default.trash
-        set(v) { AppGraph.default.trash = v }
-
-    fun validate(dir: File, name: String, except: File? = null): FileError? = files.validate(dir, name, except)
-    fun diagramName(name: String) = files.diagramName(name)
-    fun freeName(dir: File, base: String, ext: String = "") = files.freeName(dir, base, ext)
-}
 
 /** The reason inside a failed file operation (anything unexpected becomes [FileError.Failed]). */
 val Throwable.fileError: FileError
     get() = (this as? FileOpException)?.error ?: FileError.Failed(message ?: javaClass.simpleName)
 
-private val store get() = AppGraph.default.documents
-private val files get() = AppGraph.default.files
+private val WorkspaceViewModel.store get() = deps.documents
+private val WorkspaceViewModel.files get() = deps.files
 
 /** A new diagram file: empty, or holding [template] with the caret on its `$0` marker. */
-suspend fun ProjectState.newDiagramIn(dir: File, name: String, template: Template? = null): Result<File> = runCatching {
+suspend fun WorkspaceViewModel.newDiagramIn(dir: File, name: String, template: Template? = null): Result<File> = runCatching {
     if (name.isBlank()) throw FileOpException(FileError.EmptyName)
     val n = files.diagramName(name)
     files.validate(dir, n)?.let { throw FileOpException(it) }
@@ -51,7 +37,7 @@ suspend fun ProjectState.newDiagramIn(dir: File, name: String, template: Templat
     f
 }
 
-fun ProjectState.newFolderIn(dir: File, name: String): Result<File> = runCatching {
+fun WorkspaceViewModel.newFolderIn(dir: File, name: String): Result<File> = runCatching {
     val f = files.createFolder(dir, name)
     expandTo(dir)
     if (f !in expanded) expanded.add(f)
@@ -59,7 +45,7 @@ fun ProjectState.newFolderIn(dir: File, name: String): Result<File> = runCatchin
     f
 }
 
-suspend fun ProjectState.rename(target: File, newName: String): Result<File> = runCatching {
+suspend fun WorkspaceViewModel.rename(target: File, newName: String): Result<File> = runCatching {
     val from = target.absoluteFile
     val to = files.renameTarget(root, from, newName)
     if (to == from) from else relocate(from, to)
@@ -69,7 +55,7 @@ suspend fun ProjectState.rename(target: File, newName: String): Result<File> = r
  * Drag & drop: moves [target] (a file or a folder) into [destDir], keeping its name.
  * Refuses a move onto itself, into its own subfolder, or over an existing name.
  */
-suspend fun ProjectState.move(target: File, destDir: File): Result<File> = runCatching {
+suspend fun WorkspaceViewModel.move(target: File, destDir: File): Result<File> = runCatching {
     val from = target.absoluteFile
     val dest = destDir.absoluteFile
     val to = files.moveTarget(root, from, dest) ?: return@runCatching from
@@ -77,12 +63,12 @@ suspend fun ProjectState.move(target: File, destDir: File): Result<File> = runCa
 }
 
 /** Whether dropping [target] on [destDir] would do something (for the drop highlight). */
-fun canMove(target: File, destDir: File): Boolean = AppGraph.default.files.canMove(target, destDir)
+fun WorkspaceViewModel.canMove(target: File, destDir: File): Boolean = files.canMove(target, destDir)
 
 /** The shared part of rename and move: moves on disk, then tabs and expanded folders follow. */
-private suspend fun ProjectState.relocate(from: File, to: File): File {
+private suspend fun WorkspaceViewModel.relocate(from: File, to: File): File {
     // Unsaved edits go to the old path first, so the move carries them.
-    AutoSave.flush(docs.toList())
+    deps.autoSaver.flush(docs.toList())
     // No save may land on either path while it moves.
     store.exclusive(from, to) { files.move(from, to) }
     for (d in docs) d.file?.absoluteFile?.let { f -> moved(f, from, to)?.let { d.file = it } }
@@ -92,7 +78,7 @@ private suspend fun ProjectState.relocate(from: File, to: File): File {
 }
 
 /** Moves [target] to the Trash and closes its tabs (or every tab under it, for a folder). */
-fun ProjectState.delete(target: File): Result<Unit> = runCatching {
+fun WorkspaceViewModel.delete(target: File): Result<Unit> = runCatching {
     val f = target.absoluteFile
     if (f == root?.absoluteFile) throw FileOpException(FileError.ProjectFolder)
     val inside = docs.filter { d -> d.file?.absoluteFile?.let { it == f || it.startsWith(f) } == true }
@@ -111,19 +97,11 @@ private fun moved(f: File, from: File, to: File): File? = when {
 }
 
 /** Expands every folder from the root down to [dir], so a new item is visible. */
-private fun ProjectState.expandTo(dir: File) {
+private fun WorkspaceViewModel.expandTo(dir: File) {
     val r = root?.absoluteFile ?: return
     var d: File? = dir.absoluteFile
     val chain = ArrayList<File>()
     while (d != null && d != r && d.startsWith(r)) { chain += d; d = d.parentFile }
     chain.forEach { if (it !in expanded) expanded.add(it) }
     rootCollapsed = false
-}
-
-/** A file-tree operation waiting for the user's input (a name, or a confirmation). */
-sealed class FileAction {
-    data class NewDiagram(val dir: File) : FileAction()
-    data class NewFolder(val dir: File) : FileAction()
-    data class Rename(val target: File) : FileAction()
-    data class Delete(val target: File) : FileAction()
 }
