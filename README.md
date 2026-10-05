@@ -177,17 +177,24 @@ Built in (JGit, no `git` install needed), local only: nothing is ever pushed.
 
 ## Layout
 
+MVVM in layers; dependencies only point down (`ArchitectureTest` checks it).
+
 ```
 src/main/kotlin/es/hugoalvarezajenjo/sproutstudio/
-  Main.kt                 entry point, Finder open-file events, window routing
-  render/                 in-process PlantUML (Smetana, sandboxed includes, offline guard, problem collection)
-  lang/                   diagram-type detection, completion engine, syntax highlighter, templates
-  editor/                 CodeEditor composable, folding, find & replace, pure edit operations, rollback
-  preview/                live preview pane, zoom/pan view, export/clipboard
-  git/                    JGit wrapper, repository state, line diffs
-  model/                  documents, project state, app windows, preferences, recents
-  ui/                     theme, components, project & quick-preview windows, Commit/Problems/Templates panels
-src/test/                 unit, render and off-screen UI tests
+  app/                    main(), AppGraph (wires everything by hand), WindowManager
+  core/                   dispatchers, LatestWinsQueue, ViewModel base, settings store
+  domain/                 plain Kotlin: PlantUML language (completion, templates, edits), line diffs
+  services/
+    render/               PlantUML in-process behind RenderService: one queued worker, offline guard
+    git/                  GitService/GitRepository on JGit, typed GitError
+    files/                ProjectFiles: tree scan, create/rename/move/trash, typed FileError
+    persistence/          DocumentStore (the only writer of diagram files) and autosave settings
+  platform/               native dialogs, Trash, Finder, clipboard (DesktopPlatform)
+  features/               one folder per feature: its ViewModel + its Composables
+    workspace/            project window, WorkspaceViewModel, layout, tabs, status bar, autosave
+    document/ editor/ preview/ problems/ explorer/ git/ templates/ palette/ quickpreview/
+  ui/designsystem/        theme, colours, shared components
+src/test/                 same layout: unit, ViewModel, render, off-screen UI and architecture tests
 samples/                  example diagrams
 .github/workflows/        CI (tests) and tag-driven releases
 ```
