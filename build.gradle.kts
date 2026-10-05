@@ -44,10 +44,14 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.compose.ui:ui-test-junit4:1.12.1")
+    // Virtual time for ViewModel and service tests (same version ui-test already brings in).
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
 
 tasks.test {
     useJUnitPlatform()
+    // Tests never read or write the user's real preferences (window layout, recents...).
+    systemProperty("sproutstudio.settings", "memory")
 }
 
 // Finder litter in src/main/resources must not end up inside the app jar.
