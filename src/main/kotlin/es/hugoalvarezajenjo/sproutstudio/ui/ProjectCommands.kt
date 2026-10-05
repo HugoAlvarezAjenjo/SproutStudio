@@ -123,13 +123,13 @@ internal fun projectCommands(
             kotlinx.coroutines.MainScope().launch {
                 p.git.undoLastCommit()?.let { u ->
                     if (p.git.commitMessage.isBlank()) p.git.commitMessage = u.fullMessage
-                    p.git.lastResult = "Undid ${u.short}: its changes are back in the list"
+                    p.git.notice = es.hugoalvarezajenjo.sproutstudio.features.git.GitNotice.Undid(u.short)
                     p.showTool(es.hugoalvarezajenjo.sproutstudio.model.SidebarTool.COMMIT); p.refreshTree()
                 }
             }
         }
         cmd("git.stash", "Stash Changes…", "Git", enabled = p.git.status.head != null, restoresFocus = false) {
-            p.showTool(es.hugoalvarezajenjo.sproutstudio.model.SidebarTool.COMMIT); p.git.stashPopupTick++
+            p.showTool(es.hugoalvarezajenjo.sproutstudio.model.SidebarTool.COMMIT); p.git.requestStashPopup()
         }
         if (!p.git.isRepo) cmd("git.init", "Create Git Repository", "Git") {
             p.showTool(es.hugoalvarezajenjo.sproutstudio.model.SidebarTool.COMMIT)

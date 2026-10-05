@@ -16,8 +16,8 @@ sealed class AppWindow {
     class DiagramDiff(
         val project: ProjectState,
         val file: File,
-        val left: es.hugoalvarezajenjo.sproutstudio.git.DiffSide = es.hugoalvarezajenjo.sproutstudio.git.DiffSide.Head,
-        val right: es.hugoalvarezajenjo.sproutstudio.git.DiffSide = es.hugoalvarezajenjo.sproutstudio.git.DiffSide.WorkingCopy,
+        val left: es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide = es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide.Head,
+        val right: es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide = es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide.WorkingCopy,
         val textFirst: Boolean = false,
     ) : AppWindow()
     /** Commits that touched [file], each viewable as a diagram or text diff. */
@@ -99,7 +99,7 @@ object AppState {
     /** "Compare Diagram with HEAD": one window per file, reused if already open. */
     fun compareWithHead(project: ProjectState, file: File, textFirst: Boolean = false) {
         val f = file.absoluteFile
-        if (windows.any { it is AppWindow.DiagramDiff && it.file == f && it.left == es.hugoalvarezajenjo.sproutstudio.git.DiffSide.Head }) return
+        if (windows.any { it is AppWindow.DiagramDiff && it.file == f && it.left == es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide.Head }) return
         windows += AppWindow.DiagramDiff(project, f, textFirst = textFirst)
     }
 
@@ -202,7 +202,7 @@ class ProjectState {
     }
 
     /** Git status of the project folder; opened by the window when [root] changes. */
-    val git = es.hugoalvarezajenjo.sproutstudio.git.GitState()
+    val git = es.hugoalvarezajenjo.sproutstudio.features.git.GitViewModel(es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.git, es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.dispatchers)
 
     fun resizeSidebar(widthDp: Float) {
         sidebarWidth = widthDp.coerceIn(SIDEBAR_MIN, SIDEBAR_MAX)

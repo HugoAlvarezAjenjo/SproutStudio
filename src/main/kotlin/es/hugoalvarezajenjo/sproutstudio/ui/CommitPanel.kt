@@ -70,9 +70,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import es.hugoalvarezajenjo.sproutstudio.git.ChangeType
-import es.hugoalvarezajenjo.sproutstudio.git.FileChange
-import es.hugoalvarezajenjo.sproutstudio.git.GitRepo
+import es.hugoalvarezajenjo.sproutstudio.services.git.ChangeType
+import es.hugoalvarezajenjo.sproutstudio.services.git.FileChange
+import es.hugoalvarezajenjo.sproutstudio.features.git.GitNotice
+import es.hugoalvarezajenjo.sproutstudio.features.git.describe
 import es.hugoalvarezajenjo.sproutstudio.model.AppState
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
 import es.hugoalvarezajenjo.sproutstudio.model.isDiagram
@@ -87,12 +88,13 @@ import java.io.File
 internal fun CommitPanel(p: ProjectState) {
     val c = ide
     val git = p.git
-    val scope = rememberCoroutineScope()
+    // Git work runs in the git ViewModel's scope: hiding the panel mid-commit must not cancel it.
+    val scope = git.scope
     var confirmRollback by remember { mutableStateOf<FileChange?>(null) }
     val messageFocus = remember { FocusRequester() }
     var stashOpen by remember { mutableStateOf(false) }
     var withGitignore by remember { mutableStateOf(true) }
-    LaunchedEffect(git.stashPopupTick) { if (git.stashPopupTick > 0) stashOpen = true }
+    LaunchedEffect(git) { git.stashPopupRequests.collect { stashOpen = true } }
     // ⌘K / "Commit…" from elsewhere puts the caret in the message box.
     LaunchedEffect(p.commitFocusTick) { if (p.commitFocusTick > 0) runCatching { messageFocus.requestFocus() } }
 
@@ -112,10 +114,10 @@ internal fun CommitPanel(p: ProjectState) {
                 git.commitMessage = ""
                 git.selection.clear()
                 git.amend = false
-                git.lastResult = when {
-                    amending && files.isEmpty() -> "Reworded the last commit ($id)"
-                    amending -> "Amended the last commit with ${files.size} file${if (files.size == 1) "" else "s"} ($id)"
-                    else -> "Committed ${files.size} file${if (files.size == 1) "" else "s"} ($id)"
+                git.notice = when {
+                    amending && files.isEmpty() -> GitNotice.Reworded(id)
+                    amending -> GitNotice.Amended(files.size, id)
+                    else -> GitNotice.Committed(files.size, id)
                 }
                 p.refreshTree()
             }
@@ -127,7 +129,7 @@ internal fun CommitPanel(p: ProjectState) {
             val undone = git.undoLastCommit() ?: return@launch
             if (git.commitMessage.isBlank()) git.commitMessage = undone.fullMessage
             git.amend = false
-            git.lastResult = "Undid ${undone.short}: its changes are back in the list"
+            git.notice = GitNotice.Undid(undone.short)
             p.refreshTree()
         }
     }
@@ -178,7 +180,7 @@ internal fun CommitPanel(p: ProjectState) {
                 ToolButton(null, label = "Create Git Repository", primary = true) {
                     scope.launch { git.init(withGitignore) }
                 }
-                git.error?.let { Text(it, color = c.error, fontSize = 12.sp) }
+                git.error?.let { Text(it.describe(), color = c.error, fontSize = 12.sp) }
             }
             return@Column
         }
@@ -218,7 +220,7 @@ internal fun CommitPanel(p: ProjectState) {
                 if (git.commitMessage.isEmpty()) Text("Commit message", fontSize = 13.sp, color = c.textDisabled)
                 BasicTextField(
                     value = git.commitMessage,
-                    onValueChange = { git.commitMessage = it; git.lastResult = null },
+                    onValueChange = { git.commitMessage = it; git.notice = null },
                     textStyle = TextStyle(fontSize = 13.sp, lineHeight = 18.sp, color = c.text),
                     cursorBrush = SolidColor(c.text),
                     modifier = Modifier.fillMaxWidth().focusRequester(messageFocus).testTag("commit-message")
@@ -262,8 +264,8 @@ internal fun CommitPanel(p: ProjectState) {
                 }
             }
             AuthorLine(p)
-            git.error?.let { Text(it, color = c.error, fontSize = 12.sp, maxLines = 4, overflow = TextOverflow.Ellipsis) }
-            git.lastResult?.let { Text(it, color = c.success, fontSize = 12.sp) }
+            git.error?.let { Text(it.describe(), color = c.error, fontSize = 12.sp, maxLines = 4, overflow = TextOverflow.Ellipsis) }
+            git.notice?.let { Text(it.describe(), color = c.success, fontSize = 12.sp) }
         }
     }
 
@@ -391,7 +393,7 @@ private fun Check(checked: Boolean?, label: String, enabled: Boolean = true, onT
 @Composable
 private fun AuthorLine(p: ProjectState) {
     val c = ide
-    var author by remember { mutableStateOf<GitRepo.Author?>(null) }
+    var author by remember { mutableStateOf<es.hugoalvarezajenjo.sproutstudio.services.git.GitAuthor?>(null) }
     LaunchedEffect(p.git.repo) { author = p.git.author() }
     val a = author ?: return
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -422,11 +424,11 @@ internal fun canCompareWithHead(p: ProjectState, f: File?): Boolean =
 private fun StashPopup(p: ProjectState, onDismiss: () -> Unit) {
     val c = ide
     val git = p.git
-    val scope = rememberCoroutineScope()
+    val scope = git.scope
     var message by remember { mutableStateOf("") }
-    var confirmDrop by remember { mutableStateOf<es.hugoalvarezajenjo.sproutstudio.git.StashInfo?>(null) }
+    var confirmDrop by remember { mutableStateOf<es.hugoalvarezajenjo.sproutstudio.services.git.StashInfo?>(null) }
     var busy by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { git.error = null }
+    LaunchedEffect(Unit) { git.clearError() }
 
     fun run(op: suspend () -> Boolean) {
         busy = true
@@ -485,7 +487,7 @@ private fun StashPopup(p: ProjectState, onDismiss: () -> Unit) {
                         }
                     }
                 }
-                git.error?.let { Text(it, color = c.error, fontSize = 12.sp) }
+                git.error?.let { Text(it.describe(), color = c.error, fontSize = 12.sp) }
             }
         }
     }

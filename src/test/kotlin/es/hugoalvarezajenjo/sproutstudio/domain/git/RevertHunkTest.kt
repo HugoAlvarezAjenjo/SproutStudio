@@ -1,4 +1,4 @@
-package es.hugoalvarezajenjo.sproutstudio.git
+package es.hugoalvarezajenjo.sproutstudio.domain.git
 
 import kotlin.random.Random
 import kotlin.test.Test

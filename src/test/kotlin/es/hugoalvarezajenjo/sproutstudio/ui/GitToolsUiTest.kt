@@ -12,9 +12,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import es.hugoalvarezajenjo.sproutstudio.git.ChangeType
-import es.hugoalvarezajenjo.sproutstudio.git.DiffSide
-import es.hugoalvarezajenjo.sproutstudio.git.GitRepo
+import es.hugoalvarezajenjo.sproutstudio.services.git.ChangeType
+import es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide
+import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
 import es.hugoalvarezajenjo.sproutstudio.model.LayoutPrefs
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
 import es.hugoalvarezajenjo.sproutstudio.model.SidebarTool
@@ -38,9 +38,9 @@ class GitToolsUiTest {
 
     /** Two commits of a.puml ("one" -> v1, "two" -> v2), then an uncommitted edit (v3). */
     private fun repo(): ProjectState {
-        GitRepo.init(dir).close()
+        JGitService().init(dir).close()
         File(dir, ".git/config").appendText("[user]\n\tname = T\n\temail = t@e\n[commit]\n\tgpgsign = false\n")
-        GitRepo.find(dir)!!.use { r ->
+        JGitService().find(dir)!!.use { r ->
             a.writeText("@startuml\nA -> B: v1\n@enduml\n"); r.commit(listOf(a), "one")
             a.writeText("@startuml\nA -> B: v2\n@enduml\n"); r.commit(listOf(a), "two")
         }
@@ -62,9 +62,9 @@ class GitToolsUiTest {
             assertEquals("two", p.git.commitMessage) // pre-filled
             onNodeWithTag("commit-message").performTextInput(" (fixed)")
             onNode(hasText("Amend Commit") and hasClickAction()).performClick()
-            waitUntil(timeoutMillis = 10_000) { p.git.status.changes.isEmpty() && p.git.lastResult != null }
+            waitUntil(timeoutMillis = 10_000) { p.git.status.changes.isEmpty() && p.git.notice != null }
         }
-        GitRepo.find(dir)!!.use { r ->
+        JGitService().find(dir)!!.use { r ->
             val h = r.history(a)
             assertEquals(2, h.size) // replaced, not added
             assertTrue(h[0].message.contains("two") && h[0].message.contains("(fixed)"), h[0].message)
@@ -104,7 +104,7 @@ class GitToolsUiTest {
 
     @Test fun blockedSwitchOffersStashAndSwitch() {
         val p = repo()
-        GitRepo.find(dir)!!.use { r ->
+        JGitService().find(dir)!!.use { r ->
             // feature changes a.puml too, so the local edit blocks the switch.
             val keep = a.readText()
             r.stash(null); r.createBranch("feature")

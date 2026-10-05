@@ -157,11 +157,10 @@ fun ProjectWindow(win: AppWindow.Project) {
         galleryOpen = false
         p.insertTemplate(t)
     }
-    val gitScope = androidx.compose.runtime.rememberCoroutineScope()
     /** Unsaved tabs get the usual question; then this window shows the welcome screen again. */
     fun closeProject() = closeDocs(p.docs.toList()) {
         p.closeProject()
-        gitScope.launch { p.git.open(null) }
+        p.git.openIn(null)
     }
     val doubleShift = remember { DoubleShiftDetector() }
 
@@ -276,17 +275,17 @@ fun ProjectWindow(win: AppWindow.Project) {
                 }
                 Separator()
                 Item("Undo Last Commit", enabled = (g.lastCommit?.parents ?: 0) > 0) {
-                    gitScope.launch {
+                    g.scope.launch {
                         g.undoLastCommit()?.let { u ->
                             if (g.commitMessage.isBlank()) g.commitMessage = u.fullMessage
-                            g.lastResult = "Undid ${u.short}: its changes are back in the list"
+                            g.notice = es.hugoalvarezajenjo.sproutstudio.features.git.GitNotice.Undid(u.short)
                             p.showTool(SidebarTool.COMMIT); p.refreshTree()
                         }
                     }
                 }
-                Item("Stash Changes…", enabled = g.status.head != null) { p.showTool(SidebarTool.COMMIT); g.stashPopupTick++ }
+                Item("Stash Changes…", enabled = g.status.head != null) { p.showTool(SidebarTool.COMMIT); g.requestStashPopup() }
                 Separator()
-                if (!g.isRepo) Item("Create Git Repository", enabled = p.root != null) { gitScope.launch { g.init() } }
+                if (!g.isRepo) Item("Create Git Repository", enabled = p.root != null) { g.scope.launch { g.init() } }
                 Item("Refresh Git Status", enabled = g.isRepo) { g.requestRefresh() }
             }
             Menu("Help") {
@@ -435,8 +434,7 @@ internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: 
     val c = ide
 
     // Git: find the repository of the folder, and re-read status on demand / after each save.
-    LaunchedEffect(p.root) { p.git.open(p.root) }
-    LaunchedEffect(p.git.refreshTick) { if (p.git.refreshTick > 0) { kotlinx.coroutines.delay(150); p.git.refresh() } }
+    LaunchedEffect(p.root) { p.git.openIn(p.root) }
     LaunchedEffect(p) { snapshotFlow { p.docs.map { it.savedText } }.collect { p.git.requestRefresh() } }
 
     Column(Modifier.fillMaxSize().background(c.panel)) {

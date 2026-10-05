@@ -44,7 +44,7 @@ class Document(file: File?, initialText: String) {
     var previewRequest by mutableStateOf<PreviewAction?>(null)
 
     /** Git markers of this text against the last commit (set by the editor; empty if untracked). */
-    var gitLines by mutableStateOf(es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index.Empty)
+    var gitLines by mutableStateOf(es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index.Empty)
 
     /** Text before the last "Rollback Lines", for its Undo; cleared by the next edit. */
     var rollbackUndo by mutableStateOf<TextFieldValue?>(null)

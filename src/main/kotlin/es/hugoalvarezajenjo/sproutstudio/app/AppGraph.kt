@@ -8,6 +8,8 @@ import es.hugoalvarezajenjo.sproutstudio.features.palette.PaletteHistory
 import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.RecentProjects
+import es.hugoalvarezajenjo.sproutstudio.services.git.GitService
+import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
 import es.hugoalvarezajenjo.sproutstudio.services.persistence.AutoSaveSettings
 import es.hugoalvarezajenjo.sproutstudio.services.render.PlantUmlRenderService
 import es.hugoalvarezajenjo.sproutstudio.services.render.RenderService
@@ -29,6 +31,7 @@ class AppGraph(
     val paletteHistory = PaletteHistory(store)
 
     val render: RenderService = PlantUmlRenderService()
+    val git: GitService = JGitService()
 
     companion object {
         /**

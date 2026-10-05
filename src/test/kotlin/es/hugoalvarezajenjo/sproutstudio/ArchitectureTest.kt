@@ -48,7 +48,10 @@ class ArchitectureTest {
         "domain",
         listOf("androidx.compose", "kotlinx.coroutines", "org.eclipse.jgit", "java.awt", "javax.swing",
             "$base.core", "$base.services", "$base.platform", "$base.features", "$base.ui", "$base.app"),
-        allowed = setOf("androidx.compose.ui.text.TextRange", "androidx.compose.ui.text.input.TextFieldValue"),
+        // Value types and a pure diff algorithm: no UI, no IO.
+        allowed = setOf("androidx.compose.ui.text.TextRange", "androidx.compose.ui.text.input.TextFieldValue",
+            "org.eclipse.jgit.diff.Edit", "org.eclipse.jgit.diff.HistogramDiff", "org.eclipse.jgit.diff.RawText",
+            "org.eclipse.jgit.diff.RawTextComparator"),
     )
 
     @Test

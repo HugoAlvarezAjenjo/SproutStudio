@@ -20,8 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.editor.changeAtCaret
 import es.hugoalvarezajenjo.sproutstudio.editor.rollbackAtCaret
-import es.hugoalvarezajenjo.sproutstudio.git.GitRepo
-import es.hugoalvarezajenjo.sproutstudio.git.LineChange
+import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange
 import es.hugoalvarezajenjo.sproutstudio.model.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.model.LayoutPrefs
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
@@ -46,10 +46,10 @@ class RollbackLinesUiTest {
     private val a get() = File(dir, "a.puml")
 
     private fun project(): ProjectState {
-        GitRepo.init(dir).close()
+        JGitService().init(dir).close()
         File(dir, ".git/config").appendText("[user]\n\tname = T\n\temail = t@e\n[commit]\n\tgpgsign = false\n")
         a.writeText(committed)
-        GitRepo.find(dir)!!.use { it.commit(listOf(a), "init") }
+        JGitService().find(dir)!!.use { it.commit(listOf(a), "init") }
         return ProjectState().apply { openRoot(dir); open(a); changeLayout(EditorLayout.EDITOR) }
     }
 

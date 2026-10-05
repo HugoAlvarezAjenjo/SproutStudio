@@ -3,7 +3,7 @@ package es.hugoalvarezajenjo.sproutstudio.ui
 import androidx.compose.material3.Surface
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
-import es.hugoalvarezajenjo.sproutstudio.git.GitRepo
+import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
 import es.hugoalvarezajenjo.sproutstudio.model.LayoutPrefs
 import es.hugoalvarezajenjo.sproutstudio.model.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
@@ -41,14 +41,14 @@ class GitSnapshotTest {
     }
 
     private fun repo(): ProjectState {
-        GitRepo.init(dir).close()
+        JGitService().init(dir).close()
         File(dir, ".git/config").appendText("[user]\n\tname = Hugo\n\temail = hugo@example.com\n[commit]\n\tgpgsign = false\n")
         File(dir, ".gitignore").writeText("archive/\n")
         val order = File(dir, "order.puml").apply {
             writeText("@startuml\nactor Customer\nparticipant Shop\nparticipant Kitchen\n\nCustomer -> Shop: order pizza\nShop -> Kitchen: bake\nKitchen --> Shop: ready\nShop --> Customer: deliver\n@enduml\n")
         }
         val classes = File(dir, "model/classes.puml").apply { parentFile.mkdirs(); writeText("@startuml\nclass Pizza\nclass Topping\nPizza o-- Topping\n@enduml\n") }
-        GitRepo.find(dir)!!.use { it.commit(listOf(order, classes, File(dir, ".gitignore")), "init") }
+        JGitService().find(dir)!!.use { it.commit(listOf(order, classes, File(dir, ".gitignore")), "init") }
         // Now: edit a line, add two, delete one; a new file; an ignored folder.
         order.writeText("@startuml\nactor Customer\nparticipant Shop\nparticipant Kitchen\nparticipant Rider\n\nCustomer -> Shop: order pizza\nShop -> Kitchen: bake (12 min)\nKitchen --> Shop: ready\nShop -> Rider: pick up\nRider --> Customer: deliver\n@enduml\n")
         File(dir, "model/states.puml").writeText("@startuml\n[*] --> Ordered\nOrdered --> Baking\nBaking --> Delivered\n@enduml\n")
@@ -73,7 +73,7 @@ class GitSnapshotTest {
 
     @Test fun branchPopup() {
         val p = repo()
-        GitRepo.find(dir)!!.use { it.createBranch("feature/rider"); it.checkout("main"); it.createBranch("docs") }
+        JGitService().find(dir)!!.use { it.createBranch("feature/rider"); it.checkout("main"); it.createBranch("docs") }
         runBlocking { p.git.open(dir) }
         shoot("git-branch-popup") {
             androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()) {
@@ -87,22 +87,22 @@ class GitSnapshotTest {
     @Test fun textDiff() {
         val p = repo()
         runBlocking { p.git.open(dir) }
-        shoot("git-text-diff") { DiffView(p, File(dir, "order.puml"), es.hugoalvarezajenjo.sproutstudio.git.DiffSide.Head, es.hugoalvarezajenjo.sproutstudio.git.DiffSide.WorkingCopy, textFirst = true) }
+        shoot("git-text-diff") { DiffView(p, File(dir, "order.puml"), es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide.Head, es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide.WorkingCopy, textFirst = true) }
     }
 
     @Test fun history() {
         val p = repo()
         val order = File(dir, "order.puml")
-        GitRepo.find(dir)!!.use { it.commit(listOf(order), "Add the rider to the delivery") }
+        JGitService().find(dir)!!.use { it.commit(listOf(order), "Add the rider to the delivery") }
         order.writeText(order.readText().replace("pick up", "pick up the order"))
-        GitRepo.find(dir)!!.use { it.commit(listOf(order), "Clearer rider step") }
+        JGitService().find(dir)!!.use { it.commit(listOf(order), "Clearer rider step") }
         runBlocking { p.git.open(dir) }
         shoot("git-history") { HistoryView(p, order) }
     }
 
     @Test fun commitWindowWithStashesAndLastCommit() {
         val p = repo()
-        GitRepo.find(dir)!!.use { it.stash("Try a second kitchen") }
+        JGitService().find(dir)!!.use { it.stash("Try a second kitchen") }
         File(dir, "order.puml").appendText("' tweak\n")
         p.showTool(SidebarTool.COMMIT)
         shoot("git-commit-window-2") { Workspace(p, onSave = {}, onCloseTab = {}) }

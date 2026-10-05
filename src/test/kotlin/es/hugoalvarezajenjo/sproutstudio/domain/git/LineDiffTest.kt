@@ -1,8 +1,8 @@
-package es.hugoalvarezajenjo.sproutstudio.git
+package es.hugoalvarezajenjo.sproutstudio.domain.git
 
-import es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.ADDED
-import es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.DELETED
-import es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.MODIFIED
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.ADDED
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.DELETED
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.MODIFIED
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

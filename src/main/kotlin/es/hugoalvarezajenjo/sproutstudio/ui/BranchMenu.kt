@@ -39,7 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import es.hugoalvarezajenjo.sproutstudio.features.git.describe
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -108,7 +108,7 @@ private object AboveAnchor : PopupPositionProvider {
 private fun BranchPopup(p: ProjectState, onDismiss: () -> Unit) {
     val c = ide
     val git = p.git
-    val scope = rememberCoroutineScope()
+    val scope = git.scope
     var creating by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -130,13 +130,13 @@ private fun BranchPopup(p: ProjectState, onDismiss: () -> Unit) {
             Column(Modifier.padding(vertical = 6.dp)) {
                 if (creating) {
                     NewBranchField(
-                        error = git.error,
-                        onCancel = { creating = false; git.error = null },
+                        error = git.error?.describe(),
+                        onCancel = { creating = false; git.clearError() },
                         onCreate = { name -> run({ git.createBranch(name) }) },
                     )
                 } else {
                     MenuRow(Icons.Outlined.Add, "New Branch…", enabled = git.status.head != null && !busy) {
-                        git.error = null; creating = true
+                        git.clearError(); creating = true
                     }
                     if (git.status.head == null) Hint("Make the first commit to create branches")
                     Box(Modifier.padding(vertical = 4.dp).fillMaxWidth().height(1.dp).background(c.popupBorder))
@@ -155,7 +155,7 @@ private fun BranchPopup(p: ProjectState, onDismiss: () -> Unit) {
                         }
                     }
                     git.error?.let {
-                        Text(it, color = c.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                        Text(it.describe(), color = c.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                     }
                     git.blockedCheckout?.let { target ->
                         Row(Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {

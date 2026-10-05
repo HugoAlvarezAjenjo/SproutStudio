@@ -49,8 +49,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
-import es.hugoalvarezajenjo.sproutstudio.git.DiffSide
-import es.hugoalvarezajenjo.sproutstudio.git.LineDiff
+import es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff
 import es.hugoalvarezajenjo.sproutstudio.model.AppState
 import es.hugoalvarezajenjo.sproutstudio.model.AppWindow
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState

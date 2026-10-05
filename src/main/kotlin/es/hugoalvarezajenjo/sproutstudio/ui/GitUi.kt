@@ -7,9 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import es.hugoalvarezajenjo.sproutstudio.git.ChangeType
-import es.hugoalvarezajenjo.sproutstudio.git.GitState
-import es.hugoalvarezajenjo.sproutstudio.git.LineDiff
+import es.hugoalvarezajenjo.sproutstudio.services.git.ChangeType
+import es.hugoalvarezajenjo.sproutstudio.features.git.GitViewModel
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -30,7 +30,7 @@ internal fun IdeColors.vcsColor(type: ChangeType?): Color? = when (type) {
  * typing stops and whenever HEAD moves (a commit); empty for files git doesn't track yet.
  */
 @Composable
-internal fun rememberLineChanges(git: GitState, file: File?, text: String): LineDiff.Index {
+internal fun rememberLineChanges(git: GitViewModel, file: File?, text: String): LineDiff.Index {
     var idx by remember(file) { mutableStateOf(LineDiff.Index.Empty) }
     val head = git.status.head
     val type = file?.let { git.changeOf(it)?.type }

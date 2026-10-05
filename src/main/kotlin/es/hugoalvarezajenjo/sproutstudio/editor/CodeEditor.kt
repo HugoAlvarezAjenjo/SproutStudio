@@ -109,12 +109,12 @@ fun CodeEditor(
     /** Every line with a problem (all diagram blocks); [errorLine] is folded in. */
     errorLines: Set<Int> = emptySet(),
     /** Git markers against HEAD (empty outside a repo or for uncommitted files). */
-    lineChanges: es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index = es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index.Empty,
+    lineChanges: es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index = es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index.Empty,
     onCaretMoved: (line: Int, col: Int) -> Unit = { _, _ -> },
 ) {
     androidx.compose.runtime.SideEffect { if (doc.gitLines !== lineChanges) doc.gitLines = lineChanges }
     /** Change block whose popup is open, and the y (px, in the scrolled content) to show it at. */
-    var hunk by remember(doc) { mutableStateOf<Pair<es.hugoalvarezajenjo.sproutstudio.git.LineChange, Float>?>(null) }
+    var hunk by remember(doc) { mutableStateOf<Pair<es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange, Float>?>(null) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     var fieldHeightPx by remember { mutableStateOf(0) }
     var completion by remember(doc) { mutableStateOf<CompletionRequest?>(null) }
@@ -248,7 +248,7 @@ fun CodeEditor(
                     properties = PopupProperties(focusable = true),
                 ) {
                     ChangePopup(
-                        ch, es.hugoalvarezajenjo.sproutstudio.git.LineDiff.hunkRows(base, value.text, ch),
+                        ch, es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.hunkRows(base, value.text, ch),
                         onRollback = { hunk = null; doc.rollbackChange(ch); runCatching { focus.requestFocus() } },
                         onClose = { hunk = null; runCatching { focus.requestFocus() } },
                     )
@@ -350,7 +350,7 @@ fun CodeEditor(
 
 /** Clickable things in the gutter. */
 private sealed interface GutterHit {
-    data class Change(val change: es.hugoalvarezajenjo.sproutstudio.git.LineChange) : GutterHit
+    data class Change(val change: es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange) : GutterHit
     data class Fold(val region: FoldRegion) : GutterHit
 }
 
@@ -366,8 +366,8 @@ private fun Gutter(
     measurer: androidx.compose.ui.text.TextMeasurer,
     density: androidx.compose.ui.unit.Density,
     fieldHeightPx: Int,
-    lineChanges: es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Index,
-    onChangeClick: (es.hugoalvarezajenjo.sproutstudio.git.LineChange, Float) -> Unit,
+    lineChanges: es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index,
+    onChangeClick: (es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange, Float) -> Unit,
 ) {
     val topPad = with(density) { 10.dp.toPx() }
     val text = doc.text
@@ -466,14 +466,14 @@ private fun Gutter(
                     val change = if (lastReal > real) lineChanges.inRange(real, lastReal) else lineChanges.at(real)
                     val barX = size.width - barW
                     // The hovered block (all its lines) is drawn wider, as in IntelliJ.
-                    val hot = hotChange != null && hotChange.type != es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.DELETED &&
+                    val hot = hotChange != null && hotChange.type != es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.DELETED &&
                         hotChange.start <= lastReal && real < hotChange.end
-                    val hotDeleted = hotChange?.type == es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.DELETED
+                    val hotDeleted = hotChange?.type == es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.DELETED
                     if (change != null) {
                         val col = when (change) {
-                            es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.ADDED -> c.gutterAdded
-                            es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.MODIFIED -> c.gutterModified
-                            es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.DELETED -> c.gutterDeleted
+                            es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.ADDED -> c.gutterAdded
+                            es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.MODIFIED -> c.gutterModified
+                            es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.DELETED -> c.gutterDeleted
                         }
                         val w = if (hot) barW * 2.2f else barW
                         drawRect(col, Offset(size.width - w, y), Size(w, lineH))
@@ -589,17 +589,17 @@ private fun KindBadge(kind: CompletionKind) {
  */
 @Composable
 private fun ChangePopup(
-    change: es.hugoalvarezajenjo.sproutstudio.git.LineChange,
-    rows: List<es.hugoalvarezajenjo.sproutstudio.git.LineDiff.HunkRow>,
+    change: es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange,
+    rows: List<es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.HunkRow>,
     onRollback: () -> Unit,
     onClose: () -> Unit,
 ) {
     val c = ide
     val n = change.end - change.start
     val title = when (change.type) {
-        es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.ADDED -> if (n == 1) "1 line added" else "$n lines added"
-        es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.DELETED -> (change.baseEnd - change.baseStart).let { if (it == 1) "1 line deleted" else "$it lines deleted" }
-        es.hugoalvarezajenjo.sproutstudio.git.LineChange.Type.MODIFIED -> if (n == 1) "1 line changed" else "$n lines changed"
+        es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.ADDED -> if (n == 1) "1 line added" else "$n lines added"
+        es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.DELETED -> (change.baseEnd - change.baseStart).let { if (it == 1) "1 line deleted" else "$it lines deleted" }
+        es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.MODIFIED -> if (n == 1) "1 line changed" else "$n lines changed"
     }
     val addedBg = c.gutterAdded.copy(alpha = if (c.isDark) 0.22f else 0.30f)
     val addedHi = c.gutterAdded.copy(alpha = if (c.isDark) 0.50f else 0.65f)
@@ -638,7 +638,7 @@ private fun ChangePopup(
                     ),
                 )
                 rows.forEach { row ->
-                    val deleted = row.kind == es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Row.Kind.DELETED
+                    val deleted = row.kind == es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Row.Kind.DELETED
                     val text = androidx.compose.ui.text.buildAnnotatedString {
                         append(row.text.ifEmpty { " " })
                         row.changed?.let { r ->

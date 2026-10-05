@@ -2,8 +2,8 @@ package es.hugoalvarezajenjo.sproutstudio.editor
 
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import es.hugoalvarezajenjo.sproutstudio.git.LineChange
-import es.hugoalvarezajenjo.sproutstudio.git.LineDiff
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff
 import es.hugoalvarezajenjo.sproutstudio.model.Document
 
 /**

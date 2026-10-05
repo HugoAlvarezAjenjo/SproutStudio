@@ -11,7 +11,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import es.hugoalvarezajenjo.sproutstudio.git.GitRepo
+import es.hugoalvarezajenjo.sproutstudio.services.git.GitError
+import es.hugoalvarezajenjo.sproutstudio.services.git.GitException
+import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
+import kotlin.test.assertIs
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -34,9 +37,9 @@ class BranchMenuTest {
 
     /** main: a.puml = "main"; feature: a.puml = "feature" + only.puml. */
     private fun twoBranches() {
-        GitRepo.init(dir).close()
+        JGitService().init(dir).close()
         File(dir, ".git/config").appendText("[user]\n\tname = T\n\temail = t@e\n[commit]\n\tgpgsign = false\n")
-        GitRepo.find(dir)!!.use { r ->
+        JGitService().find(dir)!!.use { r ->
             a.writeText("main\n"); r.commit(listOf(a), "main")
             r.createBranch("feature")
             a.writeText("feature\n")
@@ -48,15 +51,15 @@ class BranchMenuTest {
 
     @Test fun repoBranchOperations() {
         twoBranches()
-        GitRepo.find(dir)!!.use { r ->
+        JGitService().find(dir)!!.use { r ->
             assertEquals(listOf("feature", "main"), r.branches())
             assertEquals("main\n", a.readText())
             assertFalse(File(dir, "only.puml").exists())
-            assertFailsWith<IllegalArgumentException> { r.createBranch("feature") }
-            assertFailsWith<IllegalArgumentException> { r.createBranch("bad..name") }
-            assertFailsWith<IllegalArgumentException> { r.deleteBranch("main") }
+            assertEquals(GitError.BranchExists("feature"), assertFailsWith<GitException> { r.createBranch("feature") }.error)
+            assertEquals(GitError.InvalidBranchName("bad..name"), assertFailsWith<GitException> { r.createBranch("bad..name") }.error)
+            assertEquals(GitError.DeleteCurrentBranch, assertFailsWith<GitException> { r.deleteBranch("main") }.error)
             // feature has a commit main doesn't: not deleted.
-            assertFailsWith<IllegalStateException> { r.deleteBranch("feature") }
+            assertIs<GitError.BranchNotMerged>(assertFailsWith<GitException> { r.deleteBranch("feature") }.error)
             r.createBranch("spike"); r.checkout("main"); r.deleteBranch("spike") // merged (same commit)
             assertEquals(listOf("feature", "main"), r.branches())
         }
@@ -69,7 +72,8 @@ class BranchMenuTest {
             p.git.open(dir)
             a.writeText("uncommitted\n")
             assertFalse(p.git.checkout("feature"))
-            assertTrue(p.git.error!!.contains("a.puml"), p.git.error)
+            val conflict = assertIs<GitError.CheckoutConflict>(p.git.error)
+            assertTrue("a.puml" in conflict.paths, conflict.toString())
             assertEquals("main", p.git.status.branch)
             assertEquals("uncommitted\n", a.readText()) // nothing lost
         }
@@ -111,6 +115,6 @@ class BranchMenuTest {
             waitUntil(timeoutMillis = 10_000) { p.git.status.branch == "try-this" }
             assertEquals(listOf("feature", "main", "try-this"), p.git.branches)
         }
-        assertNotNull(GitRepo.find(dir)).use { assertEquals("try-this", it.branch()) }
+        assertNotNull(JGitService().find(dir)).use { assertEquals("try-this", it.branch()) }
     }
 }

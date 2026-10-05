@@ -1,7 +1,8 @@
-package es.hugoalvarezajenjo.sproutstudio.git
+package es.hugoalvarezajenjo.sproutstudio.services.git
 
 import java.io.File
 import java.nio.file.Files
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,17 +14,17 @@ import kotlin.test.assertTrue
 /** Undo, amend, history, stash, .gitignore, text diff. */
 class GitHistoryTest {
     private val dir: File = Files.createTempDirectory("sprout-hist").toFile()
-    private val opened = ArrayList<GitRepo>()
+    private val opened = ArrayList<GitRepository>()
     @AfterTest fun cleanup() { opened.forEach { it.close() }; dir.deleteRecursively() }
 
-    private fun repo(gitignore: Boolean = false): GitRepo {
-        GitRepo.init(dir, gitignore).close()
+    private fun repo(gitignore: Boolean = false): GitRepository {
+        JGitService().init(dir, gitignore).close()
         File(dir, ".git/config").appendText("[user]\n\tname = Test\n\temail = t@e\n[commit]\n\tgpgsign = false\n")
-        return GitRepo.find(dir)!!.also { opened += it }
+        return JGitService().find(dir)!!.also { opened += it }
     }
 
     private fun file(name: String, text: String) = File(dir, name).apply { writeText(text) }
-    private fun GitRepo.typeOf(path: String) = status().changes.firstOrNull { it.path == path }?.type
+    private fun GitRepository.typeOf(path: String) = status().changes.firstOrNull { it.path == path }?.type
 
     @Test fun `undo last commit keeps the changes ready to commit again`() {
         val r = repo()
@@ -45,7 +46,7 @@ class GitHistoryTest {
     @Test fun `the first commit can't be undone`() {
         val r = repo()
         r.commit(listOf(file("a.puml", "1\n")), "one")
-        assertFailsWith<IllegalArgumentException> { r.undoLastCommit() }
+        assertEquals(GitError.FirstCommitCantBeUndone, assertFailsWith<GitException> { r.undoLastCommit() }.error)
     }
 
     @Test fun `amend adds the selected files to the last commit, or just rewords it`() {
@@ -100,7 +101,7 @@ class GitHistoryTest {
         val other = Files.createTempDirectory("sprout-ig").toFile()
         try {
             File(other, ".gitignore").writeText("mine\n")
-            GitRepo.init(other, gitignore = true).close()
+            JGitService().init(other, gitignore = true).close()
             assertEquals("mine\n", File(other, ".gitignore").readText())
         } finally { other.deleteRecursively() }
     }

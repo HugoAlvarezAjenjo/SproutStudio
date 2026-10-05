@@ -12,8 +12,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import es.hugoalvarezajenjo.sproutstudio.git.ChangeType
-import es.hugoalvarezajenjo.sproutstudio.git.GitRepo
+import es.hugoalvarezajenjo.sproutstudio.services.git.ChangeType
+import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
 import es.hugoalvarezajenjo.sproutstudio.model.LayoutPrefs
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
 import es.hugoalvarezajenjo.sproutstudio.model.SidebarTool
@@ -43,9 +43,9 @@ class CommitPanelTest {
 
     /** a.puml committed then edited, b.puml new. */
     private fun repoWithChanges(): Pair<File, File> {
-        GitRepo.init(dir).close(); configure()
+        JGitService().init(dir).close(); configure()
         val a = write("a.puml", "@startuml\nA -> B\n@enduml\n")
-        GitRepo.find(dir)!!.use { it.commit(listOf(a), "init") }
+        JGitService().find(dir)!!.use { it.commit(listOf(a), "init") }
         a.writeText("@startuml\nA -> B\nB -> C\n@enduml\n")
         val b = write("b.puml", "@startuml\nX -> Y\n@enduml\n")
         return a to b
@@ -72,10 +72,10 @@ class CommitPanelTest {
 
             onNodeWithTag("commit-message").performTextInput("Add B and C")
             onNode(hasText("Commit") and hasClickAction()).performClick()
-            waitUntil(timeoutMillis = 10_000) { p.git.status.changes.isEmpty() && p.git.lastResult != null }
+            waitUntil(timeoutMillis = 10_000) { p.git.status.changes.isEmpty() && p.git.notice != null }
             assertEquals("", p.git.commitMessage)
         }
-        GitRepo.find(dir)!!.use { r ->
+        JGitService().find(dir)!!.use { r ->
             assertEquals(a.readText(), r.headText(a))
             assertEquals(b.readText(), r.headText(b))
         }
@@ -93,10 +93,10 @@ class CommitPanelTest {
             onNodeWithContentDescription("Include a.puml").performClick() // a out, b in
             onNodeWithTag("commit-message").performTextInput("Only B")
             onNode(hasText("Commit") and hasClickAction()).performClick()
-            waitUntil(timeoutMillis = 10_000) { p.git.lastResult != null }
+            waitUntil(timeoutMillis = 10_000) { p.git.notice != null }
             waitUntil(timeoutMillis = 10_000) { p.git.status.changes.map { it.path } == listOf("a.puml") }
         }
-        GitRepo.find(dir)!!.use { r ->
+        JGitService().find(dir)!!.use { r ->
             assertEquals("@startuml\nA -> B\n@enduml\n", r.headText(a)) // edit not committed
             assertNotNull(r.headText(b))
         }

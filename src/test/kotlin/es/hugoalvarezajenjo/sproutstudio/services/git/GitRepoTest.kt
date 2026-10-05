@@ -1,4 +1,4 @@
-package es.hugoalvarezajenjo.sproutstudio.git
+package es.hugoalvarezajenjo.sproutstudio.services.git
 
 import java.io.File
 import java.nio.file.Files
@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 
 class GitRepoTest {
     private val dir: File = Files.createTempDirectory("sprout-git").toFile()
-    private val opened = ArrayList<GitRepo>()
+    private val opened = ArrayList<GitRepository>()
 
     @AfterTest fun cleanup() {
         opened.forEach { it.close() }
@@ -20,21 +20,21 @@ class GitRepoTest {
     }
 
     /** A repo with a fixed author, so tests don't depend on the machine's git config. */
-    private fun newRepo(): GitRepo {
-        val r = GitRepo.init(dir).also { opened += it }
+    private fun newRepo(): GitRepository {
+        val r = JGitService().init(dir).also { opened += it }
         File(dir, ".git/config").appendText("[user]\n\tname = Test\n\temail = test@example.com\n[commit]\n\tgpgsign = false\n")
-        return GitRepo.find(dir)!!.also { opened += it }.also { r.close() }
+        return JGitService().find(dir)!!.also { opened += it }.also { r.close() }
     }
 
     private fun write(path: String, text: String) = File(dir, path).apply { parentFile.mkdirs(); writeText(text) }
 
-    private fun GitRepo.typeOf(path: String) = status().changes.firstOrNull { it.path == path }?.type
+    private fun GitRepository.typeOf(path: String) = status().changes.firstOrNull { it.path == path }?.type
 
     @Test fun `find returns null outside a repo and the repo from a subfolder`() {
-        assertNull(GitRepo.find(dir))
+        assertNull(JGitService().find(dir))
         newRepo()
         val sub = File(dir, "docs/deep").apply { mkdirs() }
-        val found = GitRepo.find(sub)
+        val found = JGitService().find(sub)
         assertNotNull(found); opened += found
         assertEquals(dir.canonicalFile, found.workTree.canonicalFile)
     }

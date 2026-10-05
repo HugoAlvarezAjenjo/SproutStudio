@@ -1,8 +1,8 @@
-package es.hugoalvarezajenjo.sproutstudio.git
+package es.hugoalvarezajenjo.sproutstudio.domain.git
 
-import es.hugoalvarezajenjo.sproutstudio.git.LineDiff.HunkRow
-import es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Row.Kind.ADDED
-import es.hugoalvarezajenjo.sproutstudio.git.LineDiff.Row.Kind.DELETED
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.HunkRow
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Row.Kind.ADDED
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Row.Kind.DELETED
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
