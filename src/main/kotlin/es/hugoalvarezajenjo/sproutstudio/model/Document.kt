@@ -7,17 +7,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import java.io.File
 import java.io.IOException
-import java.nio.file.AtomicMoveNotSupportedException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
+import es.hugoalvarezajenjo.sproutstudio.app.AppGraph
+import es.hugoalvarezajenjo.sproutstudio.services.persistence.DocumentStore
 
-val DiagramExtensions = setOf("puml", "plantuml", "pu", "iuml", "wsd")
+val DiagramExtensions = es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles.DIAGRAM_EXTENSIONS
 
-fun File.isDiagram() = isFile && extension.lowercase() in DiagramExtensions
+fun File.isDiagram() = es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles.isDiagram(this)
 
 /** One open file (or an unsaved new diagram). */
 @Stable
-class Document(file: File?, initialText: String) {
+class Document(
+    file: File?,
+    initialText: String,
+    /** Where saves go: the one writer of diagram files, which keeps writes to a file in order. */
+    private val store: DocumentStore = AppGraph.default.documents,
+) {
     /** Folded blocks; declared first because the [value] setter uses it. */
     val folds = es.hugoalvarezajenjo.sproutstudio.editor.FoldState()
 
@@ -62,14 +66,28 @@ class Document(file: File?, initialText: String) {
     var saveError by mutableStateOf<String?>(null)
         private set
 
-    /** Writes to [target]; on failure keeps the edits dirty and records [saveError]. */
-    fun save(target: File? = file): Boolean {
+    /**
+     * Writes to [target] off the UI thread; on failure keeps the edits dirty and records
+     * [saveError]. What gets saved is the text at the moment of the call: edits typed while
+     * the write runs stay dirty.
+     */
+    suspend fun save(target: File? = file): Boolean {
         val f = target ?: return false
         val snapshot = text
-        try {
-            writeAtomically(f, snapshot)
-        } catch (e: IOException) {
-            saveError = e.message ?: e.javaClass.simpleName
+        return finishSave(f, snapshot, runCatching { store.write(f, snapshot) }.exceptionOrNull())
+    }
+
+    /** [save], blocking. Only for callers that can't suspend and aren't the UI thread (⌘Q). */
+    fun saveNow(target: File? = file): Boolean {
+        val f = target ?: return false
+        val snapshot = text
+        return finishSave(f, snapshot, runCatching { store.writeNow(f, snapshot) }.exceptionOrNull())
+    }
+
+    private fun finishSave(f: File, snapshot: String, failure: Throwable?): Boolean {
+        if (failure != null) {
+            if (failure !is IOException) throw failure
+            saveError = failure.message ?: failure.javaClass.simpleName
             return false
         }
         file = f
@@ -79,7 +97,7 @@ class Document(file: File?, initialText: String) {
     }
 
     /** Autosave entry point: only file-backed documents with edits; untitled ones need Save As. */
-    fun saveIfNeeded(): Boolean = file != null && dirty && save()
+    suspend fun saveIfNeeded(): Boolean = file != null && dirty && save()
 
     /** Reload from disk when the file changed outside and we have no unsaved edits. */
     fun reloadIfChanged(): Boolean {
@@ -107,26 +125,6 @@ class Document(file: File?, initialText: String) {
 
     companion object {
         fun open(file: File) = Document(file, file.readText())
-
-        /**
-         * Write via a temp file in the same folder + rename, so a crash or a full disk mid-write
-         * (more likely now that we save every second) never leaves a half-written diagram.
-         */
-        fun writeAtomically(f: File, content: String) {
-            val dir = f.absoluteFile.parentFile ?: throw IOException("No folder for ${f.name}")
-            val tmp = File(dir, ".${f.name}.sprout-tmp")
-            try {
-                tmp.writeText(content)
-                try {
-                    Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-                } catch (_: AtomicMoveNotSupportedException) {
-                    Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                }
-            } finally {
-                tmp.delete()
-            }
-        }
-
     }
 }
 

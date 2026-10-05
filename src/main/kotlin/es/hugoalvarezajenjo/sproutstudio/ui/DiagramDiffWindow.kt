@@ -115,11 +115,13 @@ private fun rememberSideText(p: ProjectState, file: File, side: DiffSide): Pair<
             var disk by remember { mutableStateOf(runCatching { file.readText() }.getOrNull()) }
             LaunchedEffect(file, doc) {
                 if (doc != null) return@LaunchedEffect
-                var stamp = file.lastModified()
+                // Outside edits show up; the disk is read off the UI thread.
+                val io = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.dispatchers.io
+                var stamp = withContext(io) { file.lastModified() }
                 while (true) {
                     delay(700)
-                    val now = file.lastModified()
-                    if (now != stamp) { stamp = now; disk = runCatching { file.readText() }.getOrNull() }
+                    val now = withContext(io) { file.lastModified() }
+                    if (now != stamp) { stamp = now; disk = withContext(io) { runCatching { file.readText() }.getOrNull() } }
                 }
             }
             return (doc?.text ?: disk) to true

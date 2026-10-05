@@ -38,7 +38,12 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.model.FileAction
+import es.hugoalvarezajenjo.sproutstudio.features.explorer.describe
 import es.hugoalvarezajenjo.sproutstudio.model.FileOps
+import es.hugoalvarezajenjo.sproutstudio.model.fileError
+import es.hugoalvarezajenjo.sproutstudio.services.files.FileError
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
 import es.hugoalvarezajenjo.sproutstudio.model.delete
 import es.hugoalvarezajenjo.sproutstudio.model.newDiagramIn
@@ -57,18 +62,20 @@ internal fun FileActionDialog(p: ProjectState) {
             initial = FileOps.freeName(a.dir, "new-folder"), selectBase = false,
             state = remember(a) { mutableStateOf(selected(FileOps.freeName(a.dir, "new-folder"), false)) },
             hint = "in ${where(p, a.dir)}",
-            check = { FileOps.validate(a.dir, it) },
+            check = { FileOps.validate(a.dir, it)?.describe() },
             onDismiss = { p.fileAction = null },
-        ) { p.newFolderIn(a.dir, it).exceptionOrNull()?.message }
+            scope = p.scope,
+        ) { p.newFolderIn(a.dir, it).exceptionOrNull()?.fileError?.describe() }
 
         is FileAction.Rename -> NameDialog(
             title = if (a.target.isDirectory) "Rename Folder" else "Rename File", label = "New name", confirm = "Rename",
             initial = a.target.name, selectBase = !a.target.isDirectory,
             state = remember(a) { mutableStateOf(selected(a.target.name, !a.target.isDirectory)) },
             hint = null,
-            check = { FileOps.validate(a.target.absoluteFile.parentFile, it, except = a.target) },
+            check = { FileOps.validate(a.target.absoluteFile.parentFile, it, except = a.target)?.describe() },
             onDismiss = { p.fileAction = null },
-        ) { p.rename(a.target, it).exceptionOrNull()?.message }
+            scope = p.scope,
+        ) { p.rename(a.target, it).exceptionOrNull()?.fileError?.describe() }
 
         is FileAction.Delete -> DeleteDialog(p, a.target)
     }
@@ -96,8 +103,9 @@ private fun NewDiagramDialog(p: ProjectState, dir: File) {
         title = "New Diagram", label = "Name", confirm = "Create",
         state = name, initial = initial,
         hint = "in ${where(p, dir)} · .puml is added if missing",
-        check = { n -> if (n.isBlank()) "Enter a name" else FileOps.validate(dir, FileOps.diagramName(n)) },
+        check = { n -> (if (n.isBlank()) FileError.EmptyName else FileOps.validate(dir, FileOps.diagramName(n)))?.describe() },
         onDismiss = { p.fileAction = null },
+        scope = p.scope,
         extra = {
             val c = ide
             Row(
@@ -117,7 +125,7 @@ private fun NewDiagramDialog(p: ProjectState, dir: File) {
                 }
             }
         },
-    ) { p.newDiagramIn(dir, it, template).exceptionOrNull()?.message }
+    ) { p.newDiagramIn(dir, it, template).exceptionOrNull()?.fileError?.describe() }
 }
 
 private fun selected(text: String, selectBase: Boolean): TextFieldValue {
@@ -143,12 +151,14 @@ private fun NameDialog(
     hint: String?,
     check: (String) -> String?,
     onDismiss: () -> Unit,
+    /** Where the operation runs: the window's, so it isn't cut short by recomposition. */
+    scope: CoroutineScope,
     /** Select the name without its extension, so typing replaces just the name (see [selected]). */
     @Suppress("UNUSED_PARAMETER") selectBase: Boolean = false,
     /** Extra controls under the field (the template picker). */
     extra: @Composable () -> Unit = {},
     /** Runs the operation; returns an error to show, or null when done. */
-    onConfirm: (String) -> String?,
+    onConfirm: suspend (String) -> String?,
 ) {
     val c = ide
     var value by state
@@ -158,10 +168,15 @@ private fun NameDialog(
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
 
+    var busy by remember { mutableStateOf(false) }
     fun submit() {
-        if (invalid != null) return
-        failed = onConfirm(value.text)
-        if (failed == null) onDismiss()
+        if (invalid != null || busy) return
+        busy = true
+        scope.launch {
+            failed = onConfirm(value.text)
+            busy = false
+            if (failed == null) onDismiss()
+        }
     }
 
     AlertDialog(
@@ -232,7 +247,7 @@ private fun DeleteDialog(p: ProjectState, target: File) {
         },
         confirmButton = {
             TextButton(onClick = {
-                failed = p.delete(f).exceptionOrNull()?.message
+                failed = p.delete(f).exceptionOrNull()?.fileError?.describe()
                 if (failed == null) p.fileAction = null
             }, modifier = Modifier.testTag("file-delete-confirm")) { Text("Move to Trash", color = c.error) }
         },
@@ -241,9 +256,4 @@ private fun DeleteDialog(p: ProjectState, target: File) {
 }
 
 /** Shows [f] selected in Finder (or opens its folder elsewhere). */
-internal fun revealInFinder(f: File) {
-    runCatching {
-        if (Dialogs.isMac) ProcessBuilder("open", "-R", f.absolutePath).start()
-        else java.awt.Desktop.getDesktop().open(if (f.isDirectory) f else f.absoluteFile.parentFile)
-    }
-}
+internal fun revealInFinder(f: File) = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.platform.reveal(f)

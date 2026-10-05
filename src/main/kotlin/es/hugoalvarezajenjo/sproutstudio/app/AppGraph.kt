@@ -8,7 +8,12 @@ import es.hugoalvarezajenjo.sproutstudio.features.palette.PaletteHistory
 import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.RecentProjects
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSaver
+import es.hugoalvarezajenjo.sproutstudio.platform.DesktopPlatform
+import es.hugoalvarezajenjo.sproutstudio.platform.Platform
+import es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitService
+import es.hugoalvarezajenjo.sproutstudio.services.persistence.DocumentStore
 import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
 import es.hugoalvarezajenjo.sproutstudio.services.persistence.AutoSaveSettings
 import es.hugoalvarezajenjo.sproutstudio.services.render.PlantUmlRenderService
@@ -30,8 +35,14 @@ class AppGraph(
     val recents = RecentProjects(store)
     val paletteHistory = PaletteHistory(store)
 
+    val platform: Platform = DesktopPlatform()
     val render: RenderService = PlantUmlRenderService()
     val git: GitService = JGitService()
+    val documents = DocumentStore(dispatchers.io)
+    /** Moves a file to the Trash. A var so tests can watch it instead of trashing for real. */
+    var trash: (java.io.File) -> Boolean = { platform.moveToTrash(it) }
+    val files = ProjectFiles(trash = { trash(it) })
+    val autoSaver = AutoSaver(autoSave)
 
     companion object {
         /**

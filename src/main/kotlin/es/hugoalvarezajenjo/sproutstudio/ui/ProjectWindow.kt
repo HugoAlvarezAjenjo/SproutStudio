@@ -58,6 +58,8 @@ import androidx.compose.material.icons.outlined.VerticalSplit
 import es.hugoalvarezajenjo.sproutstudio.model.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.model.FileAction
 import es.hugoalvarezajenjo.sproutstudio.model.move
+import es.hugoalvarezajenjo.sproutstudio.model.fileError
+import es.hugoalvarezajenjo.sproutstudio.features.explorer.describe
 import androidx.compose.ui.composed
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
@@ -123,7 +125,7 @@ import es.hugoalvarezajenjo.sproutstudio.model.AppWindow
 import es.hugoalvarezajenjo.sproutstudio.model.Document
 import es.hugoalvarezajenjo.sproutstudio.model.ProjectState
 import es.hugoalvarezajenjo.sproutstudio.model.Recents
-import es.hugoalvarezajenjo.sproutstudio.model.TreeNode
+import es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode
 import es.hugoalvarezajenjo.sproutstudio.preview.PreviewPane
 import es.hugoalvarezajenjo.sproutstudio.preview.rememberPreviewViewModel
 import java.awt.Cursor
@@ -140,16 +142,18 @@ fun ProjectWindow(win: AppWindow.Project) {
     var pending by remember { mutableStateOf<PendingClose?>(null) }
 
     fun closeDocs(docs: List<Document>, then: () -> Unit) {
-        AutoSave.flush(docs) // with autosave on, only untitled diagrams still need the question
-        val dirty = docs.filter { it.dirty }
-        if (dirty.isEmpty()) then() else pending = PendingClose(dirty, then)
+        p.scope.launch {
+            AutoSave.flush(docs) // with autosave on, only untitled diagrams still need the question
+            val dirty = docs.filter { it.dirty }
+            if (dirty.isEmpty()) then() else pending = PendingClose(dirty, then)
+        }
     }
 
     // Autosave: 1 s after you stop typing, and whenever you switch tab (see below).
     LaunchedEffect(p) { AutoSave.watch({ p.docs.toList() }) }
     LaunchedEffect(p.activeIndex) { AutoSave.flush(p.docs.toList()) }
 
-    DisposableEffect(p) { onDispose { p.git.close() } }
+    DisposableEffect(p) { onDispose { p.close() } }
 
     var paletteOpen by remember { mutableStateOf(false) }
     var galleryOpen by remember { mutableStateOf(false) }
@@ -164,9 +168,13 @@ fun ProjectWindow(win: AppWindow.Project) {
     }
     val doubleShift = remember { DoubleShiftDetector() }
 
-    fun save(doc: Document?) {
+    /** Save (asks where for an untitled diagram); the write itself runs off the UI thread. */
+    suspend fun save(doc: Document?) {
         doc ?: return
         if (doc.file == null) Dialogs.saveAs(doc.name, p.root)?.let { doc.save(it); p.refreshTree() } else doc.save()
+    }
+    fun saveAs(d: Document) {
+        Dialogs.saveAs(d.name, d.dir ?: p.root)?.let { target -> p.scope.launch { d.save(target); p.refreshTree() } }
     }
 
     val title = buildString {
@@ -194,7 +202,7 @@ fun ProjectWindow(win: AppWindow.Project) {
         // ...and when the window loses focus (you go to another app), like IntelliJ.
         DisposableEffect(window) {
             val l = object : WindowAdapter() {
-                override fun windowLostFocus(e: WindowEvent?) = AutoSave.flush(p.docs.toList())
+                override fun windowLostFocus(e: WindowEvent?) { p.scope.launch { AutoSave.flush(p.docs.toList()) } }
                 // Back from the terminal (a commit, a checkout...): re-read git status.
                 override fun windowGainedFocus(e: WindowEvent?) = p.git.requestRefresh()
             }
@@ -209,13 +217,13 @@ fun ProjectWindow(win: AppWindow.Project) {
                 Item("Open Folder…", shortcut = shortcut(Key.O)) { Dialogs.openFolder()?.let { p.openRoot(it) } }
                 Item("New Window") { AppState.newProjectWindow() }
                 Separator()
-                Item("Save", shortcut = shortcut(Key.S), enabled = p.active != null) { save(p.active) }
+                Item("Save", shortcut = shortcut(Key.S), enabled = p.active != null) { p.scope.launch { save(p.active) } }
                 CheckboxItem("Save Automatically", checked = AutoSavePrefs.enabled) {
                     AutoSavePrefs.enabled = it
-                    if (it) AutoSave.flush(p.docs.toList())
+                    if (it) p.scope.launch { AutoSave.flush(p.docs.toList()) }
                 }
                 Item("Save As…", shortcut = shortcut(Key.S, shift = true), enabled = p.active != null) {
-                    p.active?.let { d -> Dialogs.saveAs(d.name, d.dir ?: p.root)?.let { d.save(it); p.refreshTree() } }
+                    p.active?.let { saveAs(it) }
                 }
                 Item("Close Tab", shortcut = shortcut(Key.W), enabled = p.active != null) {
                     p.active?.let { d -> closeDocs(listOf(d)) { p.closeDoc(d) } }
@@ -299,15 +307,15 @@ fun ProjectWindow(win: AppWindow.Project) {
                 if (p.root == null && p.docs.isEmpty()) {
                     Welcome(p)
                 } else {
-                    Workspace(p, onSave = { save(it) }, onCloseTab = { d -> closeDocs(listOf(d)) { p.closeDoc(d) } })
+                    Workspace(p, onSave = { d -> p.scope.launch { save(d) } }, onCloseTab = { d -> closeDocs(listOf(d)) { p.closeDoc(d) } })
                 }
             }
 
             if (paletteOpen) {
                 val commands = projectCommands(
                     p,
-                    onSave = { save(p.active) },
-                    onSaveAs = { p.active?.let { d -> Dialogs.saveAs(d.name, d.dir ?: p.root)?.let { d.save(it); p.refreshTree() } } },
+                    onSave = { p.scope.launch { save(p.active) } },
+                    onSaveAs = { p.active?.let { saveAs(it) } },
                     onCloseTab = { p.active?.let { d -> closeDocs(listOf(d)) { p.closeDoc(d) } } },
                     onOpenGallery = { paletteOpen = false; galleryOpen = true },
                     onCloseProject = { closeProject() },
@@ -338,7 +346,10 @@ fun ProjectWindow(win: AppWindow.Project) {
                     title = { Text("Save changes?", style = MaterialTheme.typography.titleMedium) },
                     text = { Text("${pc.docs.joinToString { it.name }} has unsaved changes.", style = MaterialTheme.typography.bodyMedium) },
                     confirmButton = {
-                        TextButton(onClick = { pc.docs.forEach { save(it) }; pending = null; if (pc.docs.none { it.dirty }) pc.then() }) { Text("Save") }
+                        TextButton(onClick = {
+                            pending = null
+                            p.scope.launch { pc.docs.forEach { save(it) }; if (pc.docs.none { it.dirty }) pc.then() }
+                        }) { Text("Save") }
                     },
                     dismissButton = {
                         Row {
@@ -594,7 +605,7 @@ private fun Sidebar(p: ProjectState) {
     var message by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(message) { if (message != null) { kotlinx.coroutines.delay(4000); message = null } }
     val onDrop: (java.io.File, java.io.File) -> Unit = { what, where ->
-        p.move(what, where).exceptionOrNull()?.let { message = it.message }
+        p.scope.launch { p.move(what, where).exceptionOrNull()?.let { message = it.fileError.describe() } }
     }
     var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
     // zIndex: the drag label may run past the panel, over the editor.

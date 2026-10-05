@@ -64,7 +64,7 @@ internal fun projectCommands(
     cmd("file.saveAs", "Save As…", "File", shortcutHint("S", shift = true), enabled = has) { onSaveAs() }
     cmd("file.autosave", if (AutoSavePrefs.enabled) "Turn Off Save Automatically" else "Turn On Save Automatically", "File") {
         AutoSavePrefs.enabled = !AutoSavePrefs.enabled
-        if (AutoSavePrefs.enabled) AutoSave.flush(p.docs.toList())
+        if (AutoSavePrefs.enabled) p.scope.launch { AutoSave.flush(p.docs.toList()) }
     }
     cmd("file.closeTab", "Close Tab", "File", shortcutHint("W"), enabled = has) { onCloseTab() }
     cmd("file.closeProject", "Close Project", "File", enabled = p.root != null || has, restoresFocus = false) { onCloseProject() }

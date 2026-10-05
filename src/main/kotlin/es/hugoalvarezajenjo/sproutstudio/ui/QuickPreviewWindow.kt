@@ -37,15 +37,17 @@ fun QuickPreviewWindow(win: AppWindow.QuickPreview) {
     var text by remember { mutableStateOf(runCatching { file.readText() }.getOrDefault("")) }
     var missing by remember { mutableStateOf(!file.exists()) }
 
+    // Watch the file for outside edits; the disk is read off the UI thread.
     LaunchedEffect(file) {
-        var stamp = file.lastModified()
+        val io = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.dispatchers.io
+        var stamp = kotlinx.coroutines.withContext(io) { file.lastModified() }
         while (true) {
             delay(700)
-            missing = !file.exists()
-            val now = file.lastModified()
-            if (!missing && now != stamp) {
+            val (exists, now) = kotlinx.coroutines.withContext(io) { file.exists() to file.lastModified() }
+            missing = !exists
+            if (exists && now != stamp) {
                 stamp = now
-                text = runCatching { file.readText() }.getOrDefault(text)
+                kotlinx.coroutines.withContext(io) { runCatching { file.readText() }.getOrNull() }?.let { text = it }
             }
         }
     }

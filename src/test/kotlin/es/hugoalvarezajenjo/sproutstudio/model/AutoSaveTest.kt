@@ -53,7 +53,7 @@ class AutoSaveTest {
     }
 
     @Test
-    fun `saves after you stop typing`() {
+    fun `saves after you stop typing`() = runBlocking<Unit> {
         val doc = fileDoc()
         watching(listOf(doc)) {
             doc.type("@startuml\nA -> C\n@enduml\n")
@@ -64,7 +64,7 @@ class AutoSaveTest {
     }
 
     @Test
-    fun `does not write while you keep typing`() {
+    fun `does not write while you keep typing`() = runBlocking<Unit> {
         val original = "@startuml\n@enduml\n"
         val doc = fileDoc(original)
         watching(listOf(doc)) {
@@ -76,7 +76,7 @@ class AutoSaveTest {
     }
 
     @Test
-    fun `untitled diagrams are never autosaved`() {
+    fun `untitled diagrams are never autosaved`() = runBlocking<Unit> {
         val doc = Document(null, "@startuml\n@enduml\n")
         watching(listOf(doc)) {
             doc.type("@startuml\nX -> Y\n@enduml\n")
@@ -89,7 +89,7 @@ class AutoSaveTest {
     }
 
     @Test
-    fun `turned off means nothing is written`() {
+    fun `turned off means nothing is written`() = runBlocking<Unit> {
         AutoSavePrefs.enabled = false
         val original = "@startuml\n@enduml\n"
         val doc = fileDoc(original)
@@ -103,7 +103,7 @@ class AutoSaveTest {
     }
 
     @Test
-    fun `flush saves immediately (tab switch, focus loss, quit)`() {
+    fun `flush saves immediately (tab switch, focus loss, quit)`() = runBlocking<Unit> {
         val doc = fileDoc()
         doc.value = TextFieldValue("@startuml\nnow\n@enduml\n")
         AutoSave.flush(listOf(doc))
@@ -112,7 +112,7 @@ class AutoSaveTest {
     }
 
     @Test
-    fun `atomic save leaves no temp file behind`() {
+    fun `atomic save leaves no temp file behind`() = runBlocking<Unit> {
         val doc = fileDoc()
         doc.value = TextFieldValue("@startuml\nB\n@enduml\n")
         assertTrue(doc.save())
@@ -120,7 +120,7 @@ class AutoSaveTest {
     }
 
     @Test
-    fun `a failed save keeps the edits and reports why`() {
+    fun `a failed save keeps the edits and reports why`() = runBlocking<Unit> {
         val doc = fileDoc()
         doc.value = TextFieldValue("@startuml\nkeep me\n@enduml\n")
         dir.setWritable(false)

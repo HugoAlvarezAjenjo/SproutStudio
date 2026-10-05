@@ -123,10 +123,14 @@ object Recents {
     fun add(dir: File) = s.add(dir)
 }
 
-data class TreeNode(val file: File, val depth: Int, val isDir: Boolean)
-
+/**
+ * One project window's state and actions. (Legacy name: it is the workspace ViewModel, and
+ * gets that name when the window is split by feature.)
+ */
 @Stable
-class ProjectState {
+class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
+    es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.dispatchers.main,
+) {
     var root by mutableStateOf<File?>(null)
         private set
     val docs = mutableStateListOf<Document>()
@@ -218,7 +222,7 @@ class ProjectState {
     var rootCollapsed by mutableStateOf(false)
     /** New / rename / delete dialog the project tree is showing, if any. */
     var fileAction by mutableStateOf<FileAction?>(null)
-    var tree by mutableStateOf<List<TreeNode>>(emptyList())
+    var tree by mutableStateOf<List<es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode>>(emptyList())
         private set
 
     val active: Document? get() = docs.getOrNull(activeIndex)
@@ -296,42 +300,24 @@ class ProjectState {
     fun refreshTree() {
         git.requestRefresh()
         val r = root ?: run { tree = emptyList(); return }
-        val out = ArrayList<TreeNode>()
-        fun walk(dir: File, depth: Int) {
-            val children = dir.listFiles().orEmpty()
-                .filter { !it.name.startsWith(".") && it.name !in IGNORED }
-                // Every folder shows, even empty ones (a folder you just created must be visible);
-                // files: only diagrams, the app's subject.
-                .filter { it.isDirectory || it.isDiagram() }
-                .sortedWith(compareBy<File>({ !it.isDirectory }, { it.name.lowercase() }))
-            for (c in children) {
-                out += TreeNode(c, depth, c.isDirectory)
-                if (c.isDirectory && c in expanded) walk(c, depth + 1)
-            }
-        }
-        walk(r, 0)
-        tree = out
+        tree = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.files.tree(r, expanded)
     }
 
     /** Every diagram under the root, expanded or not (for the command palette's "go to file"). */
     fun allDiagrams(limit: Int = 2000): List<File> {
         val r = root ?: return emptyList()
-        val out = ArrayList<File>()
-        fun walk(dir: File, depth: Int) {
-            if (depth > 8 || out.size >= limit) return
-            for (f in dir.listFiles().orEmpty().sortedBy { it.name.lowercase() }) {
-                if (f.name.startsWith(".") || f.name in IGNORED) continue
-                if (f.isDirectory) walk(f, depth + 1) else if (f.isDiagram() && out.size < limit) out += f.absoluteFile
-            }
-        }
-        walk(r, 0)
-        return out
+        return es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.files.allDiagrams(r, limit)
+    }
+
+    /** Closes the window's state: its git ViewModel and anything still running. */
+    override fun close() {
+        git.close()
+        super.close()
     }
 
     companion object {
         const val SIDEBAR_MIN = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings.SIDEBAR_MIN
         const val SIDEBAR_MAX = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings.SIDEBAR_MAX
-        private val IGNORED = setOf("node_modules", "build", "target", "out", "dist", ".git", ".gradle")
     }
 }
 

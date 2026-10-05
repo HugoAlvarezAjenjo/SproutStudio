@@ -37,7 +37,7 @@ fun main(args: Array<String>) {
     // ⌘Q quits without closing windows one by one, so flush autosave first (no edit lost).
     if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
         Desktop.getDesktop().setQuitHandler { _, response ->
-            AutoSave.flush(AppState.windows.filterIsInstance<AppWindow.Project>().flatMap { it.state.docs.toList() })
+            AutoSave.flushNow(AppState.windows.filterIsInstance<AppWindow.Project>().flatMap { it.state.docs.toList() })
             response.performQuit()
         }
     }

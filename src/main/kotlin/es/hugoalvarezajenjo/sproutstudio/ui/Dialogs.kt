@@ -1,45 +1,22 @@
 package es.hugoalvarezajenjo.sproutstudio.ui
 
+import es.hugoalvarezajenjo.sproutstudio.app.AppGraph
 import es.hugoalvarezajenjo.sproutstudio.model.DiagramExtensions
-import java.awt.FileDialog
-import java.awt.Frame
 import java.io.File
 
+/** Legacy access to the platform's dialogs; goes away as screens get ViewModels. */
 object Dialogs {
-    val isMac = System.getProperty("os.name").lowercase().contains("mac")
+    private val platform get() = AppGraph.default.platform
 
-    fun openDiagram(): File? {
-        val d = FileDialog(null as Frame?, "Open a diagram", FileDialog.LOAD).apply {
-            setFilenameFilter { _, name -> name.substringAfterLast('.', "").lowercase() in DiagramExtensions }
-        }
-        d.isVisible = true
-        return d.file?.let { File(d.directory, it) }
-    }
+    val isMac: Boolean get() = platform.isMac
 
-    /** Native folder picker (macOS needs the apple.awt.fileDialogForDirectories flag). */
-    fun openFolder(): File? {
-        if (isMac) {
-            System.setProperty("apple.awt.fileDialogForDirectories", "true")
-            try {
-                val d = FileDialog(null as Frame?, "Open a project folder", FileDialog.LOAD)
-                d.isVisible = true
-                return d.file?.let { File(d.directory, it) }
-            } finally {
-                System.setProperty("apple.awt.fileDialogForDirectories", "false")
-            }
-        }
-        val chooser = javax.swing.JFileChooser().apply { fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY }
-        return if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
-    }
+    fun openDiagram(): File? = platform.chooseFile("Open a diagram", DiagramExtensions)
 
+    fun openFolder(): File? = platform.chooseFolder("Open a project folder")
+
+    /** Adds `.puml` when the name has no diagram extension. */
     fun saveAs(suggested: String, dir: File?): File? {
-        val d = FileDialog(null as Frame?, "Save diagram", FileDialog.SAVE).apply {
-            dir?.let { directory = it.absolutePath }
-            file = suggested
-        }
-        d.isVisible = true
-        val name = d.file ?: return null
-        val withExt = if (name.substringAfterLast('.', "").lowercase() in DiagramExtensions) name else "$name.puml"
-        return File(d.directory, withExt)
+        val f = platform.chooseSaveTarget("Save diagram", suggested, dir) ?: return null
+        return if (f.extension.lowercase() in DiagramExtensions) f else File(f.parentFile, "${f.name}.puml")
     }
 }

@@ -283,7 +283,9 @@ private fun BranchRow(name: String, current: Boolean, enabled: Boolean, onClick:
  */
 internal suspend fun ProjectState.switchingBranches(op: suspend () -> Boolean): Boolean {
     docs.filter { it.file != null && it.dirty }.forEach { it.save() }
-    val ok = op()
+    // No save may write an open file while git rewrites the working tree.
+    val open = docs.mapNotNull { it.file }.toTypedArray()
+    val ok = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.documents.exclusive(*open) { op() }
     if (ok) {
         docs.toList().forEach { d ->
             val f = d.file ?: return@forEach

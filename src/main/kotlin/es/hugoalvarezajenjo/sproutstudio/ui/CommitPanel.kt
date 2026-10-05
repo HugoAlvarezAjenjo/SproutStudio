@@ -139,7 +139,9 @@ internal fun CommitPanel(p: ProjectState) {
             // Save the editor's copy first so autosave can't write it back over the restored file.
             val doc = p.docs.firstOrNull { it.file != null && git.changeOf(it.file!!)?.path == ch.path }
             doc?.takeIf { it.dirty }?.save()
-            if (git.rollback(ch.file)) {
+            // Hold the file: an autosave landing mid-rollback would write the old text back.
+            val restored = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.documents.exclusive(ch.file) { git.rollback(ch.file) }
+            if (restored) {
                 doc?.replaceFromDisk()
                 p.refreshTree()
             }
