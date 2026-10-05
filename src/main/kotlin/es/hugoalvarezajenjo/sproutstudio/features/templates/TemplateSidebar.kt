@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.templates
 
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
@@ -76,7 +78,7 @@ fun TemplateSidebar(thumbnails: TemplateThumbnails, onPick: (Template) -> Unit) 
             }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(c.border))
-        androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 4.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 4.dp)) {
             groups.forEach { (cat, items) ->
                 item(key = "h-$cat") {
                     Text(
@@ -102,7 +104,7 @@ private fun TemplateRow(thumbnails: TemplateThumbnails, template: Template, onPi
             .background(if (hovered) c.hover else Color.Transparent)
             .pointerInput(template.id) {
                 awaitPointerEventScope {
-                    while (true) { val e = awaitPointerEvent(); hovered = e.type != androidx.compose.ui.input.pointer.PointerEventType.Exit }
+                    while (true) { val e = awaitPointerEvent(); hovered = e.type != PointerEventType.Exit }
                 }
             }
             .padding(horizontal = 8.dp, vertical = 4.dp).testTag("template-row-${template.id}"),

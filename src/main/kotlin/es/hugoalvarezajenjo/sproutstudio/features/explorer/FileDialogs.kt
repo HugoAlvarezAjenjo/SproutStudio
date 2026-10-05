@@ -61,7 +61,7 @@ internal fun FileActionDialog(p: WorkspaceViewModel) {
 
         is FileAction.NewFolder -> NameDialog(
             title = "New Folder", label = "Name", confirm = "Create",
-            initial = p.deps.files.freeName(a.dir, "new-folder"), selectBase = false,
+            initial = p.deps.files.freeName(a.dir, "new-folder"),
             state = remember(a) { mutableStateOf(selected(p.deps.files.freeName(a.dir, "new-folder"), false)) },
             hint = "in ${where(p, a.dir)}",
             check = { p.deps.files.validate(a.dir, it)?.describe() },
@@ -71,7 +71,7 @@ internal fun FileActionDialog(p: WorkspaceViewModel) {
 
         is FileAction.Rename -> NameDialog(
             title = if (a.target.isDirectory) "Rename Folder" else "Rename File", label = "New name", confirm = "Rename",
-            initial = a.target.name, selectBase = !a.target.isDirectory,
+            initial = a.target.name,
             state = remember(a) { mutableStateOf(selected(a.target.name, !a.target.isDirectory)) },
             hint = null,
             check = { p.deps.files.validate(a.target.absoluteFile.parentFile, it, except = a.target)?.describe() },
@@ -156,8 +156,6 @@ private fun NameDialog(
     onDismiss: () -> Unit,
     /** Where the operation runs: the window's, so it isn't cut short by recomposition. */
     scope: CoroutineScope,
-    /** Select the name without its extension, so typing replaces just the name (see [selected]). */
-    @Suppress("UNUSED_PARAMETER") selectBase: Boolean = false,
     /** Extra controls under the field (the template picker). */
     extra: @Composable () -> Unit = {},
     /** Runs the operation; returns an error to show, or null when done. */

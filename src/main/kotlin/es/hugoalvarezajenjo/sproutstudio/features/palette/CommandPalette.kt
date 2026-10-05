@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.palette
 
+import androidx.compose.ui.text.TextRange
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -79,7 +80,7 @@ fun CommandPalette(
     initialQuery: String = "",
 ) {
     val c = ide
-    var query by remember { mutableStateOf(TextFieldValue(initialQuery, androidx.compose.ui.text.TextRange(initialQuery.length))) }
+    var query by remember { mutableStateOf(TextFieldValue(initialQuery, TextRange(initialQuery.length))) }
     var selected by remember { mutableStateOf(0) }
     val hits = remember(query.text, commands) { CommandSearch.search(query.text, commands, recentIds) }
     val list = rememberLazyListState()

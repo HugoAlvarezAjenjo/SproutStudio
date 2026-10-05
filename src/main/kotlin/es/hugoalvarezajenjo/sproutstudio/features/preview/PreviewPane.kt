@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.preview
 
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.animation.AnimatedVisibility
@@ -134,7 +135,7 @@ fun PreviewPane(
                 style = MaterialTheme.typography.labelMedium,
                 color = c.textMuted,
                 modifier = Modifier.width(40.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                textAlign = TextAlign.Center,
             )
             ToolButton(Icons.Outlined.Add, "Zoom in (mouse wheel)") { zoom.zoomBy(1.25f) }
             ToolButton(Icons.Outlined.FitScreen, "Fit to window (double-click)", selected = zoom.autoFit) {

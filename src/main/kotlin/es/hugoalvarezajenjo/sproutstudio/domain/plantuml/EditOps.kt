@@ -138,7 +138,7 @@ object EditOps {
      * Inserts a gallery template. A whole-diagram template dropped into a blank document becomes
      * its entire content; otherwise (a block, or a non-empty document) it goes in at the caret.
      */
-    fun insertTemplate(v: TextFieldValue, template: es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template): TextFieldValue {
+    fun insertTemplate(v: TextFieldValue, template: Template): TextFieldValue {
         if (template.whole && v.text.isBlank()) {
             val marker = template.body.indexOf("\$0")
             val body = template.body.replace("\$0", "")

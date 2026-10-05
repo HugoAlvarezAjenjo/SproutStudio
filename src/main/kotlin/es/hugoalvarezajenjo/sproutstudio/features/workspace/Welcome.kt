@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -85,7 +86,7 @@ private fun AppMark(size: Int) {
     Box(
         Modifier.size(size.dp).clip(RoundedCornerShape((size / 4).dp)).background(Color(0xFF2FA36B)),
         contentAlignment = Alignment.Center,
-    ) { Text("S", color = Color.White, fontSize = (size * 0.5).sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+    ) { Text("S", color = Color.White, fontSize = (size * 0.5).sp, fontWeight = FontWeight.Bold) }
 }
 
 /** JetBrains recent-project tile: two initials on a tinted square. */
@@ -95,6 +96,6 @@ private fun Initials(name: String) {
     val tint = Color(hues[(name.hashCode() and 0x7fffffff) % hues.size])
     val letters = name.split('-', '_', ' ', '.').filter { it.isNotEmpty() }.take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "?" }
     Box(Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).background(tint), contentAlignment = Alignment.Center) {
-        Text(letters, color = Color.White, fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Text(letters, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }

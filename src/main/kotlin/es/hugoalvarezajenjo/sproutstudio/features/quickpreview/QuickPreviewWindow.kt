@@ -1,6 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.quickpreview
 
 
+import androidx.compose.ui.input.key.KeyShortcut
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.openDiagramDialog
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.openFolderDialog
@@ -57,13 +58,13 @@ fun QuickPreviewWindow(file: File, deps: WorkspaceDeps, onClose: () -> Unit) {
     ) {
         MenuBar {
             Menu("File") {
-                Item("Edit This Diagram", shortcut = androidx.compose.ui.input.key.KeyShortcut(Key.E, meta = Os.isMac, ctrl = !Os.isMac)) {
+                Item("Edit This Diagram", shortcut = KeyShortcut(Key.E, meta = Os.isMac, ctrl = !Os.isMac)) {
                     deps.windows.editFile(file)
                 }
                 Item("Open Diagram…") { deps.openDiagramDialog() }
                 Item("Open Folder…") { deps.openFolderDialog() }
                 Separator()
-                Item("Close", shortcut = androidx.compose.ui.input.key.KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
+                Item("Close", shortcut = KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
             }
             Menu("View") {
                 CheckboxItem("Dark Theme", checked = deps.theme.dark.value) { deps.theme.toggle() }

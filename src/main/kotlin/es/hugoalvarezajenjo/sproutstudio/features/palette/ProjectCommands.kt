@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.palette
 
+import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.chooseFolder
 
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.openDiagramDialog
@@ -56,11 +58,11 @@ internal fun projectCommands(
     cmd("file.newWindow", "New Window", "File") { p.deps.windows.newProjectWindow() }
     p.root?.let { root ->
         val dir = d?.file?.absoluteFile?.parentFile?.takeIf { it == root.absoluteFile || it.startsWith(root.absoluteFile) } ?: root
-        cmd("file.newNamed", "New Diagram in Folder…", "File", restoresFocus = false) { p.showFileAction(es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.NewDiagram(dir)) }
-        cmd("file.newFolder", "New Folder…", "File", restoresFocus = false) { p.showFileAction(es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.NewFolder(dir)) }
+        cmd("file.newNamed", "New Diagram in Folder…", "File", restoresFocus = false) { p.showFileAction(FileAction.NewDiagram(dir)) }
+        cmd("file.newFolder", "New Folder…", "File", restoresFocus = false) { p.showFileAction(FileAction.NewFolder(dir)) }
         d?.file?.let { f ->
-            cmd("file.rename", "Rename File…", "File", restoresFocus = false) { p.showFileAction(es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.Rename(f)) }
-            cmd("file.trash", "Move File to Trash…", "File", restoresFocus = false) { p.showFileAction(es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.Delete(f)) }
+            cmd("file.rename", "Rename File…", "File", restoresFocus = false) { p.showFileAction(FileAction.Rename(f)) }
+            cmd("file.trash", "Move File to Trash…", "File", restoresFocus = false) { p.showFileAction(FileAction.Delete(f)) }
         }
     }
     cmd("file.save", "Save", "File", shortcutHint("S"), enabled = has) { onSave() }
@@ -104,8 +106,8 @@ internal fun projectCommands(
             p.showSidebar(!p.sidebarVisible)
         }
         cmd("view.refresh", "Refresh Files", "View", shortcutHint("Y", alt = true)) { p.refreshTree() }
-        cmd("view.commitPanel", if (p.sidebarVisible && p.sidebarTool == es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool.COMMIT) "Hide Commit Panel" else "Show Commit Panel", "View", shortcutHint("0")) {
-            p.toggleTool(es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool.COMMIT)
+        cmd("view.commitPanel", if (p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT) "Hide Commit Panel" else "Show Commit Panel", "View", shortcutHint("0")) {
+            p.toggleTool(SidebarTool.COMMIT)
         }
         // Git
         cmd("git.commit", "Commit…", "Git", shortcutHint("K"), restoresFocus = false) { p.focusCommit() }
@@ -125,10 +127,10 @@ internal fun projectCommands(
             p.gitFlow.undoLastCommit(showCommitPanel = true)
         }
         cmd("git.stash", "Stash Changes…", "Git", enabled = p.git.status.head != null, restoresFocus = false) {
-            p.showTool(es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool.COMMIT); p.git.requestStashPopup()
+            p.showTool(SidebarTool.COMMIT); p.git.requestStashPopup()
         }
         if (!p.git.isRepo) cmd("git.init", "Create Git Repository", "Git") {
-            p.showTool(es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool.COMMIT)
+            p.showTool(SidebarTool.COMMIT)
             p.gitFlow.init()
         }
     }

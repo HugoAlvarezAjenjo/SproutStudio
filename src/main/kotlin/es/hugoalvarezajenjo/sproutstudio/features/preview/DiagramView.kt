@@ -71,11 +71,9 @@ fun DiagramView(
                         val panning = ev.buttons.isPrimaryPressed || ev.buttons.isTertiaryPressed
                         when {
                             !panning -> last = null
-                            last == null -> last = ch.position
                             else -> {
-                                zoom.panBy(ch.position - last!!)
+                                last?.let { prev -> zoom.panBy(ch.position - prev); ch.consume() }
                                 last = ch.position
-                                ch.consume()
                             }
                         }
                     }

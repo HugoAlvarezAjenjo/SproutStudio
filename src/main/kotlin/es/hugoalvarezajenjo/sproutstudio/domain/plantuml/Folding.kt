@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.domain.plantuml
 
+import java.util.Arrays
+
 /**
  * A foldable block. Folding hides [hideStart, hideEnd): from the end of the opening line up to
  * the closing keyword, so `class Pizza {…}` and `alt ok … end` stay on one readable line.
@@ -127,7 +129,7 @@ object Folding {
 
     /** 0-based line of [offset]. */
     fun lineOf(starts: IntArray, offset: Int): Int {
-        var i = java.util.Arrays.binarySearch(starts, offset)
+        var i = Arrays.binarySearch(starts, offset)
         if (i < 0) i = -i - 2
         return i.coerceIn(0, starts.size - 1)
     }

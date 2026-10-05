@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.services.render
 
+import java.util.concurrent.ConcurrentHashMap
 import es.hugoalvarezajenjo.sproutstudio.core.concurrency.LatestWinsQueue
 import es.hugoalvarezajenjo.sproutstudio.core.concurrency.LatestWinsQueue.Priority
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -21,7 +22,7 @@ class PlantUmlRenderService : RenderService {
     )
 
     // Thumbnails depend only on the template and the colour mode: draw each once.
-    private val thumbnails = java.util.concurrent.ConcurrentHashMap<Pair<String, Boolean>, ByteArray>()
+    private val thumbnails = ConcurrentHashMap<Pair<String, Boolean>, ByteArray>()
 
     init {
         PlantUmlEngine.configureOffline()

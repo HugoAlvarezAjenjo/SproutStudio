@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.features.document.DiagramExtensions
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 
@@ -159,7 +160,7 @@ internal fun DiffView(
     leadingTools: @Composable () -> Unit = { Tag(file.name, Icons.Outlined.Schema) },
 ) {
     val c = ide
-    val isDiagram = file.isDiagram() || file.extension.lowercase() in es.hugoalvarezajenjo.sproutstudio.features.document.DiagramExtensions
+    val isDiagram = file.isDiagram() || file.extension.lowercase() in DiagramExtensions
     var textMode by remember { mutableStateOf(textFirst || !isDiagram) }
     val (leftText, leftLoaded) = rememberSideText(p, file, left)
     val (rightText, rightLoaded) = rememberSideText(p, file, right)

@@ -1,5 +1,11 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import androidx.compose.material3.Surface
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import es.hugoalvarezajenjo.sproutstudio.services.git.GitAuthor
+import es.hugoalvarezajenjo.sproutstudio.services.git.StashInfo
 import es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint
 
 import androidx.compose.foundation.ContextMenuArea
@@ -341,7 +347,7 @@ private fun Check(checked: Boolean?, label: String, enabled: Boolean = true, onT
 @Composable
 private fun AuthorLine(p: WorkspaceViewModel) {
     val c = ide
-    var author by remember { mutableStateOf<es.hugoalvarezajenjo.sproutstudio.services.git.GitAuthor?>(null) }
+    var author by remember { mutableStateOf<GitAuthor?>(null) }
     LaunchedEffect(p.git.repo) { author = p.git.author() }
     val a = author ?: return
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -373,7 +379,7 @@ private fun StashPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
     val c = ide
     val git = p.git
     var message by remember { mutableStateOf("") }
-    var confirmDrop by remember { mutableStateOf<es.hugoalvarezajenjo.sproutstudio.services.git.StashInfo?>(null) }
+    var confirmDrop by remember { mutableStateOf<StashInfo?>(null) }
     var busy by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { git.clearError() }
 
@@ -383,13 +389,13 @@ private fun StashPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
         p.gitFlow.changeWorkingTree(op) { busy = false }
     }
 
-    androidx.compose.ui.window.Popup(
+    Popup(
         alignment = Alignment.TopStart,
-        offset = androidx.compose.ui.unit.IntOffset(0, 34),
+        offset = IntOffset(0, 34),
         onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+        properties = PopupProperties(focusable = true),
     ) {
-        androidx.compose.material3.Surface(
+        Surface(
             shape = RoundedCornerShape(8.dp), color = c.popup, shadowElevation = 12.dp,
             modifier = Modifier.width(320.dp).border(1.dp, c.popupBorder, RoundedCornerShape(8.dp)).testTag("stash-popup"),
         ) {

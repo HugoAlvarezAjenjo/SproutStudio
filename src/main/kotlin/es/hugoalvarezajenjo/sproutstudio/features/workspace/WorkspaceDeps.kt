@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateThumbnails
 import androidx.compose.runtime.getValue
 
 import es.hugoalvarezajenjo.sproutstudio.core.concurrency.AppDispatchers
@@ -32,5 +33,5 @@ class WorkspaceDeps(
     val windows: WindowNavigator,
 ) {
     /** Template thumbnails for the gallery, the sidebar and the New Diagram dialog. */
-    val thumbnails = es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateThumbnails(render, diagram, dispatchers.default)
+    val thumbnails = TemplateThumbnails(render, diagram, dispatchers.default)
 }

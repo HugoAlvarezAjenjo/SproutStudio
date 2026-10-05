@@ -1,5 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.features.templates
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 
@@ -139,7 +142,7 @@ fun TemplateGallery(
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         groups.forEach { (cat, items) ->
-                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
                                 Text(cat, fontSize = 12.sp, color = c.textMuted, modifier = Modifier.padding(top = 4.dp))
                             }
                             items(items, key = { it.id }) { t -> TemplateCard(thumbnails, t) { onPick(t) } }
@@ -164,7 +167,7 @@ private fun TemplateCard(thumbnails: TemplateThumbnails, template: Template, onP
                 awaitPointerEventScope {
                     while (true) {
                         val e = awaitPointerEvent()
-                        hovered = e.type != androidx.compose.ui.input.pointer.PointerEventType.Exit
+                        hovered = e.type != PointerEventType.Exit
                     }
                 }
             }
@@ -198,7 +201,7 @@ internal fun rememberThumbnail(thumbnails: TemplateThumbnails, template: Templat
 internal fun Thumbnail(img: DiagramImage?) {
     val c = ide
     if (img != null) {
-        androidx.compose.foundation.Canvas(Modifier.fillMaxSize().background(img.background).padding(6.dp)) {
+        Canvas(Modifier.fillMaxSize().background(img.background).padding(6.dp)) {
             val s = minOf(size.width / img.image.width, size.height / img.image.height, 1f).coerceAtLeast(0.01f)
             val w = img.image.width * s
             val h = img.image.height * s

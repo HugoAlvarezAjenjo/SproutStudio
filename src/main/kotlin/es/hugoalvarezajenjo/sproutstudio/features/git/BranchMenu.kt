@@ -1,5 +1,9 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -95,10 +99,10 @@ internal fun BranchButton(p: WorkspaceViewModel, initiallyOpen: Boolean = false)
 /** Opens upward from the status bar, right-aligned with the button. */
 private object AboveAnchor : PopupPositionProvider {
     override fun calculatePosition(
-        anchorBounds: androidx.compose.ui.unit.IntRect,
-        windowSize: androidx.compose.ui.unit.IntSize,
-        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
-        popupContentSize: androidx.compose.ui.unit.IntSize,
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
     ): IntOffset {
         val x = (anchorBounds.right - popupContentSize.width).coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
         val y = (anchorBounds.top - popupContentSize.height - 4).coerceAtLeast(0)
@@ -225,7 +229,7 @@ private fun NewBranchField(error: String?, onCancel: () -> Unit, onCreate: (Stri
 }
 
 @Composable
-private fun MenuRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, enabled: Boolean = true, onClick: () -> Unit) {
+private fun MenuRow(icon: ImageVector, label: String, enabled: Boolean = true, onClick: () -> Unit) {
     val c = ide
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()

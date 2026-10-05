@@ -1,5 +1,17 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.Density
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.domain.text.FindResult
 import es.hugoalvarezajenjo.sproutstudio.domain.text.FindReplace
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.FoldRegion
@@ -118,12 +130,12 @@ fun CodeEditor(
     /** Every line with a problem (all diagram blocks); [errorLine] is folded in. */
     errorLines: Set<Int> = emptySet(),
     /** Git markers against HEAD (empty outside a repo or for uncommitted files). */
-    lineChanges: es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index = es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index.Empty,
+    lineChanges: LineDiff.Index = LineDiff.Index.Empty,
     onCaretMoved: (line: Int, col: Int) -> Unit = { _, _ -> },
 ) {
-    androidx.compose.runtime.SideEffect { doc.updateGitLines(lineChanges) }
+    SideEffect { doc.updateGitLines(lineChanges) }
     /** Change block whose popup is open, and the y (px, in the scrolled content) to show it at. */
-    var hunk by remember(doc) { mutableStateOf<Pair<es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange, Float>?>(null) }
+    var hunk by remember(doc) { mutableStateOf<Pair<LineChange, Float>?>(null) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     var fieldHeightPx by remember { mutableStateOf(0) }
     var completion by remember(doc) { mutableStateOf<CompletionRequest?>(null) }
@@ -257,7 +269,7 @@ fun CodeEditor(
                     properties = PopupProperties(focusable = true),
                 ) {
                     ChangePopup(
-                        ch, es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.hunkRows(base, value.text, ch),
+                        ch, LineDiff.hunkRows(base, value.text, ch),
                         onRollback = { hunk = null; doc.rollbackChange(ch); runCatching { focus.requestFocus() } },
                         onClose = { hunk = null; runCatching { focus.requestFocus() } },
                     )
@@ -349,7 +361,7 @@ fun CodeEditor(
             ) {
                 Row(Modifier.padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Lines rolled back", fontSize = 12.sp, color = c.text)
-                    es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton(null, label = "Undo") { doc.undoRollback(); runCatching { focus.requestFocus() } }
+                    ToolButton(null, label = "Undo") { doc.undoRollback(); runCatching { focus.requestFocus() } }
                 }
             }
         }
@@ -359,7 +371,7 @@ fun CodeEditor(
 
 /** Clickable things in the gutter. */
 private sealed interface GutterHit {
-    data class Change(val change: es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange) : GutterHit
+    data class Change(val change: LineChange) : GutterHit
     data class Fold(val region: FoldRegion) : GutterHit
 }
 
@@ -372,11 +384,11 @@ private fun Gutter(
     lineStarts: IntArray,
     errorLines: Set<Int>,
     caret: Int,
-    measurer: androidx.compose.ui.text.TextMeasurer,
-    density: androidx.compose.ui.unit.Density,
+    measurer: TextMeasurer,
+    density: Density,
     fieldHeightPx: Int,
-    lineChanges: es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index,
-    onChangeClick: (es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange, Float) -> Unit,
+    lineChanges: LineDiff.Index,
+    onChangeClick: (LineChange, Float) -> Unit,
 ) {
     val topPad = with(density) { 10.dp.toPx() }
     val text = doc.text
@@ -475,14 +487,14 @@ private fun Gutter(
                     val change = if (lastReal > real) lineChanges.inRange(real, lastReal) else lineChanges.at(real)
                     val barX = size.width - barW
                     // The hovered block (all its lines) is drawn wider, as in IntelliJ.
-                    val hot = hotChange != null && hotChange.type != es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.DELETED &&
+                    val hot = hotChange != null && hotChange.type != LineChange.Type.DELETED &&
                         hotChange.start <= lastReal && real < hotChange.end
-                    val hotDeleted = hotChange?.type == es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.DELETED
+                    val hotDeleted = hotChange?.type == LineChange.Type.DELETED
                     if (change != null) {
                         val col = when (change) {
-                            es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.ADDED -> c.gutterAdded
-                            es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.MODIFIED -> c.gutterModified
-                            es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.DELETED -> c.gutterDeleted
+                            LineChange.Type.ADDED -> c.gutterAdded
+                            LineChange.Type.MODIFIED -> c.gutterModified
+                            LineChange.Type.DELETED -> c.gutterDeleted
                         }
                         val w = if (hot) barW * 2.2f else barW
                         drawRect(col, Offset(size.width - w, y), Size(w, lineH))
@@ -490,8 +502,8 @@ private fun Gutter(
                         // Deleted lines: a small grey wedge on the boundary where they were.
                         val atBottom = !lineChanges.deletedAbove(real)
                         val yy = if (atBottom) y + lineH else y
-                        val k = if (hotDeleted && hotChange!!.start == (if (atBottom) real + 1 else real)) 1.7f else 1f
-                        val wedge = androidx.compose.ui.graphics.Path().apply {
+                        val k = if (hotDeleted && hotChange?.start == (if (atBottom) real + 1 else real)) 1.7f else 1f
+                        val wedge = Path().apply {
                             moveTo(barX, yy - barW * k); lineTo(barX + barW * 1.6f * k, yy); lineTo(barX, yy + barW * k); close()
                         }
                         drawPath(wedge, c.gutterDeleted)
@@ -512,7 +524,7 @@ private fun Gutter(
                     val cx = size.width - barW - 2.dp.toPx() - 7.dp.toPx()
                     val cy = y + lineH / 2
                     val h = 3.5f * density.density
-                    val path = androidx.compose.ui.graphics.Path().apply {
+                    val path = Path().apply {
                         if (doc.folds.isFolded(r)) {
                             moveTo(cx - h / 2, cy - h); lineTo(cx + h / 2, cy); lineTo(cx - h / 2, cy + h)
                         } else {
@@ -521,7 +533,7 @@ private fun Gutter(
                     }
                     drawPath(
                         path, if (doc.folds.isFolded(r) || r == hotFold) c.lineNumberActive else c.lineNumber,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = (if (r == hotFold) 1.9f else 1.4f) * density.density),
+                        style = Stroke(width = (if (r == hotFold) 1.9f else 1.4f) * density.density),
                     )
                 }
             },
@@ -588,7 +600,7 @@ private fun KindBadge(kind: CompletionKind) {
         CompletionKind.DIRECTIVE -> s.directive
     }
     Box(Modifier.width(30.dp), contentAlignment = Alignment.Center) {
-        Text(kind.badge, fontSize = 10.sp, color = fg, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Text(kind.badge, fontSize = 10.sp, color = fg, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -598,17 +610,17 @@ private fun KindBadge(kind: CompletionKind) {
  */
 @Composable
 private fun ChangePopup(
-    change: es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange,
-    rows: List<es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.HunkRow>,
+    change: LineChange,
+    rows: List<LineDiff.HunkRow>,
     onRollback: () -> Unit,
     onClose: () -> Unit,
 ) {
     val c = ide
     val n = change.end - change.start
     val title = when (change.type) {
-        es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.ADDED -> if (n == 1) "1 line added" else "$n lines added"
-        es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.DELETED -> (change.baseEnd - change.baseStart).let { if (it == 1) "1 line deleted" else "$it lines deleted" }
-        es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange.Type.MODIFIED -> if (n == 1) "1 line changed" else "$n lines changed"
+        LineChange.Type.ADDED -> if (n == 1) "1 line added" else "$n lines added"
+        LineChange.Type.DELETED -> (change.baseEnd - change.baseStart).let { if (it == 1) "1 line deleted" else "$it lines deleted" }
+        LineChange.Type.MODIFIED -> if (n == 1) "1 line changed" else "$n lines changed"
     }
     val addedBg = c.gutterAdded.copy(alpha = if (c.isDark) 0.22f else 0.30f)
     val addedHi = c.gutterAdded.copy(alpha = if (c.isDark) 0.50f else 0.65f)
@@ -620,19 +632,19 @@ private fun ChangePopup(
             .onPreviewKeyEvent { e -> if (e.type == KeyEventType.KeyDown && e.key == Key.Escape) { onClose(); true } else false }
             .testTag("change-popup"),
     ) {
-        Column(Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Max)) {
+        Column(Modifier.width(IntrinsicSize.Max)) {
             Row(
                 Modifier.fillMaxWidth().height(HUNK_HEADER_DP.dp).padding(start = 10.dp, end = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(title, fontSize = 12.sp, color = c.textMuted, modifier = Modifier.weight(1f).padding(end = 12.dp))
-                es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton(
-                    androidx.compose.material.icons.Icons.AutoMirrored.Outlined.Undo,
+                ToolButton(
+                    Icons.AutoMirrored.Outlined.Undo,
                     tooltip = "Rollback Lines (${es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint("Z", alt = true)})",
                     label = "Rollback",
                 ) { onRollback() }
-                es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton(androidx.compose.material.icons.Icons.Outlined.Close, "Close (esc)") { onClose() }
+                ToolButton(Icons.Outlined.Close, "Close (esc)") { onClose() }
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(c.popupBorder))
             Column(
@@ -641,13 +653,13 @@ private fun ChangePopup(
             ) {
                 // Full line boxes (no first/last-line trim), so each row is exactly one editor line tall.
                 val rowStyle = editorTextStyle.copy(
-                    lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
-                        androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
-                        androidx.compose.ui.text.style.LineHeightStyle.Trim.None,
+                    lineHeightStyle = LineHeightStyle(
+                        LineHeightStyle.Alignment.Center,
+                        LineHeightStyle.Trim.None,
                     ),
                 )
                 rows.forEach { row ->
-                    val deleted = row.kind == es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Row.Kind.DELETED
+                    val deleted = row.kind == LineDiff.Row.Kind.DELETED
                     val text = androidx.compose.ui.text.buildAnnotatedString {
                         append(row.text.ifEmpty { " " })
                         row.changed?.let { r ->

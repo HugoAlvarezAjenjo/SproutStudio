@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.ui.designsystem
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -98,7 +99,7 @@ fun ToolButton(
     if (tooltip != null) Tip(tooltip) { content() } else content()
 }
 
-@OptIn(ExperimentalComposeUiApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun Tip(text: String, content: @Composable () -> Unit) {
     val c = ide

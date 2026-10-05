@@ -1,5 +1,9 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
+import androidx.compose.foundation.ContextMenuArea
+import androidx.compose.foundation.ContextMenuItem
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
@@ -87,7 +91,7 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
     val onDrop: (java.io.File, java.io.File) -> Unit = { what, where ->
         p.scope.launch { p.move(what, where).exceptionOrNull()?.let { message = it.fileError.describe() } }
     }
-    var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var origin by remember { mutableStateOf(Offset.Zero) }
     // zIndex: the drag label may run past the panel, over the editor.
     Box(Modifier.width(p.sidebarWidth.dp).fillMaxHeight().zIndex(if (drag.source != null) 2f else 0f).onGloballyPositioned { origin = it.positionInWindow() }) {
     Column(Modifier.fillMaxSize().background(c.panel).testTag("project-tree")) {
@@ -97,14 +101,14 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Project", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
-            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New Diagram…") { p.showFileAction(FileAction.NewDiagram(targetDir(p))) }
-            ToolButton(Icons.Outlined.CreateNewFolder, "New Folder…") { p.showFileAction(FileAction.NewFolder(targetDir(p))) }
+            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New Diagram…") { targetDir(p)?.let { p.showFileAction(FileAction.NewDiagram(it)) } }
+            ToolButton(Icons.Outlined.CreateNewFolder, "New Folder…") { targetDir(p)?.let { p.showFileAction(FileAction.NewFolder(it)) } }
             ToolButton(Icons.Outlined.UnfoldLess, "Collapse All") { p.collapseAll() }
             ToolButton(Icons.Outlined.Refresh, "Refresh (⌥⌘Y)") { p.refreshTree() }
             ToolButton(Icons.Outlined.Remove, "Hide (⌘1)") { p.showSidebar(false) }
         }
         // Root row: a folder like any other, so it collapses too.
-        androidx.compose.foundation.ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
+        ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
             ListRow(
                 onClick = { p.toggleRootCollapsed() }, height = 26, startPadding = 6,
                 modifier = Modifier.treeDrag(drag, "root", root, file = null, onDrop).dropHighlight(drag.target == root.absoluteFile),
@@ -128,7 +132,7 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
             }
         }
         // The empty space below the tree: right-click creates in the project folder.
-        androidx.compose.foundation.ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
+        ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
             Box(Modifier.weight(1f).fillMaxWidth().treeDrag(drag, "empty", root, file = null, onDrop))
         }
         message?.let {
@@ -140,7 +144,7 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
         val d = LocalDensity.current
         val at = drag.pointer - origin
         Row(
-            Modifier.offset { androidx.compose.ui.unit.IntOffset(at.x.toInt() + with(d) { 14.dp.roundToPx() }, at.y.toInt() + with(d) { 6.dp.roundToPx() }) }
+            Modifier.offset { IntOffset(at.x.toInt() + with(d) { 14.dp.roundToPx() }, at.y.toInt() + with(d) { 6.dp.roundToPx() }) }
                 .clip(RoundedCornerShape(6.dp)).background(c.popup).border(1.dp, if (drag.target != null) c.accent else c.popupBorder, RoundedCornerShape(6.dp))
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -160,41 +164,41 @@ private fun Modifier.dropHighlight(on: Boolean) = composed {
 }
 
 /** Where the header's New buttons create: the active file's folder inside the project, else the root. */
-private fun targetDir(p: WorkspaceViewModel): java.io.File {
-    val root = p.root!!.absoluteFile
+private fun targetDir(p: WorkspaceViewModel): java.io.File? {
+    val root = p.root?.absoluteFile ?: return null
     val dir = p.active?.file?.absoluteFile?.parentFile
     return if (dir != null && (dir == root || dir.startsWith(root))) dir else root
 }
 
 private fun folderMenu(p: WorkspaceViewModel, dir: java.io.File, isRoot: Boolean) = buildList {
-    add(androidx.compose.foundation.ContextMenuItem("New Diagram…") { p.showFileAction(FileAction.NewDiagram(dir)) })
-    add(androidx.compose.foundation.ContextMenuItem("New Folder…") { p.showFileAction(FileAction.NewFolder(dir)) })
+    add(ContextMenuItem("New Diagram…") { p.showFileAction(FileAction.NewDiagram(dir)) })
+    add(ContextMenuItem("New Folder…") { p.showFileAction(FileAction.NewFolder(dir)) })
     if (!isRoot) {
-        add(androidx.compose.foundation.ContextMenuItem("Rename…") { p.showFileAction(FileAction.Rename(dir)) })
-        add(androidx.compose.foundation.ContextMenuItem("Move to Trash…") { p.showFileAction(FileAction.Delete(dir)) })
+        add(ContextMenuItem("Rename…") { p.showFileAction(FileAction.Rename(dir)) })
+        add(ContextMenuItem("Move to Trash…") { p.showFileAction(FileAction.Delete(dir)) })
     } else {
-        add(androidx.compose.foundation.ContextMenuItem(if (p.rootCollapsed) "Expand" else "Collapse") { p.toggleRootCollapsed() })
+        add(ContextMenuItem(if (p.rootCollapsed) "Expand" else "Collapse") { p.toggleRootCollapsed() })
     }
-    add(androidx.compose.foundation.ContextMenuItem(if (Os.isMac) "Reveal in Finder" else "Open Containing Folder") { p.deps.platform.reveal(dir) })
+    add(ContextMenuItem(if (Os.isMac) "Reveal in Finder" else "Open Containing Folder") { p.deps.platform.reveal(dir) })
 }
 
 @Composable
 private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDrop: (java.io.File, java.io.File) -> Unit) {
     val f = node.file
     DisposableEffect(f) { onDispose { drag.forget(f.absolutePath) } }
-    androidx.compose.foundation.ContextMenuArea(items = {
+    ContextMenuArea(items = {
         if (node.isDir) folderMenu(p, f, isRoot = false) else buildList {
             val dir = f.absoluteFile.parentFile
-            add(androidx.compose.foundation.ContextMenuItem("Open") { p.open(f) })
-            add(androidx.compose.foundation.ContextMenuItem("New Diagram…") { p.showFileAction(FileAction.NewDiagram(dir)) })
-            add(androidx.compose.foundation.ContextMenuItem("New Folder…") { p.showFileAction(FileAction.NewFolder(dir)) })
-            add(androidx.compose.foundation.ContextMenuItem("Rename…") { p.showFileAction(FileAction.Rename(f)) })
-            add(androidx.compose.foundation.ContextMenuItem("Move to Trash…") { p.showFileAction(FileAction.Delete(f)) })
-            add(androidx.compose.foundation.ContextMenuItem(if (Os.isMac) "Reveal in Finder" else "Open Containing Folder") { p.deps.platform.reveal(f) })
+            add(ContextMenuItem("Open") { p.open(f) })
+            add(ContextMenuItem("New Diagram…") { p.showFileAction(FileAction.NewDiagram(dir)) })
+            add(ContextMenuItem("New Folder…") { p.showFileAction(FileAction.NewFolder(dir)) })
+            add(ContextMenuItem("Rename…") { p.showFileAction(FileAction.Rename(f)) })
+            add(ContextMenuItem("Move to Trash…") { p.showFileAction(FileAction.Delete(f)) })
+            add(ContextMenuItem(if (Os.isMac) "Reveal in Finder" else "Open Containing Folder") { p.deps.platform.reveal(f) })
             if (p.git.status.head != null) {
-                if (canCompareWithHead(p, f)) add(androidx.compose.foundation.ContextMenuItem("Compare Diagram with HEAD") { p.deps.windows.compareWithHead(p, f) })
-                if (hasCommittedChanges(p, f)) add(androidx.compose.foundation.ContextMenuItem("Show Diff with HEAD") { p.deps.windows.compareWithHead(p, f, textFirst = true) })
-                add(androidx.compose.foundation.ContextMenuItem("Show History") { p.deps.windows.showHistory(p, f) })
+                if (canCompareWithHead(p, f)) add(ContextMenuItem("Compare Diagram with HEAD") { p.deps.windows.compareWithHead(p, f) })
+                if (hasCommittedChanges(p, f)) add(ContextMenuItem("Show Diff with HEAD") { p.deps.windows.compareWithHead(p, f, textFirst = true) })
+                add(ContextMenuItem("Show History") { p.deps.windows.showHistory(p, f) })
             }
         }
     }) { TreeRowContent(p, node, drag, onDrop) }

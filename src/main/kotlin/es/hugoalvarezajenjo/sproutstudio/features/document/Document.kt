@@ -1,5 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.features.document
 
+import es.hugoalvarezajenjo.sproutstudio.features.editor.FindState
+import es.hugoalvarezajenjo.sproutstudio.features.editor.FoldState
+import es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,9 +17,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import es.hugoalvarezajenjo.sproutstudio.services.persistence.DocumentStore
 
-val DiagramExtensions = es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles.DIAGRAM_EXTENSIONS
+val DiagramExtensions = ProjectFiles.DIAGRAM_EXTENSIONS
 
-fun File.isDiagram() = es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles.isDiagram(this)
+fun File.isDiagram() = ProjectFiles.isDiagram(this)
 
 /** One open file (or an unsaved new diagram). */
 @Stable
@@ -27,7 +30,7 @@ class Document(
     private val store: DocumentStore,
 ) {
     /** Folded blocks; declared first because the [value] setter uses it. */
-    val folds = es.hugoalvarezajenjo.sproutstudio.features.editor.FoldState()
+    val folds = FoldState()
 
     var file by mutableStateOf(file)
         private set
@@ -99,7 +102,7 @@ class Document(
     fun relocate(to: File) { file = to }
 
     /** The editor's ⌘F / ⌘R bar. */
-    val find = es.hugoalvarezajenjo.sproutstudio.features.editor.FindState()
+    val find = FindState()
 
     val text: String get() = value.text
     val dirty: Boolean get() = text != savedText

@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 
@@ -75,7 +76,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
 
     var paletteOpen by remember { mutableStateOf(false) }
     var galleryOpen by remember { mutableStateOf(false) }
-    fun pickTemplate(t: es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template) {
+    fun pickTemplate(t: Template) {
         galleryOpen = false
         p.insertTemplate(t)
     }

@@ -1,5 +1,10 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
+import es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -97,8 +102,8 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     }
 
     /** ⌘K / "Commit…" asks the Commit panel to put the caret in the message. */
-    private val commitFocus = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
-    val commitFocusRequests: kotlinx.coroutines.flow.Flow<Unit> = commitFocus.receiveAsFlow()
+    private val commitFocus = Channel<Unit>(Channel.CONFLATED)
+    val commitFocusRequests: Flow<Unit> = commitFocus.receiveAsFlow()
 
     fun focusCommit() {
         showTool(SidebarTool.COMMIT)
@@ -224,7 +229,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
             if (pc.docs.none { it.dirty }) pc.then()
         }
     }
-    var tree by mutableStateOf<List<es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode>>(emptyList())
+    var tree by mutableStateOf<List<TreeNode>>(emptyList())
         private set
 
     val active: Document? get() = docs.getOrNull(activeIndex)
@@ -279,10 +284,10 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
      * fresh document holding just it; otherwise it goes into the active editor (whole diagram into
      * a blank doc = full content, else at the caret). Reveals the editor and focuses it.
      */
-    fun insertTemplate(template: es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template) {
+    fun insertTemplate(template: Template) {
         val doc = active ?: newDocument()
         revealEditor()
-        doc.value = es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps.insertTemplate(doc.value, template)
+        doc.value = EditOps.insertTemplate(doc.value, template)
         doc.requestFocus()
     }
 
@@ -323,7 +328,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     }
 
     companion object {
-        const val SIDEBAR_MIN = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings.SIDEBAR_MIN
-        const val SIDEBAR_MAX = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings.SIDEBAR_MAX
+        const val SIDEBAR_MIN = LayoutSettings.SIDEBAR_MIN
+        const val SIDEBAR_MAX = LayoutSettings.SIDEBAR_MAX
     }
 }

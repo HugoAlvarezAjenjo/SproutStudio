@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewViewModel
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 
@@ -129,7 +130,7 @@ internal fun Workspace(p: WorkspaceViewModel, onSave: (Document) -> Unit, onClos
 internal data class StatusInfo(val kind: String, val diagrams: Int, val errorLine: Int?, val problems: Int)
 
 @Composable
-private fun EditorAndPreview(p: WorkspaceViewModel, doc: Document, preview: es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewViewModel, onCaret: (Int, Int) -> Unit) {
+private fun EditorAndPreview(p: WorkspaceViewModel, doc: Document, preview: PreviewViewModel, onCaret: (Int, Int) -> Unit) {
     val c = ide
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val total = maxWidth

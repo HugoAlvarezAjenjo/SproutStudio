@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.problems
 
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
@@ -108,7 +109,7 @@ private fun ProblemsHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) 
             CountBadge(count)
         }
         Box(Modifier.width(0.dp))
-        androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+        Spacer(Modifier.weight(1f))
         // The toggle affordance: the whole bar is clickable, this just signals the state.
         Icon(
             if (expanded) Icons.Outlined.Close else Icons.Outlined.ErrorOutline,
