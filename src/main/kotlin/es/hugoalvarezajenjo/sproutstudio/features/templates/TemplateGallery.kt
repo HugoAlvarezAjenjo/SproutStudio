@@ -1,7 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.templates
 
 import androidx.compose.runtime.setValue
-
 import androidx.compose.runtime.getValue
 
 import androidx.compose.foundation.background
@@ -65,8 +64,6 @@ import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramImage
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.editorTextStyle
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * The template gallery: a grid of ready-made diagrams and blocks, each with a live thumbnail
@@ -192,10 +189,7 @@ internal fun rememberThumbnail(thumbnails: TemplateThumbnails, template: Templat
     return produceState<DiagramImage?>(null, template.id, dark) {
         // The render service draws thumbnails only when the editor's own renders are done, and
         // draws each template once.
-        val bytes = runCatching {
-            thumbnails.render.thumbnail(template.previewSource, dark)
-        }.getOrNull()
-        value = bytes?.let { withContext(Dispatchers.Default) { DiagramImage.fromPng(it, 1.0) } }
+        value = thumbnails.image(template, dark)
     }.value
 }
 

@@ -1,5 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,10 +20,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -45,7 +46,6 @@ import es.hugoalvarezajenjo.sproutstudio.features.explorer.newDiagramIn
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.newFolderIn
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.rename
 import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateGallery
-import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateThumbnails
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.files.FileError
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
@@ -95,7 +95,7 @@ private fun NewDiagramDialog(p: WorkspaceViewModel, dir: File) {
     var picking by remember(dir) { mutableStateOf(false) }
     if (picking) {
         TemplateGallery(
-            thumbnails = TemplateThumbnails(p.deps.render, p.deps.diagram),
+            thumbnails = p.deps.thumbnails,
             onDismiss = { picking = false },
             onPick = { template = it; picking = false },
             wholeOnly = true,

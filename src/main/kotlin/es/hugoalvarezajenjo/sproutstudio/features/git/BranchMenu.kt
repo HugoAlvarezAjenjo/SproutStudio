@@ -66,7 +66,6 @@ import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.StatusText
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
-import kotlinx.coroutines.launch
 
 /**
  * The branch in the status bar, as a button: IntelliJ's branch popup with the local branches

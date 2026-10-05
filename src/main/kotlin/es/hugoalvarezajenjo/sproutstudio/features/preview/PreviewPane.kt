@@ -42,11 +42,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,12 +64,10 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.HLine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolSeparator
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
-import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable

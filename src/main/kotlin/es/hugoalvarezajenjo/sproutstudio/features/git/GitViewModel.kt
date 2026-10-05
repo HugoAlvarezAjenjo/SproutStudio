@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import es.hugoalvarezajenjo.sproutstudio.core.concurrency.AppDispatchers
 import es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff
 import es.hugoalvarezajenjo.sproutstudio.services.git.ChangeType
 import es.hugoalvarezajenjo.sproutstudio.services.git.CommitInfo
 import es.hugoalvarezajenjo.sproutstudio.services.git.FileChange
@@ -52,6 +53,7 @@ class GitViewModel(
 ) : ViewModel(dispatchers.main, parent) {
 
     private val io = dispatchers.io.limitedParallelism(1)
+    private val cpu = dispatchers.default
     private val stateLock = Mutex()
     private var generation = 0L
 
@@ -236,6 +238,21 @@ class GitViewModel(
         revCache[key] = Optional(text)
         return text
     }
+
+    /**
+     * Gutter markers of [text] against [f]'s committed version; empty when git doesn't track it
+     * yet. The diff runs off the UI thread.
+     */
+    suspend fun lineChanges(f: File, text: String): LineDiff.Index {
+        val type = changeOf(f)?.type
+        if (status.head == null || type == ChangeType.UNVERSIONED || type == ChangeType.ADDED) return LineDiff.Index.Empty
+        val base = headText(f) ?: return LineDiff.Index.Empty
+        return withContext(cpu) { LineDiff.Index(LineDiff.compute(base, text), base) }
+    }
+
+    /** Whole-file diff rows for the text diff window, computed off the UI thread. */
+    suspend fun diffRows(base: String?, current: String?): List<LineDiff.Row> =
+        withContext(cpu) { LineDiff.rows(base.orEmpty(), current.orEmpty()) }
 
     suspend fun author(): GitAuthor? = repo?.let { r -> runCatching { withContext(io) { r.author() } }.getOrNull() }
 

@@ -1,10 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
 import androidx.compose.runtime.setValue
-
 import androidx.compose.runtime.getValue
 
-import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateThumbnails
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 
 import androidx.compose.foundation.layout.Box
@@ -42,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
-import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 import es.hugoalvarezajenjo.sproutstudio.features.editor.changeAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.editor.findNext
 import es.hugoalvarezajenjo.sproutstudio.features.editor.foldAll
@@ -65,7 +62,6 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
-import kotlinx.coroutines.launch
 
 private fun shortcut(key: Key, shift: Boolean = false) =
     KeyShortcut(key, meta = Os.isMac, ctrl = !Os.isMac, shift = shift)
@@ -235,7 +231,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
             }
 
             if (galleryOpen) {
-                TemplateGallery(TemplateThumbnails(p.deps.render, p.deps.diagram), onDismiss = { galleryOpen = false; p.active?.requestFocus() }, onPick = { pickTemplate(it) })
+                TemplateGallery(p.deps.thumbnails, onDismiss = { galleryOpen = false; p.active?.requestFocus() }, onPick = { pickTemplate(it) })
             }
             }
 

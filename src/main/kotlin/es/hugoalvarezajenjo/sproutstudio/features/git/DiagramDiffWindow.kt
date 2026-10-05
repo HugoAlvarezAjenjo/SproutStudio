@@ -73,9 +73,9 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.editorTextStyle
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import java.io.File
 import kotlin.math.max
-import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 /** Compare window: by default the committed version next to today's. */
 @Composable
@@ -130,19 +130,10 @@ private fun rememberSideText(p: WorkspaceViewModel, file: File, side: DiffSide):
     var loaded by remember(side) { mutableStateOf(false) }
     when (side) {
         DiffSide.WorkingCopy -> {
-            var disk by remember { mutableStateOf(runCatching { file.readText() }.getOrNull()) }
-            LaunchedEffect(file, doc) {
-                if (doc != null) return@LaunchedEffect
-                // Outside edits show up; the disk is read off the UI thread.
-                val io = p.deps.dispatchers.io
-                var stamp = withContext(io) { file.lastModified() }
-                while (true) {
-                    delay(700)
-                    val now = withContext(io) { file.lastModified() }
-                    if (now != stamp) { stamp = now; disk = withContext(io) { runCatching { file.readText() }.getOrNull() } }
-                }
-            }
-            return (doc?.text ?: disk) to true
+            // Outside edits show up; the disk is read off the UI thread (not needed with a tab open).
+            val disk by remember(file) { p.deps.documents.watch(file).map { listOf(it) } }.collectAsState(null)
+            if (doc != null) return doc.text to true
+            return disk?.single() to (disk != null)
         }
         DiffSide.Head -> {
             val head = git.status.head
@@ -190,7 +181,7 @@ internal fun DiffView(
         }
         HLine()
         if (textMode) {
-            TextDiff(leftText, rightText, leftLoaded && rightLoaded, left, right)
+            TextDiff(p.git, leftText, rightText, leftLoaded && rightLoaded, left, right)
         } else {
             DiagramsSideBySide(p.deps, 
                 file, leftText, rightText, leftLoaded,
@@ -290,13 +281,13 @@ private fun Side(
 
 /** Unified text diff, whole file: red rows removed, green rows added, both line numbers. */
 @Composable
-private fun TextDiff(base: String?, current: String?, loaded: Boolean, left: DiffSide, right: DiffSide) {
+private fun TextDiff(git: GitViewModel, base: String?, current: String?, loaded: Boolean, left: DiffSide, right: DiffSide) {
     val c = ide
     var rows by remember { mutableStateOf<List<LineDiff.Row>?>(null) }
     LaunchedEffect(base, current, loaded) {
         if (!loaded) return@LaunchedEffect
         delay(80)
-        rows = withContext(Dispatchers.Default) { LineDiff.rows(base.orEmpty(), current.orEmpty()) }
+        rows = git.diffRows(base, current)
     }
     val r = rows ?: return
     val changes = r.count { it.kind != LineDiff.Row.Kind.SAME }

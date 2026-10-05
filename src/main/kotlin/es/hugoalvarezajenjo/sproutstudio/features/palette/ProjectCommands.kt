@@ -21,7 +21,6 @@ import es.hugoalvarezajenjo.sproutstudio.features.git.canCompareWithHead
 import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
-import kotlinx.coroutines.launch
 
 /** Shortcut label in the platform's style: "⇧⌘F" on macOS, "Ctrl+Shift+F" elsewhere. */
 internal fun shortcutHint(key: String, shift: Boolean = false, alt: Boolean = false): String =

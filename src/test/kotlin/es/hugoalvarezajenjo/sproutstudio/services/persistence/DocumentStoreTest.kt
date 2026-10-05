@@ -60,4 +60,25 @@ class DocumentStoreTest {
         assertEquals(10_000, f.readText().length)
         assertEquals(listOf("a.puml"), dir.list()!!.toList())
     }
+
+    @Test
+    fun watchFollowsTheFileOnDisk() = runBlocking {
+        withTimeout(5000) {
+            val seen = mutableListOf<String?>()
+            val job = launch { store.watch(f, pollMs = 20).collect { seen += it } }
+            while (seen.isEmpty()) delay(10)
+            f.writeText("v2"); f.setLastModified(f.lastModified() + 2000)
+            while (seen.size < 2) delay(10)
+            f.delete()
+            while (seen.size < 3) delay(10)
+            job.cancel()
+            assertEquals(listOf("v1", "v2", null), seen)
+        }
+    }
+
+    @Test
+    fun readOrNullIsNullForAMissingFile() = runBlocking {
+        assertEquals(null, store.readOrNull(File(dir, "nope.puml")))
+        assertEquals("v1", store.readOrNull(f))
+    }
 }

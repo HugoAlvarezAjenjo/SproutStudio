@@ -1,6 +1,10 @@
 package es.hugoalvarezajenjo.sproutstudio.services.persistence
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -37,6 +41,23 @@ class DocumentStore(private val io: CoroutineDispatcher) {
 
     /** [read], or null when [f] is missing or unreadable. */
     suspend fun readOrNull(f: File): String? = withContext(io) { lockOf(f).withLock { runCatching { f.readText() }.getOrNull() } }
+
+    /**
+     * [f]'s text now, then again every time it changes on disk (polled every [pollMs]); null
+     * while the file doesn't exist. Reads run on [io]. For windows that follow a file edited
+     * elsewhere (quick preview, diff against the working copy).
+     */
+    fun watch(f: File, pollMs: Long = 700): Flow<String?> = flow {
+        var stamp: Long? = null
+        while (true) {
+            val now = if (f.exists()) f.lastModified() else -1L
+            if (now != stamp) {
+                stamp = now
+                emit(if (now < 0) null else runCatching { f.readText() }.getOrNull())
+            }
+            delay(pollMs)
+        }
+    }.flowOn(io)
 
     /** [read], blocking the caller (opening a tab, which must have its text at once). */
     fun readNow(f: File): String = runBlocking(io) { lockOf(f).withLock { f.readText() } }

@@ -12,9 +12,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.git.GitViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.git.ChangeType
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.IdeColors
 import java.io.File
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 /** IntelliJ's file-name colour for a git state; null = normal text. */
 internal fun IdeColors.vcsColor(type: ChangeType?): Color? = when (type) {
@@ -39,8 +37,7 @@ internal fun rememberLineChanges(git: GitViewModel, file: File?, text: String): 
     LaunchedEffect(file, text, head, tracked) {
         if (!tracked || file == null) { idx = LineDiff.Index.Empty; return@LaunchedEffect }
         delay(120) // typing debounce
-        val base = git.headText(file) ?: run { idx = LineDiff.Index.Empty; return@LaunchedEffect }
-        idx = withContext(Dispatchers.Default) { LineDiff.Index(LineDiff.compute(base, text), base) }
+        idx = git.lineChanges(file, text)
     }
     return idx
 }

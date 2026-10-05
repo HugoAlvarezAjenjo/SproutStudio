@@ -18,7 +18,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -36,7 +35,8 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.Tag
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
-import kotlinx.coroutines.delay
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.map
 
 /**
  * The "just show me the diagram" window opened by double-clicking a file.
@@ -44,23 +44,10 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun QuickPreviewWindow(file: File, deps: WorkspaceDeps, onClose: () -> Unit) {
-    var text by remember { mutableStateOf(runCatching { file.readText() }.getOrDefault("")) }
-    var missing by remember { mutableStateOf(!file.exists()) }
-
-    // Watch the file for outside edits; the disk is read off the UI thread.
-    LaunchedEffect(file) {
-        val io = deps.dispatchers.io
-        var stamp = kotlinx.coroutines.withContext(io) { file.lastModified() }
-        while (true) {
-            delay(700)
-            val (exists, now) = kotlinx.coroutines.withContext(io) { file.exists() to file.lastModified() }
-            missing = !exists
-            if (exists && now != stamp) {
-                stamp = now
-                kotlinx.coroutines.withContext(io) { runCatching { file.readText() }.getOrNull() }?.let { text = it }
-            }
-        }
-    }
+    // Follows the file, so editing it anywhere else refreshes the picture; read off the UI thread.
+    val disk by remember(file) { deps.documents.watch(file).map { DiskText(it) } }.collectAsState(null)
+    val text = disk?.text.orEmpty()
+    val missing = disk != null && disk?.text == null
 
     Window(
         onCloseRequest = onClose,
@@ -104,3 +91,6 @@ fun QuickPreviewWindow(file: File, deps: WorkspaceDeps, onClose: () -> Unit) {
         }
     }
 }
+
+/** One read of the watched file; [text] null = it doesn't exist. (A null DiskText = not read yet.) */
+private class DiskText(val text: String?)

@@ -1,7 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
 import androidx.compose.runtime.setValue
-
 import androidx.compose.runtime.getValue
 
 import androidx.compose.foundation.background
@@ -46,7 +45,6 @@ import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewPane
 import es.hugoalvarezajenjo.sproutstudio.features.preview.rememberPreviewViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.problems.ProblemsPanel
 import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateSidebar
-import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateThumbnails
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
@@ -76,7 +74,7 @@ internal fun Workspace(p: WorkspaceViewModel, onSave: (Document) -> Unit, onClos
                 if (p.sidebarVisible) {
                     when (p.sidebarTool) {
                         SidebarTool.COMMIT -> CommitPanel(p)
-                        SidebarTool.TEMPLATES -> TemplateSidebar(TemplateThumbnails(p.deps.render, p.deps.diagram), onPick = { p.insertTemplate(it) })
+                        SidebarTool.TEMPLATES -> TemplateSidebar(p.deps.thumbnails, onPick = { p.insertTemplate(it) })
                         SidebarTool.PROJECT -> ProjectTree(p)
                     }
                     SidebarSplitter(p)

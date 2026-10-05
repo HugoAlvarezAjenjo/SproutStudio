@@ -10,7 +10,7 @@ import java.io.File
 object TestGraph {
     val graph: AppGraph get() = AppGraph.default
     val deps get() = graph.deps
-    val thumbnails get() = TemplateThumbnails(graph.render, graph.diagram)
+    val thumbnails get() = graph.deps.thumbnails
 
     fun workspace(): WorkspaceViewModel = graph.newWorkspace()
     fun document(file: File?, text: String) = Document(file, text, graph.documents)

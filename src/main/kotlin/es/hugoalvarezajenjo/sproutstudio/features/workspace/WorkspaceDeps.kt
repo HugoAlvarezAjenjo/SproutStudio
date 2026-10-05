@@ -30,4 +30,7 @@ class WorkspaceDeps(
     val recents: RecentProjects,
     val paletteHistory: PaletteHistory,
     val windows: WindowNavigator,
-)
+) {
+    /** Template thumbnails for the gallery, the sidebar and the New Diagram dialog. */
+    val thumbnails = es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateThumbnails(render, diagram, dispatchers.default)
+}

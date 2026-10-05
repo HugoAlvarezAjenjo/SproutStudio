@@ -50,7 +50,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,7 +72,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.features.document.isDiagram
-import es.hugoalvarezajenjo.sproutstudio.features.git.GitNotice
 import es.hugoalvarezajenjo.sproutstudio.features.git.describe
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.git.ChangeType
@@ -83,7 +81,6 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.HLine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import java.io.File
-import kotlinx.coroutines.launch
 
 /**
  * IntelliJ's Commit tool window (⌘0): what changed since the last commit, checkboxes to pick
