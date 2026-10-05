@@ -177,7 +177,6 @@ class ProjectCommandsTest {
         p.changeLayout(EditorLayout.EDITOR)
         p.run("export png")
         assertEquals(EditorLayout.SPLIT, p.layout)
-        assertNotNull(p.active?.previewRequest)
-        assertEquals(PreviewAction.EXPORT_PNG, p.active?.previewRequest)
+        assertEquals(PreviewAction.EXPORT_PNG, assertNotNull(p.active).takePreviewCommand())
     }
 }

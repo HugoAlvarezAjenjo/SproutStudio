@@ -1,6 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.editor
 
 import androidx.compose.runtime.Stable
+import kotlinx.coroutines.flow.receiveAsFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -108,10 +109,14 @@ class FindState {
     var replaceVisible by mutableStateOf(false)
     var query by mutableStateOf(FindQuery(""))
     var replacement by mutableStateOf("")
-    /** Bumped to ask the find field to take focus (and select its text). */
-    var focusTick by mutableStateOf(0)
-    /** Bumped whenever a find action moved the selection: the editor scrolls it into view. */
-    var revealTick by mutableStateOf(0)
+    private val focusChannel = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    private val revealChannel = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    /** The find field should take focus (and select its text). */
+    val focusRequests: kotlinx.coroutines.flow.Flow<Unit> = focusChannel.receiveAsFlow()
+    /** A find action moved the selection: the editor scrolls it into view. */
+    val revealRequests: kotlinx.coroutines.flow.Flow<Unit> = revealChannel.receiveAsFlow()
+
+    fun requestReveal() { revealChannel.trySend(Unit) }
     /** Status for the bar after Replace All ("3 replaced"); cleared on the next edit of the query. */
     var notice by mutableStateOf<String?>(null)
 
@@ -120,7 +125,7 @@ class FindState {
         if (replace) replaceVisible = true
         // Seed with the editor selection, like IntelliJ, but not with multi-line blocks.
         if (!seed.isNullOrEmpty() && '\n' !in seed) query = query.copy(text = seed)
-        focusTick++
+        focusChannel.trySend(Unit)
     }
 
     fun close() {
@@ -183,11 +188,11 @@ private fun IntRange.toSelection() = TextRange(first, last + 1)
 
 fun Document.findNext(forward: Boolean = true) {
     if (find.query.text.isEmpty()) { find.open(replace = false, seed = selectedText()); return }
-    navigate(value, find.query, forward)?.let { value = it; find.revealTick++ }
+    navigate(value, find.query, forward)?.let { value = it; find.requestReveal() }
 }
 
 fun Document.replaceNext() {
-    replaceCurrent(value, find.query, find.replacement)?.let { value = it; find.revealTick++ }
+    replaceCurrent(value, find.query, find.replacement)?.let { value = it; find.requestReveal() }
 }
 
 fun Document.replaceAll() {

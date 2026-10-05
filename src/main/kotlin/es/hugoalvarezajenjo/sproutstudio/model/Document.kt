@@ -8,6 +8,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import java.io.File
 import java.io.IOException
 import es.hugoalvarezajenjo.sproutstudio.app.AppGraph
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import es.hugoalvarezajenjo.sproutstudio.services.persistence.DocumentStore
 
 val DiagramExtensions = es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles.DIAGRAM_EXTENSIONS
@@ -38,14 +41,26 @@ class Document(
     var savedText by mutableStateOf(initialText)
         private set
 
-    /** Line the editor should scroll to and select; consumed by the editor. */
-    var jumpRequest by mutableStateOf<Int?>(null)
+    // One-shot requests to this document's editor and preview. Channels, not state: a request
+    // is delivered exactly once, even if the editor isn't on screen yet (preview-only layout),
+    // and two requests in a row are never merged into one.
+    private val jumps = Channel<Int>(Channel.BUFFERED)
+    private val focusRequests = Channel<Unit>(Channel.CONFLATED)
+    private val previewCommands = Channel<PreviewAction>(Channel.CONFLATED)
 
-    /** Bumped to give the editor the keyboard back (e.g. after the command palette closes). */
-    var focusTick by mutableStateOf(0)
+    /** Lines the editor should scroll to and select (the error strip, the Problems panel). */
+    val jumpRequests: Flow<Int> = jumps.receiveAsFlow()
+    /** Asks for the keyboard back (e.g. after the command palette closes). */
+    val focusRequestFlow: Flow<Unit> = focusRequests.receiveAsFlow()
+    /** Copy / export asked for from outside the preview (the command palette). */
+    val previewCommandFlow: Flow<PreviewAction> = previewCommands.receiveAsFlow()
 
-    /** A copy/export asked for from outside the preview (the command palette); consumed by the preview. */
-    var previewRequest by mutableStateOf<PreviewAction?>(null)
+    fun jumpTo(line: Int) { jumps.trySend(line) }
+    fun requestFocus() { focusRequests.trySend(Unit) }
+    fun requestPreview(action: PreviewAction) { previewCommands.trySend(action) }
+
+    /** The pending preview command, taken off the queue. For tests. */
+    internal fun takePreviewCommand(): PreviewAction? = previewCommands.tryReceive().getOrNull()
 
     /** Git markers of this text against the last commit (set by the editor; empty if untracked). */
     var gitLines by mutableStateOf(es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index.Empty)

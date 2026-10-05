@@ -88,6 +88,9 @@ import es.hugoalvarezajenjo.sproutstudio.ui.IdeColors
 import es.hugoalvarezajenjo.sproutstudio.ui.editorTextStyle
 import es.hugoalvarezajenjo.sproutstudio.ui.ide
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filterNotNull
+import androidx.compose.runtime.snapshotFlow
 
 private const val GUTTER_DP = 58
 /** Git change bar at the gutter's right edge, next to the text. */
@@ -151,7 +154,7 @@ fun CodeEditor(
     // Focus the editor when it appears / when the document changes.
     LaunchedEffect(doc) { delay(50); runCatching { focus.requestFocus() } }
     // ...and when asked to (the command palette closing hands the keyboard back).
-    LaunchedEffect(doc.focusTick) { if (doc.focusTick > 0) { delay(16); runCatching { focus.requestFocus() } } }
+    LaunchedEffect(doc) { doc.focusRequestFlow.collect { delay(16); runCatching { focus.requestFocus() } } }
 
     // Report caret position for the status bar.
     LaunchedEffect(caret, value.text) {
@@ -160,16 +163,17 @@ fun CodeEditor(
     }
 
     // Jump-to-line requests from the preview's error banner.
-    LaunchedEffect(doc.jumpRequest, layout) {
-        val line = doc.jumpRequest ?: return@LaunchedEffect
-        val l = layout ?: return@LaunchedEffect
-        doc.value = doc.value.copy(selection = EditOps.selectLine(doc.text, line)) // unfolds if hidden
-        doc.jumpRequest = null
-        delay(16) // layout of the unfolded text
-        val l2 = layout ?: l
-        val idx = l2.getLineForOffset(l2.safeOffset(liveT(doc.value.selection.min)))
-        vScroll.animateScrollTo((l2.getLineTop(idx) - 120f).toInt().coerceAtLeast(0))
-        runCatching { focus.requestFocus() }
+    LaunchedEffect(doc) {
+        doc.jumpRequests.collect { line ->
+            // Wait for the text to be laid out (the editor may have just appeared).
+            val l = snapshotFlow { layout }.filterNotNull().first()
+            doc.value = doc.value.copy(selection = EditOps.selectLine(doc.text, line)) // unfolds if hidden
+            delay(16) // layout of the unfolded text
+            val l2 = layout ?: l
+            val idx = l2.getLineForOffset(l2.safeOffset(liveT(doc.value.selection.min)))
+            vScroll.animateScrollTo((l2.getLineTop(idx) - 120f).toInt().coerceAtLeast(0))
+            runCatching { focus.requestFocus() }
+        }
     }
 
     // ── find / replace ──
@@ -182,13 +186,12 @@ fun CodeEditor(
     // Typing in the find field (or flipping a toggle) jumps to the first hit from the caret.
     LaunchedEffect(find.query, find.visible) {
         if (!find.visible || find.query.text.isEmpty()) return@LaunchedEffect
-        findIncremental(doc.value, find.query)?.let { doc.value = it; find.revealTick++ }
+        findIncremental(doc.value, find.query)?.let { doc.value = it; find.requestReveal() }
     }
     // Scroll the selected match into view after any find action.
-    LaunchedEffect(find.revealTick) {
-        if (find.revealTick == 0) return@LaunchedEffect
+    LaunchedEffect(find) { find.revealRequests.collect {
         delay(16) // let the layout catch up with a Replace that changed the text
-        val l = layout ?: return@LaunchedEffect
+        val l = layout ?: return@collect
         val line = l.getLineForOffset(l.safeOffset(liveT(doc.value.selection.min)))
         val top = l.getLineTop(line).toInt()
         val bottom = l.getLineBottom(line).toInt()
@@ -201,7 +204,7 @@ fun CodeEditor(
         if (viewW > 0 && (x < hScroll.value || x > hScroll.value + viewW - margin)) {
             hScroll.animateScrollTo((x - viewW / 3).coerceAtLeast(0))
         }
-    }
+    } }
     fun closeFind() {
         find.close()
         runCatching { focus.requestFocus() }

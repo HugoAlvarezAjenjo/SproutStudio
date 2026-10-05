@@ -142,7 +142,7 @@ internal fun projectCommands(
     // Preview: export goes through the preview pane (it knows which diagram is showing).
     fun previewCmd(id: String, title: String, a: PreviewAction) = cmd(id, title, "Preview", enabled = has) {
         if (!p.previewVisible) p.changeLayout(EditorLayout.SPLIT)
-        d?.previewRequest = a
+        d?.requestPreview(a)
     }
     previewCmd("preview.copy", "Copy Diagram Image", PreviewAction.COPY_IMAGE)
     previewCmd("preview.svg", "Export Diagram as SVG…", PreviewAction.EXPORT_SVG)

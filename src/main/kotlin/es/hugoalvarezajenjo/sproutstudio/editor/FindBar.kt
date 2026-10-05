@@ -61,9 +61,13 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
     var findValue by remember { mutableStateOf(TextFieldValue(f.query.text)) }
 
     // ⌘F / ⌘R while the bar is open: refocus and select the query, like IntelliJ.
-    LaunchedEffect(f.focusTick) {
-        findValue = TextFieldValue(f.query.text, TextRange(0, f.query.text.length))
-        runCatching { findFocus.requestFocus() }
+    LaunchedEffect(f) {
+        fun focusQuery() {
+            findValue = TextFieldValue(f.query.text, TextRange(0, f.query.text.length))
+            runCatching { findFocus.requestFocus() }
+        }
+        focusQuery() // the bar just opened
+        f.focusRequests.collect { focusQuery() }
     }
 
     fun keys(onEnter: (shift: Boolean) -> Unit) = Modifier.onPreviewKeyEvent { ev ->

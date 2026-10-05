@@ -67,7 +67,11 @@ import es.hugoalvarezajenjo.sproutstudio.ui.HLine
 import es.hugoalvarezajenjo.sproutstudio.ui.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.ToolSeparator
 import es.hugoalvarezajenjo.sproutstudio.ui.ide
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -80,9 +84,8 @@ fun PreviewPane(
     modifier: Modifier = Modifier,
     onJumpToLine: ((Int) -> Unit)? = null,
     leadingTools: @Composable RowScope.() -> Unit = {},
-    /** Copy/export asked for from elsewhere (the command palette); [onRequestHandled] clears it. */
-    request: PreviewAction? = null,
-    onRequestHandled: () -> Unit = {},
+    /** Copy/export asked for from elsewhere (the command palette). */
+    requests: Flow<PreviewAction> = emptyFlow(),
 ) {
     val c = ide
     val zoom = rememberZoomState()
@@ -105,16 +108,16 @@ fun PreviewPane(
     }
 
     // Requests wait for the first render, so "export" right after opening a file still works.
-    LaunchedEffect(request, preview.image, preview.firstDone) {
-        val r = request ?: return@LaunchedEffect
-        if (preview.image == null && !preview.firstDone) return@LaunchedEffect
-        onRequestHandled()
-        if (preview.image == null) { toast = "Nothing to export: fix the diagram first"; return@LaunchedEffect }
-        when (r) {
-            PreviewAction.COPY_IMAGE -> copyImage()
-            PreviewAction.EXPORT_SVG -> export(ExportFormat.SVG)
-            PreviewAction.EXPORT_PNG -> export(ExportFormat.PNG)
-            PreviewAction.EXPORT_PDF -> export(ExportFormat.PDF)
+    LaunchedEffect(preview, requests) {
+        requests.collect { r ->
+            snapshotFlow { preview.firstDone }.first { it }
+            if (preview.image == null) { toast = "Nothing to export: fix the diagram first"; return@collect }
+            when (r) {
+                PreviewAction.COPY_IMAGE -> copyImage()
+                PreviewAction.EXPORT_SVG -> export(ExportFormat.SVG)
+                PreviewAction.EXPORT_PNG -> export(ExportFormat.PNG)
+                PreviewAction.EXPORT_PDF -> export(ExportFormat.PDF)
+            }
         }
     }
 

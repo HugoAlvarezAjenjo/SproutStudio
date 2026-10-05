@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.receiveAsFlow
 import java.io.File
 
 /** A window the app is showing. */
@@ -196,13 +197,13 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
         showSidebar(true)
     }
 
-    /** Bumped by ⌘K / "Commit…" to put the caret in the commit message. */
-    var commitFocusTick by mutableStateOf(0)
-        private set
+    /** ⌘K / "Commit…" asks the Commit panel to put the caret in the message. */
+    private val commitFocus = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    val commitFocusRequests: kotlinx.coroutines.flow.Flow<Unit> = commitFocus.receiveAsFlow()
 
     fun focusCommit() {
         showTool(SidebarTool.COMMIT)
-        commitFocusTick++
+        commitFocus.trySend(Unit)
     }
 
     /** Git status of the project folder; opened by the window when [root] changes. */
@@ -281,7 +282,7 @@ class ProjectState : es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel(
         val doc = active ?: newDocument()
         revealEditor()
         doc.value = es.hugoalvarezajenjo.sproutstudio.editor.EditOps.insertTemplate(doc.value, template)
-        doc.focusTick++
+        doc.requestFocus()
     }
 
     fun closeDoc(doc: Document) {

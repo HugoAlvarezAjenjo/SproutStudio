@@ -96,7 +96,7 @@ internal fun CommitPanel(p: ProjectState) {
     var withGitignore by remember { mutableStateOf(true) }
     LaunchedEffect(git) { git.stashPopupRequests.collect { stashOpen = true } }
     // ⌘K / "Commit…" from elsewhere puts the caret in the message box.
-    LaunchedEffect(p.commitFocusTick) { if (p.commitFocusTick > 0) runCatching { messageFocus.requestFocus() } }
+    LaunchedEffect(p) { p.commitFocusRequests.collect { runCatching { messageFocus.requestFocus() } } }
 
     fun canCommit() = git.commitMessage.isNotBlank() &&
         (if (git.amend) git.status.head != null else git.included.isNotEmpty())

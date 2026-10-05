@@ -322,19 +322,19 @@ fun ProjectWindow(win: AppWindow.Project) {
                 )
                 CommandPalette(
                     commands,
-                    onDismiss = { paletteOpen = false; p.active?.let { it.focusTick++ } },
+                    onDismiss = { paletteOpen = false; p.active?.requestFocus() },
                     onRun = { cmd ->
                         paletteOpen = false
                         PaletteRecents.add(cmd.id)
                         cmd.run()
                         // Hand the keyboard back to the (possibly new) active editor.
-                        if (cmd.restoresFocus) p.active?.let { it.focusTick++ }
+                        if (cmd.restoresFocus) p.active?.requestFocus()
                     },
                 )
             }
 
             if (galleryOpen) {
-                TemplateGallery(onDismiss = { galleryOpen = false; p.active?.let { it.focusTick++ } }, onPick = { pickTemplate(it) })
+                TemplateGallery(onDismiss = { galleryOpen = false; p.active?.requestFocus() }, onPick = { pickTemplate(it) })
             }
             }
 
@@ -486,7 +486,7 @@ internal fun Workspace(p: ProjectState, onSave: (Document) -> Unit, onCloseTab: 
                                 if (target.diagramIndex != preview.index && target.diagramIndex < preview.diagramCount) {
                                     preview.showDiagram(target.diagramIndex)
                                 }
-                                target.line?.let { doc.jumpRequest = it }
+                                target.line?.let { doc.jumpTo(it) }
                             },
                             // Expanded: capped height so the editor keeps most of the window. Collapsed: just the bar.
                             modifier = if (p.problemsExpanded) Modifier.height(200.dp) else Modifier,
@@ -543,9 +543,8 @@ private fun EditorAndPreview(p: ProjectState, doc: Document, preview: es.hugoalv
                     baseName = doc.baseName,
                     modifier = Modifier.weight(if (split) p.previewFraction else 1f).fillMaxHeight(),
                     // An error link needs the code: from preview-only, open the editor beside it.
-                    onJumpToLine = { p.revealEditor(); doc.jumpRequest = it },
-                    request = doc.previewRequest,
-                    onRequestHandled = { doc.previewRequest = null },
+                    onJumpToLine = { p.revealEditor(); doc.jumpTo(it) },
+                    requests = doc.previewCommandFlow,
                     leadingTools = {
                         Text("Preview", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.padding(start = 6.dp, end = 4.dp))
                     },
