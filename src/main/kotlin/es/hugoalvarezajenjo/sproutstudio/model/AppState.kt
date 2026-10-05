@@ -6,7 +6,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import java.io.File
-import java.util.prefs.Preferences
 
 /** A window the app is showing. */
 sealed class AppWindow {
@@ -115,18 +114,13 @@ object AppState {
     }
 }
 
-/** Persisted list of recently opened folders. */
+/** Legacy access to [es.hugoalvarezajenjo.sproutstudio.features.workspace.RecentProjects]. */
 object Recents {
-    private val prefs = Preferences.userRoot().node("es/hugoalvarezajenjo/sproutstudio")
-    private const val KEY = "recentFolders"
+    private val s get() = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.recents
 
-    fun folders(): List<File> =
-        prefs.get(KEY, "").split('\n').filter { it.isNotBlank() }.map(::File).filter { it.isDirectory }
+    fun folders(): List<File> = s.folders()
 
-    fun add(dir: File) {
-        val list = (listOf(dir.absoluteFile) + folders()).distinct().take(8)
-        prefs.put(KEY, list.joinToString("\n") { it.absolutePath })
-    }
+    fun add(dir: File) = s.add(dir)
 }
 
 data class TreeNode(val file: File, val depth: Int, val isDir: Boolean)
@@ -335,32 +329,31 @@ class ProjectState {
     }
 
     companion object {
-        const val SIDEBAR_MIN = 160f
-        const val SIDEBAR_MAX = 560f
+        const val SIDEBAR_MIN = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings.SIDEBAR_MIN
+        const val SIDEBAR_MAX = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings.SIDEBAR_MAX
         private val IGNORED = setOf("node_modules", "build", "target", "out", "dist", ".git", ".gradle")
     }
 }
 
-/** Window layout the user tuned, persisted. */
+/** Legacy access to [es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings]. */
 object LayoutPrefs {
-    private val prefs = Preferences.userRoot().node("es/hugoalvarezajenjo/sproutstudio")
+    private val s get() = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.layout
 
     var sidebarVisible: Boolean
-        get() = prefs.getBoolean("sidebarVisible", true)
-        set(v) = prefs.putBoolean("sidebarVisible", v)
+        get() = s.sidebarVisible.value
+        set(v) { s.sidebarVisible.value = v }
 
     var sidebarWidth: Float
-        get() = prefs.getFloat("sidebarWidth", 240f).coerceIn(ProjectState.SIDEBAR_MIN, ProjectState.SIDEBAR_MAX)
-        set(v) = prefs.putFloat("sidebarWidth", v)
+        get() = es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings.clampWidth(s.sidebarWidth.value)
+        set(v) { s.sidebarWidth.value = v }
 
     var editorLayout: EditorLayout
-        get() = runCatching { EditorLayout.valueOf(prefs.get("editorLayout", EditorLayout.SPLIT.name)) }.getOrDefault(EditorLayout.SPLIT)
-        set(v) = prefs.put("editorLayout", v.name)
+        get() = s.editorLayout.value
+        set(v) { s.editorLayout.value = v }
 
-    /** Whether the Problems panel at the bottom is expanded. The header bar always shows. */
     var problemsExpanded: Boolean
-        get() = prefs.getBoolean("problemsExpanded", false)
-        set(v) = prefs.putBoolean("problemsExpanded", v)
+        get() = s.problemsExpanded.value
+        set(v) { s.problemsExpanded.value = v }
 }
 
 enum class SidebarTool { PROJECT, COMMIT, TEMPLATES }

@@ -21,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.lang.SyntaxColors
-import java.util.prefs.Preferences
 
 /**
  * IDE colour tokens, modelled on the JetBrains "New UI" (Int UI) palettes.
@@ -167,31 +166,20 @@ val LightIde = IdeColors(
     ),
 )
 
-/** The user's theme choice, persisted. Dark by default, like the JetBrains IDEs. */
+/** Legacy access to [es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ThemeSettings]; removed as screens get ViewModels. */
 object ThemePrefs {
-    private val prefs = Preferences.userRoot().node("es/hugoalvarezajenjo/sproutstudio")
-    var dark by mutableStateOf(prefs.getBoolean("darkTheme", true))
-        private set
+    private val s get() = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.theme
+    val dark: Boolean get() = s.dark.value
 
-    fun toggle() {
-        dark = !dark
-        prefs.putBoolean("darkTheme", dark)
-    }
+    fun toggle() = s.toggle()
 }
 
-/**
- * Whether the PREVIEW recolours diagrams dark. Independent of [ThemePrefs]: a dark editor with
- * a light diagram is the default. Exports and copied images always keep the original colours.
- */
+/** Legacy access to [es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramSettings]; removed as screens get ViewModels. */
 object DiagramPrefs {
-    private val prefs = Preferences.userRoot().node("es/hugoalvarezajenjo/sproutstudio")
-    var dark by mutableStateOf(prefs.getBoolean("darkDiagram", false))
-        private set
+    private val s get() = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.diagram
+    val dark: Boolean get() = s.dark.value
 
-    fun toggle() {
-        dark = !dark
-        prefs.putBoolean("darkDiagram", dark)
-    }
+    fun toggle() = s.toggle()
 }
 
 val LocalIde = staticCompositionLocalOf { DarkIde }

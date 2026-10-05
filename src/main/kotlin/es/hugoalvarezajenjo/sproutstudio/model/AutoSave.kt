@@ -6,19 +6,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
-import java.util.prefs.Preferences
 
-/** "File → Save Automatically", on by default like IntelliJ; remembered across launches. */
+/** Legacy access to the autosave setting; removed once the autosave moves to its service. */
 object AutoSavePrefs {
-    private val prefs = Preferences.userRoot().node("es/hugoalvarezajenjo/sproutstudio")
-    private var state by mutableStateOf(prefs.getBoolean("autoSave", true))
+    private val s get() = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.autoSave.enabled
 
     var enabled: Boolean
-        get() = state
-        set(v) {
-            state = v
-            prefs.putBoolean("autoSave", v)
-        }
+        get() = s.value
+        set(v) { s.value = v }
 }
 
 /**

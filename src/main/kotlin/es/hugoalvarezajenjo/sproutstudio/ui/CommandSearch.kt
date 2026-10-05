@@ -1,6 +1,5 @@
 package es.hugoalvarezajenjo.sproutstudio.ui
 
-import java.util.prefs.Preferences
 
 /** One entry of the command palette: an action, a file to open, a template to insert… */
 data class Command(
@@ -106,22 +105,15 @@ object CommandSearch {
     }
 }
 
-/** Recently run palette commands, most recent first, kept across launches. */
+/** Legacy access to [es.hugoalvarezajenjo.sproutstudio.features.palette.PaletteHistory]; removed with the palette ViewModel. */
 object PaletteRecents {
-    private val prefs = Preferences.userRoot().node("es/hugoalvarezajenjo/sproutstudio")
-    private const val KEY = "paletteRecent"
-    private const val MAX = 8
+    private val s get() = es.hugoalvarezajenjo.sproutstudio.app.AppGraph.default.paletteHistory
 
-    fun ids(): List<String> = prefs.get(KEY, "").split('\n').filter { it.isNotEmpty() }
+    fun ids(): List<String> = s.ids()
 
-    fun add(id: String) {
-        prefs.put(KEY, (listOf(id) + ids()).distinct().take(MAX).joinToString("\n"))
-    }
+    fun add(id: String) = s.add(id)
 
-    /** Tests use this to leave the user's history untouched. */
-    internal fun replace(ids: List<String>) {
-        prefs.put(KEY, ids.joinToString("\n"))
-    }
+    internal fun replace(ids: List<String>) = s.replace(ids)
 }
 
 /**
