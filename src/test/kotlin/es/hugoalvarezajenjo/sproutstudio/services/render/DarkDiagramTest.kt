@@ -1,6 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.services.render
 
-import es.hugoalvarezajenjo.sproutstudio.preview.DiagramImage
+import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramImage
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertTrue

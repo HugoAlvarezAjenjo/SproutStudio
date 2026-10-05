@@ -1,7 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
 import androidx.compose.runtime.snapshotFlow
-import es.hugoalvarezajenjo.sproutstudio.model.Document
+import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 import es.hugoalvarezajenjo.sproutstudio.services.persistence.AutoSaveSettings
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce

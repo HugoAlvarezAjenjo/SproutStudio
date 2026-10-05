@@ -7,7 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import es.hugoalvarezajenjo.sproutstudio.core.concurrency.AppDispatchers
 import es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel
-import es.hugoalvarezajenjo.sproutstudio.preview.DiagramImage
+import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramImage
 import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
 import es.hugoalvarezajenjo.sproutstudio.services.render.PreviewRequest
 import es.hugoalvarezajenjo.sproutstudio.services.render.Problem

@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio
 
+import es.hugoalvarezajenjo.sproutstudio.app.main
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -11,7 +12,7 @@ import kotlin.test.assertTrue
  * .puml opened the welcome window instead of (or next to) the preview.
  */
 class StartupOrderTest {
-    private val main = File("src/main/kotlin/es/hugoalvarezajenjo/sproutstudio/Main.kt").readText()
+    private val main = File("src/main/kotlin/es/hugoalvarezajenjo/sproutstudio/app/Main.kt").readText()
 
     @Test
     fun `dock icon is installed only after the open-file and quit handlers`() {

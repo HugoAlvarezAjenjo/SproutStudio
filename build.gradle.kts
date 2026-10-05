@@ -98,7 +98,7 @@ tasks.matching { it.name.startsWith("createDistributable") || it.name.startsWith
 
 compose.desktop {
     application {
-        mainClass = "es.hugoalvarezajenjo.sproutstudio.MainKt"
+        mainClass = "es.hugoalvarezajenjo.sproutstudio.app.MainKt"
         // Skiko loads its native renderer; declare it so newer JDKs do not warn.
         jvmArgs += "--enable-native-access=ALL-UNNAMED"
 

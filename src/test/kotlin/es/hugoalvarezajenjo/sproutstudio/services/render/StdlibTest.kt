@@ -59,7 +59,7 @@ class StdlibTest {
     )
 
     @Test fun `every include offered by completion really exists`() {
-        val bad = es.hugoalvarezajenjo.sproutstudio.lang.Stdlib.includes.mapNotNull { e ->
+        val bad = es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Stdlib.includes.mapNotNull { e ->
             val common = when {
                 e.path.startsWith("awslib14/") && !e.path.endsWith("Common") -> "!include <awslib14/AWSCommon>\n"
                 e.path.startsWith("azure/") && !e.path.endsWith("Common") -> "!include <azure/AzureCommon>\n"
@@ -72,12 +72,12 @@ class StdlibTest {
     }
 
     @Test fun `the library list comes from PlantUML itself`() {
-        val libs = es.hugoalvarezajenjo.sproutstudio.lang.Stdlib.libraries.map { it.lowercase() }
+        val libs = es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Stdlib.libraries.map { it.lowercase() }
         assertTrue(listOf("c4", "awslib14", "azure", "gcp", "kubernetes").all { it in libs }, "got $libs")
     }
 
     @Test fun `every whole template renders without errors`() {
-        val bad = es.hugoalvarezajenjo.sproutstudio.lang.Templates.wholeDiagrams.mapNotNull { t ->
+        val bad = es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Templates.wholeDiagrams.mapNotNull { t ->
             PlantUmlEngine.renderBlocking(t.previewSource, null).error?.let { "${t.id}: line ${it.line}: ${it.message}" }
         }
         assertTrue(bad.isEmpty(), "broken templates:\n" + bad.joinToString("\n"))

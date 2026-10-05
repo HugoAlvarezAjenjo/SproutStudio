@@ -4,7 +4,7 @@ import es.hugoalvarezajenjo.sproutstudio.core.settings.SettingsStore
 import es.hugoalvarezajenjo.sproutstudio.core.settings.boolean
 import es.hugoalvarezajenjo.sproutstudio.core.settings.enum
 import es.hugoalvarezajenjo.sproutstudio.core.settings.float
-import es.hugoalvarezajenjo.sproutstudio.model.EditorLayout
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
 
 /** The window layout the user tuned, remembered across launches. */
 class LayoutSettings(store: SettingsStore) {
