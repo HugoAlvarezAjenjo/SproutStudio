@@ -121,7 +121,7 @@ fun CodeEditor(
     lineChanges: es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index = es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index.Empty,
     onCaretMoved: (line: Int, col: Int) -> Unit = { _, _ -> },
 ) {
-    androidx.compose.runtime.SideEffect { if (doc.gitLines !== lineChanges) doc.gitLines = lineChanges }
+    androidx.compose.runtime.SideEffect { doc.updateGitLines(lineChanges) }
     /** Change block whose popup is open, and the y (px, in the scrolled content) to show it at. */
     var hunk by remember(doc) { mutableStateOf<Pair<es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange, Float>?>(null) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -219,7 +219,7 @@ fun CodeEditor(
     fun update(newValue: TextFieldValue, typed: Boolean) {
         doc.value = newValue
         if (typed) {
-            doc.rollbackUndo = null // typing after a rollback: its Undo would lose that typing
+            doc.dropRollbackUndo() // typing after a rollback: its Undo would lose that typing
             hunk = null
             completion = CompletionEngine.complete(newValue.text, newValue.selection.start)
             selected = 0
@@ -342,7 +342,7 @@ fun CodeEditor(
         }
         // "Lines rolled back · Undo", while the rollback can still be undone.
         doc.rollbackUndo?.let {
-            LaunchedEffect(it) { delay(8000); if (doc.rollbackUndo === it) doc.rollbackUndo = null }
+            LaunchedEffect(it) { delay(8000); doc.dropRollbackUndo(only = it) }
             Surface(
                 shape = RoundedCornerShape(8.dp), color = c.popup, shadowElevation = 8.dp,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).border(1.dp, c.popupBorder, RoundedCornerShape(8.dp)),

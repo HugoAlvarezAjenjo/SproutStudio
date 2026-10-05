@@ -65,7 +65,7 @@ internal fun FileActionDialog(p: WorkspaceViewModel) {
             state = remember(a) { mutableStateOf(selected(p.deps.files.freeName(a.dir, "new-folder"), false)) },
             hint = "in ${where(p, a.dir)}",
             check = { p.deps.files.validate(a.dir, it)?.describe() },
-            onDismiss = { p.fileAction = null },
+            onDismiss = { p.dismissFileAction() },
             scope = p.scope,
         ) { p.newFolderIn(a.dir, it).exceptionOrNull()?.fileError?.describe() }
 
@@ -75,7 +75,7 @@ internal fun FileActionDialog(p: WorkspaceViewModel) {
             state = remember(a) { mutableStateOf(selected(a.target.name, !a.target.isDirectory)) },
             hint = null,
             check = { p.deps.files.validate(a.target.absoluteFile.parentFile, it, except = a.target)?.describe() },
-            onDismiss = { p.fileAction = null },
+            onDismiss = { p.dismissFileAction() },
             scope = p.scope,
         ) { p.rename(a.target, it).exceptionOrNull()?.fileError?.describe() }
 
@@ -107,7 +107,7 @@ private fun NewDiagramDialog(p: WorkspaceViewModel, dir: File) {
         state = name, initial = initial,
         hint = "in ${where(p, dir)} · .puml is added if missing",
         check = { n -> (if (n.isBlank()) FileError.EmptyName else p.deps.files.validate(dir, p.deps.files.diagramName(n)))?.describe() },
-        onDismiss = { p.fileAction = null },
+        onDismiss = { p.dismissFileAction() },
         scope = p.scope,
         extra = {
             val c = ide
@@ -228,7 +228,7 @@ private fun DeleteDialog(p: WorkspaceViewModel, target: File) {
     val inside = remember(f) { if (f.isDirectory) f.walkTopDown().count { it.isFile } else 0 }
     val unsaved = p.docs.filter { d -> d.dirty && d.file?.absoluteFile?.let { it == f || it.startsWith(f) } == true }
     AlertDialog(
-        onDismissRequest = { p.fileAction = null },
+        onDismissRequest = { p.dismissFileAction() },
         containerColor = c.popup,
         shape = RoundedCornerShape(10.dp),
         title = { Text("Move “${f.name}” to the Trash?", style = MaterialTheme.typography.titleMedium) },
@@ -251,10 +251,10 @@ private fun DeleteDialog(p: WorkspaceViewModel, target: File) {
         confirmButton = {
             TextButton(onClick = {
                 failed = p.delete(f).exceptionOrNull()?.fileError?.describe()
-                if (failed == null) p.fileAction = null
+                if (failed == null) p.dismissFileAction()
             }, modifier = Modifier.testTag("file-delete-confirm")) { Text("Move to Trash", color = c.error) }
         },
-        dismissButton = { TextButton(onClick = { p.fileAction = null }) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = { p.dismissFileAction() }) { Text("Cancel") } },
     )
 }
 

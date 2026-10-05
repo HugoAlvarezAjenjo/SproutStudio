@@ -63,7 +63,7 @@ internal fun TabsBar(p: WorkspaceViewModel, onCloseTab: (Document) -> Unit) {
                         .fillMaxHeight()
                         .background(if (active) c.editor else if (hovered) c.hover else Color.Transparent)
                         .hoverable(interaction)
-                        .clickable { p.activeIndex = i },
+                        .clickable { p.selectTab(i) },
                 ) {
                     Row(
                         Modifier.fillMaxHeight().padding(start = 12.dp, end = 6.dp),

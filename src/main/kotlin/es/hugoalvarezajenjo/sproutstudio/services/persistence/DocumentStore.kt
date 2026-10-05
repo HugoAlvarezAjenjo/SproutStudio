@@ -35,6 +35,12 @@ class DocumentStore(private val io: CoroutineDispatcher) {
 
     suspend fun read(f: File): String = withContext(io) { lockOf(f).withLock { f.readText() } }
 
+    /** [read], or null when [f] is missing or unreadable. */
+    suspend fun readOrNull(f: File): String? = withContext(io) { lockOf(f).withLock { runCatching { f.readText() }.getOrNull() } }
+
+    /** [read], blocking the caller (opening a tab, which must have its text at once). */
+    fun readNow(f: File): String = runBlocking(io) { lockOf(f).withLock { f.readText() } }
+
     /**
      * Runs [block] while nobody else writes [files] (git rollback, rename, move). [block] may
      * suspend; it must not wait for the UI thread while it holds the locks.

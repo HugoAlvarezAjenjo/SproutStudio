@@ -93,8 +93,6 @@ import kotlinx.coroutines.launch
 internal fun CommitPanel(p: WorkspaceViewModel) {
     val c = ide
     val git = p.git
-    // Git work runs in the git ViewModel's scope: hiding the panel mid-commit must not cancel it.
-    val scope = git.scope
     var confirmRollback by remember { mutableStateOf<FileChange?>(null) }
     val messageFocus = remember { FocusRequester() }
     var stashOpen by remember { mutableStateOf(false) }
@@ -102,56 +100,6 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
     LaunchedEffect(git) { git.stashPopupRequests.collect { stashOpen = true } }
     // ⌘K / "Commit…" from elsewhere puts the caret in the message box.
     LaunchedEffect(p) { p.commitFocusRequests.collect { runCatching { messageFocus.requestFocus() } } }
-
-    fun canCommit() = git.commitMessage.isNotBlank() &&
-        (if (git.amend) git.status.head != null else git.included.isNotEmpty())
-
-    fun doCommit() {
-        val files = git.included.map { it.file }
-        val msg = git.commitMessage
-        if (!canCommit()) return
-        val amending = git.amend
-        scope.launch {
-            // Like IntelliJ: commit what you see, so unsaved editor text is written first.
-            p.docs.filter { it.file != null && it.dirty }.forEach { it.save() }
-            val id = git.commit(files, msg, amend = amending)
-            if (id != null) {
-                git.commitMessage = ""
-                git.selection.clear()
-                git.amend = false
-                git.notice = when {
-                    amending && files.isEmpty() -> GitNotice.Reworded(id)
-                    amending -> GitNotice.Amended(files.size, id)
-                    else -> GitNotice.Committed(files.size, id)
-                }
-                p.refreshTree()
-            }
-        }
-    }
-
-    fun undoLast() {
-        scope.launch {
-            val undone = git.undoLastCommit() ?: return@launch
-            if (git.commitMessage.isBlank()) git.commitMessage = undone.fullMessage
-            git.amend = false
-            git.notice = GitNotice.Undid(undone.short)
-            p.refreshTree()
-        }
-    }
-
-    fun rollback(ch: FileChange) {
-        scope.launch {
-            // Save the editor's copy first so autosave can't write it back over the restored file.
-            val doc = p.docs.firstOrNull { it.file != null && git.changeOf(it.file!!)?.path == ch.path }
-            doc?.takeIf { it.dirty }?.save()
-            // Hold the file: an autosave landing mid-rollback would write the old text back.
-            val restored = p.deps.documents.exclusive(ch.file) { git.rollback(ch.file) }
-            if (restored) {
-                doc?.replaceFromDisk()
-                p.refreshTree()
-            }
-        }
-    }
 
     Column(Modifier.width(p.sidebarWidth.dp).fillMaxHeight().background(c.panel).testTag("commit-panel")) {
         Row(
@@ -185,7 +133,7 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
                     Text("Add a .gitignore (.DS_Store, temp files)", fontSize = 12.sp, color = c.textMuted)
                 }
                 ToolButton(null, label = "Create Git Repository", primary = true) {
-                    scope.launch { git.init(withGitignore) }
+                    p.gitFlow.init(withGitignore)
                 }
                 git.error?.let { Text(it.describe(), color = c.error, fontSize = 12.sp) }
             }
@@ -227,13 +175,13 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
                 if (git.commitMessage.isEmpty()) Text("Commit message", fontSize = 13.sp, color = c.textDisabled)
                 BasicTextField(
                     value = git.commitMessage,
-                    onValueChange = { git.commitMessage = it; git.notice = null },
+                    onValueChange = git::editMessage,
                     textStyle = TextStyle(fontSize = 13.sp, lineHeight = 18.sp, color = c.text),
                     cursorBrush = SolidColor(c.text),
                     modifier = Modifier.fillMaxWidth().focusRequester(messageFocus).testTag("commit-message")
                         .onPreviewKeyEvent { e ->
                             val cmd = e.isMetaPressed || e.isCtrlPressed
-                            if (e.type == KeyEventType.KeyDown && cmd && e.key == Key.Enter) { doCommit(); true } else false
+                            if (e.type == KeyEventType.KeyDown && cmd && e.key == Key.Enter) { p.gitFlow.commit(); true } else false
                         },
                 )
             }
@@ -242,18 +190,14 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
                 ToolButton(
                     null, tooltip = "${if (git.amend) "Amend" else "Commit"} (${shortcutHint("⏎")})",
                     label = if (git.amend) "Amend Commit" else "Commit", primary = true,
-                    enabled = canCommit(),
-                ) { doCommit() }
+                    enabled = git.canCommit,
+                ) { p.gitFlow.commit() }
                 Text(
                     if (changes.isEmpty()) "" else "$n of ${changes.size} file${if (changes.size == 1) "" else "s"}",
                     fontSize = 12.sp, color = c.textMuted, modifier = Modifier.weight(1f),
                 )
                 if (git.status.head != null) {
-                    Check(git.amend, "Amend") {
-                        git.amend = !git.amend
-                        // Amending usually keeps the old message: start from it.
-                        if (git.amend && git.commitMessage.isBlank()) git.commitMessage = git.lastCommit?.fullMessage.orEmpty()
-                    }
+                    Check(git.amend, "Amend") { git.toggleAmend() }
                     Text("Amend", fontSize = 12.sp, color = c.textMuted)
                 }
             }
@@ -266,7 +210,7 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
                     Text("· ${last.short}", fontSize = 12.sp, color = c.textMuted)
                     if (last.parents > 0) {
                         Spacer(Modifier.width(2.dp))
-                        ToolButton(Icons.AutoMirrored.Outlined.Undo, "Undo last commit (keeps its changes)") { undoLast() }
+                        ToolButton(Icons.AutoMirrored.Outlined.Undo, "Undo last commit (keeps its changes)") { p.gitFlow.undoLastCommit() }
                     }
                 }
             }
@@ -289,7 +233,7 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
                     style = MaterialTheme.typography.bodyMedium,
                 )
             },
-            confirmButton = { TextButton(onClick = { confirmRollback = null; rollback(ch) }) { Text("Rollback", color = ide.error) } },
+            confirmButton = { TextButton(onClick = { confirmRollback = null; p.gitFlow.rollback(ch) }) { Text("Rollback", color = ide.error) } },
             dismissButton = { TextButton(onClick = { confirmRollback = null }) { Text("Cancel") } },
         )
     }
@@ -431,7 +375,6 @@ internal fun canCompareWithHead(p: WorkspaceViewModel, f: File?): Boolean =
 private fun StashPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
     val c = ide
     val git = p.git
-    val scope = git.scope
     var message by remember { mutableStateOf("") }
     var confirmDrop by remember { mutableStateOf<es.hugoalvarezajenjo.sproutstudio.services.git.StashInfo?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -440,7 +383,7 @@ private fun StashPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
     fun run(op: suspend () -> Boolean) {
         busy = true
         // Disk changes under open tabs: same care as switching branches.
-        scope.launch { p.switchingBranches(op); busy = false }
+        p.gitFlow.changeWorkingTree(op) { busy = false }
     }
 
     androidx.compose.ui.window.Popup(

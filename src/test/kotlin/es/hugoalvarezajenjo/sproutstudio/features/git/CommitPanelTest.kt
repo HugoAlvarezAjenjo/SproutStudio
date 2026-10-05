@@ -85,6 +85,37 @@ class CommitPanelTest {
         }
     }
 
+    /** The commit flow lives in the ViewModels now: no panel on screen, same result. */
+    @Test fun commitWritesUnsavedEditsFirstAndReportsIt() {
+        val (a, _) = repoWithChanges()
+        val p = project().apply { open(a) }
+        val doc = p.active!!
+        doc.value = androidx.compose.ui.text.input.TextFieldValue("@startuml\nA -> B\nB -> D\n@enduml\n")
+        runBlocking {
+            p.git.open(dir)
+            p.git.editMessage("Route B to D")
+            p.gitFlow.commit().join()
+        }
+        assertTrue(!doc.dirty, "the editor's text was saved before committing")
+        assertEquals(GitNotice.Committed::class, p.git.notice!!::class)
+        assertEquals("", p.git.commitMessage)
+        JGitService().find(dir)!!.use { r -> assertEquals(doc.text, r.headText(a)) }
+    }
+
+    @Test fun undoLastCommitKeepsItsMessage() {
+        val (a, _) = repoWithChanges()
+        val p = project()
+        runBlocking {
+            p.git.open(dir)
+            p.git.editMessage("Second")
+            p.gitFlow.commit().join()
+            p.gitFlow.undoLastCommit().join()
+        }
+        assertEquals("Second", p.git.commitMessage.trim())
+        assertEquals(GitNotice.Undid::class, p.git.notice!!::class)
+        JGitService().find(dir)!!.use { r -> assertEquals("@startuml\nA -> B\n@enduml\n", r.headText(a)) }
+    }
+
     @Test fun uncheckedFilesStayOutOfTheCommit() {
         val (a, b) = repoWithChanges()
         val p = project()
@@ -135,8 +166,8 @@ class CommitPanelTest {
             p.git.open(dir)
             assertEquals(ChangeType.MODIFIED, p.git.changeOf(a)?.type)
             assertTrue(p.git.rollback(a))
+            doc.replaceFromDisk()
         }
-        doc.replaceFromDisk()
         assertEquals("@startuml\nA -> B\n@enduml\n", a.readText())
         assertEquals(a.readText(), doc.text)
         assertTrue(!doc.dirty)

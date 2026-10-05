@@ -97,16 +97,16 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Project", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
-            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New Diagram…") { p.fileAction = FileAction.NewDiagram(targetDir(p)) }
-            ToolButton(Icons.Outlined.CreateNewFolder, "New Folder…") { p.fileAction = FileAction.NewFolder(targetDir(p)) }
-            ToolButton(Icons.Outlined.UnfoldLess, "Collapse All") { p.expanded.clear(); p.refreshTree() }
+            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New Diagram…") { p.showFileAction(FileAction.NewDiagram(targetDir(p))) }
+            ToolButton(Icons.Outlined.CreateNewFolder, "New Folder…") { p.showFileAction(FileAction.NewFolder(targetDir(p))) }
+            ToolButton(Icons.Outlined.UnfoldLess, "Collapse All") { p.collapseAll() }
             ToolButton(Icons.Outlined.Refresh, "Refresh (⌥⌘Y)") { p.refreshTree() }
             ToolButton(Icons.Outlined.Remove, "Hide (⌘1)") { p.showSidebar(false) }
         }
         // Root row: a folder like any other, so it collapses too.
         androidx.compose.foundation.ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
             ListRow(
-                onClick = { p.rootCollapsed = !p.rootCollapsed }, height = 26, startPadding = 6,
+                onClick = { p.toggleRootCollapsed() }, height = 26, startPadding = 6,
                 modifier = Modifier.treeDrag(drag, "root", root, file = null, onDrop).dropHighlight(drag.target == root.absoluteFile),
             ) {
                 Icon(if (p.rootCollapsed) Icons.Outlined.ChevronRight else Icons.Outlined.ExpandMore, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
@@ -167,13 +167,13 @@ private fun targetDir(p: WorkspaceViewModel): java.io.File {
 }
 
 private fun folderMenu(p: WorkspaceViewModel, dir: java.io.File, isRoot: Boolean) = buildList {
-    add(androidx.compose.foundation.ContextMenuItem("New Diagram…") { p.fileAction = FileAction.NewDiagram(dir) })
-    add(androidx.compose.foundation.ContextMenuItem("New Folder…") { p.fileAction = FileAction.NewFolder(dir) })
+    add(androidx.compose.foundation.ContextMenuItem("New Diagram…") { p.showFileAction(FileAction.NewDiagram(dir)) })
+    add(androidx.compose.foundation.ContextMenuItem("New Folder…") { p.showFileAction(FileAction.NewFolder(dir)) })
     if (!isRoot) {
-        add(androidx.compose.foundation.ContextMenuItem("Rename…") { p.fileAction = FileAction.Rename(dir) })
-        add(androidx.compose.foundation.ContextMenuItem("Move to Trash…") { p.fileAction = FileAction.Delete(dir) })
+        add(androidx.compose.foundation.ContextMenuItem("Rename…") { p.showFileAction(FileAction.Rename(dir)) })
+        add(androidx.compose.foundation.ContextMenuItem("Move to Trash…") { p.showFileAction(FileAction.Delete(dir)) })
     } else {
-        add(androidx.compose.foundation.ContextMenuItem(if (p.rootCollapsed) "Expand" else "Collapse") { p.rootCollapsed = !p.rootCollapsed })
+        add(androidx.compose.foundation.ContextMenuItem(if (p.rootCollapsed) "Expand" else "Collapse") { p.toggleRootCollapsed() })
     }
     add(androidx.compose.foundation.ContextMenuItem(if (Os.isMac) "Reveal in Finder" else "Open Containing Folder") { p.deps.platform.reveal(dir) })
 }
@@ -186,10 +186,10 @@ private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDro
         if (node.isDir) folderMenu(p, f, isRoot = false) else buildList {
             val dir = f.absoluteFile.parentFile
             add(androidx.compose.foundation.ContextMenuItem("Open") { p.open(f) })
-            add(androidx.compose.foundation.ContextMenuItem("New Diagram…") { p.fileAction = FileAction.NewDiagram(dir) })
-            add(androidx.compose.foundation.ContextMenuItem("New Folder…") { p.fileAction = FileAction.NewFolder(dir) })
-            add(androidx.compose.foundation.ContextMenuItem("Rename…") { p.fileAction = FileAction.Rename(f) })
-            add(androidx.compose.foundation.ContextMenuItem("Move to Trash…") { p.fileAction = FileAction.Delete(f) })
+            add(androidx.compose.foundation.ContextMenuItem("New Diagram…") { p.showFileAction(FileAction.NewDiagram(dir)) })
+            add(androidx.compose.foundation.ContextMenuItem("New Folder…") { p.showFileAction(FileAction.NewFolder(dir)) })
+            add(androidx.compose.foundation.ContextMenuItem("Rename…") { p.showFileAction(FileAction.Rename(f)) })
+            add(androidx.compose.foundation.ContextMenuItem("Move to Trash…") { p.showFileAction(FileAction.Delete(f)) })
             add(androidx.compose.foundation.ContextMenuItem(if (Os.isMac) "Reveal in Finder" else "Open Containing Folder") { p.deps.platform.reveal(f) })
             if (p.git.status.head != null) {
                 if (canCompareWithHead(p, f)) add(androidx.compose.foundation.ContextMenuItem("Compare Diagram with HEAD") { p.deps.windows.compareWithHead(p, f) })

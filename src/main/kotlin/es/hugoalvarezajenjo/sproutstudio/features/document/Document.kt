@@ -4,7 +4,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.channels.Channel
@@ -28,6 +30,7 @@ class Document(
     val folds = es.hugoalvarezajenjo.sproutstudio.features.editor.FoldState()
 
     var file by mutableStateOf(file)
+        private set
     private var current by mutableStateOf(TextFieldValue(initialText))
 
     /** Every writer goes through here, so folds follow edits and never hide the caret. */
@@ -62,10 +65,38 @@ class Document(
     internal fun takePreviewCommand(): PreviewAction? = previewCommands.tryReceive().getOrNull()
 
     /** Git markers of this text against the last commit (set by the editor; empty if untracked). */
-    var gitLines by mutableStateOf(es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff.Index.Empty)
+    var gitLines by mutableStateOf(LineDiff.Index.Empty)
+        private set
+
+    fun updateGitLines(index: LineDiff.Index) {
+        if (gitLines !== index) gitLines = index
+    }
 
     /** Text before the last "Rollback Lines", for its Undo; cleared by the next edit. */
     var rollbackUndo by mutableStateOf<TextFieldValue?>(null)
+        private set
+
+    /** Replace the text with a rolled-back version, remembering the current one for Undo. */
+    fun applyRollback(restored: TextFieldValue) {
+        val before = value
+        value = restored
+        rollbackUndo = before
+    }
+
+    /** Undo of the last rollback, as long as nothing was typed since. */
+    fun undoRollback() {
+        val prev = rollbackUndo ?: return
+        value = prev
+        rollbackUndo = null
+    }
+
+    /** The rollback's Undo no longer applies (typing after it would be lost, or it timed out). */
+    fun dropRollbackUndo(only: TextFieldValue? = null) {
+        if (only == null || rollbackUndo === only) rollbackUndo = null
+    }
+
+    /** The file was renamed or moved on disk: this tab follows it. */
+    fun relocate(to: File) { file = to }
 
     /** The editor's ⌘F / ⌘R bar. */
     val find = es.hugoalvarezajenjo.sproutstudio.features.editor.FindState()
@@ -113,32 +144,39 @@ class Document(
     /** Autosave entry point: only file-backed documents with edits; untitled ones need Save As. */
     suspend fun saveIfNeeded(): Boolean = file != null && dirty && save()
 
-    /** Reload from disk when the file changed outside and we have no unsaved edits. */
-    fun reloadIfChanged(): Boolean {
-        val f = file ?: return false
-        if (dirty || !f.exists()) return false
-        val disk = f.readText()
-        if (disk == savedText) return false
-        value = TextFieldValue(disk, value.selection.let { if (it.end > disk.length) androidx.compose.ui.text.TextRange(disk.length) else it })
-        savedText = disk
-        return true
-    }
-
     /**
      * Take the file's current content from disk, dropping the editor's copy (after a git
      * rollback, which is meant to throw the edits away). Folds and caret survive where they fit.
      */
-    fun replaceFromDisk() {
+    suspend fun replaceFromDisk() {
         val f = file ?: return
-        val disk = runCatching { f.readText() }.getOrNull() ?: return
-        val sel = value.selection.let { if (it.max > disk.length) androidx.compose.ui.text.TextRange(disk.length) else it }
+        store.readOrNull(f)?.let(::takeDiskText)
+    }
+
+    /**
+     * After git rewrote the working tree: take the file's new content, or return false when the
+     * file doesn't exist any more (the tab should close).
+     */
+    suspend fun syncWithDisk(): Boolean {
+        val f = file ?: return true
+        val disk = store.readOrNull(f) ?: return false
+        if (disk != text) takeDiskText(disk)
+        return true
+    }
+
+    private fun takeDiskText(disk: String) {
+        val sel = value.selection.let { if (it.max > disk.length) TextRange(disk.length) else it }
         value = TextFieldValue(disk, sel)
         savedText = disk
         saveError = null
     }
 
     companion object {
-        fun open(file: File, store: DocumentStore) = Document(file, file.readText(), store)
+        /**
+         * Opens [file] with its current text. The read blocks the caller: opening is a user action
+         * on small text files, and the tab must exist with its content right away.
+         */
+        fun open(file: File, store: DocumentStore) = Document(file, store.readNow(file), store)
     }
 }
 

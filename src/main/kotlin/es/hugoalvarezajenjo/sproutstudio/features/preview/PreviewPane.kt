@@ -88,29 +88,20 @@ fun PreviewPane(
 ) {
     val c = ide
     val zoom = rememberZoomState()
-    // Copy and export run in the preview's own scope: closing a menu or a panel mid-export
-    // must not cancel it.
-    val scope = preview.scope
-    var toast by remember { mutableStateOf<String?>(null) }
     var exportMenu by remember { mutableStateOf(false) }
+    val toast = preview.notice?.describe()
 
-    LaunchedEffect(toast) { if (toast != null) { delay(2200); toast = null } }
+    LaunchedEffect(preview.notice) { if (preview.notice != null) { delay(2200); preview.clearNotice() } }
 
-    fun copyImage() = scope.launch {
-        toast = runCatching { preview.copyImage(); "Image copied to clipboard" }
-            .getOrElse { "Couldn't copy: ${exportFailure(it)}" }
-    }
-    fun export(f: ExportFormat) = scope.launch {
-        val name = if (preview.diagramCount > 1) "$baseName-${preview.index + 1}" else baseName
-        toast = runCatching { chooseExportTarget(preview, baseDir, f, name)?.also { preview.export(f, it) } }
-            .fold({ it?.let { file -> "Saved ${file.name}" } }, { "Export failed: ${exportFailure(it)}" })
+    fun copyImage() { preview.copyToClipboard() }
+    fun export(f: ExportFormat) {
+        chooseExportTarget(preview, baseDir, f, preview.exportName(baseName))?.let { preview.exportTo(f, it) }
     }
 
     // Requests wait for the first render, so "export" right after opening a file still works.
     LaunchedEffect(preview, requests) {
         requests.collect { r ->
-            snapshotFlow { preview.firstDone }.first { it }
-            if (preview.image == null) { toast = "Nothing to export: fix the diagram first"; return@collect }
+            if (!preview.awaitExportable()) return@collect
             when (r) {
                 PreviewAction.COPY_IMAGE -> copyImage()
                 PreviewAction.EXPORT_SVG -> export(ExportFormat.SVG)
@@ -205,6 +196,14 @@ private fun chooseExportTarget(preview: PreviewViewModel, baseDir: File?, format
     val dir = baseDir ?: File(System.getProperty("user.home"))
     val f = preview.chooseExportTarget("Export diagram as ${format.label()}", "$baseName.${format.extension}", dir) ?: return null
     return if (f.name.endsWith(".${format.extension}")) f else File(f.parentFile, "${f.name}.${format.extension}")
+}
+
+private fun PreviewNotice.describe(): String = when (this) {
+    PreviewNotice.Copied -> "Image copied to clipboard"
+    is PreviewNotice.CopyFailed -> "Couldn't copy: ${exportFailure(cause)}"
+    is PreviewNotice.Saved -> "Saved ${file.name}"
+    is PreviewNotice.ExportFailed -> "Export failed: ${exportFailure(cause)}"
+    PreviewNotice.NothingToExport -> "Nothing to export: fix the diagram first"
 }
 
 private fun exportFailure(t: Throwable) = when (t) {

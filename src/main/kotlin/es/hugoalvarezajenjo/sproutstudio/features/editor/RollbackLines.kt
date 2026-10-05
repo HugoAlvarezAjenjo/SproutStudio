@@ -12,11 +12,9 @@ import es.hugoalvarezajenjo.sproutstudio.features.document.Document
  */
 fun Document.rollbackChange(change: LineChange): Boolean {
     val base = gitLines.base ?: return false
-    val before = value
-    val r = LineDiff.revert(base, before.text, change)
-    if (r.text == before.text) return false
-    value = TextFieldValue(r.text, TextRange(r.caret))
-    rollbackUndo = before
+    val r = LineDiff.revert(base, text, change)
+    if (r.text == text) return false
+    applyRollback(TextFieldValue(r.text, TextRange(r.caret)))
     return true
 }
 
@@ -29,10 +27,3 @@ fun Document.changeAtCaret(): LineChange? {
 }
 
 fun Document.rollbackAtCaret(): Boolean = changeAtCaret()?.let { rollbackChange(it) } ?: false
-
-/** Undo of the last rollback, as long as nothing was typed since. */
-fun Document.undoRollback() {
-    val prev = rollbackUndo ?: return
-    value = prev
-    rollbackUndo = null
-}

@@ -111,15 +111,13 @@ private object AboveAnchor : PopupPositionProvider {
 private fun BranchPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
     val c = ide
     val git = p.git
-    val scope = git.scope
     var creating by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
 
     fun run(op: suspend () -> Boolean, closeOnSuccess: Boolean = true) {
         busy = true
-        scope.launch {
-            val ok = p.switchingBranches(op)
+        p.gitFlow.changeWorkingTree(op) { ok ->
             busy = false
             if (ok && closeOnSuccess) onDismiss()
         }
@@ -279,22 +277,3 @@ private fun BranchRow(name: String, current: Boolean, enabled: Boolean, onClick:
     }
 }
 
-/**
- * Wraps a checkout / new branch: the editors' unsaved text is written first (it would be lost
- * or block the switch), and afterwards open tabs take the new branch's files from disk; a tab
- * whose file doesn't exist on that branch is closed.
- */
-internal suspend fun WorkspaceViewModel.switchingBranches(op: suspend () -> Boolean): Boolean {
-    docs.filter { it.file != null && it.dirty }.forEach { it.save() }
-    // No save may write an open file while git rewrites the working tree.
-    val open = docs.mapNotNull { it.file }.toTypedArray()
-    val ok = deps.documents.exclusive(*open) { op() }
-    if (ok) {
-        docs.toList().forEach { d ->
-            val f = d.file ?: return@forEach
-            if (!f.exists()) closeDoc(d) else if (runCatching { f.readText() }.getOrNull() != d.text) d.replaceFromDisk()
-        }
-        refreshTree()
-    }
-    return ok
-}

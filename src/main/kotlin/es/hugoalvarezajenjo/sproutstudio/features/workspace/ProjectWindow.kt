@@ -70,24 +70,10 @@ import kotlinx.coroutines.launch
 private fun shortcut(key: Key, shift: Boolean = false) =
     KeyShortcut(key, meta = Os.isMac, ctrl = !Os.isMac, shift = shift)
 
-/** What to do once the user answers the "unsaved changes" question. */
-private class PendingClose(val docs: List<Document>, val then: () -> Unit)
-
 @Composable
 fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit) {
-    var pending by remember { mutableStateOf<PendingClose?>(null) }
-
-    fun closeDocs(docs: List<Document>, then: () -> Unit) {
-        p.scope.launch {
-            p.deps.autoSaver.flush(docs) // with autosave on, only untitled diagrams still need the question
-            val dirty = docs.filter { it.dirty }
-            if (dirty.isEmpty()) then() else pending = PendingClose(dirty, then)
-        }
-    }
-
-    // Autosave: 1 s after you stop typing, and whenever you switch tab (see below).
-    LaunchedEffect(p) { p.deps.autoSaver.watch({ p.docs.toList() }) }
-    LaunchedEffect(p.activeIndex) { p.deps.autoSaver.flush(p.docs.toList()) }
+    // Autosave: 1 s after you stop typing, and whenever you switch tab. Runs in p's own scope.
+    LaunchedEffect(p) { p.startAutoSave() }
 
     DisposableEffect(p) { onDispose { p.close() } }
 
@@ -97,21 +83,8 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
         galleryOpen = false
         p.insertTemplate(t)
     }
-    /** Unsaved tabs get the usual question; then this window shows the welcome screen again. */
-    fun closeProject() = closeDocs(p.docs.toList()) {
-        p.closeProject()
-        p.git.openIn(null)
-    }
     val doubleShift = remember { DoubleShiftDetector() }
 
-    /** Save (asks where for an untitled diagram); the write itself runs off the UI thread. */
-    suspend fun save(doc: Document?) {
-        doc ?: return
-        if (doc.file == null) p.chooseSaveTarget(doc.name, p.root)?.let { doc.save(it); p.refreshTree() } else doc.save()
-    }
-    fun saveAs(d: Document) {
-        p.chooseSaveTarget(d.name, d.dir ?: p.root)?.let { target -> p.scope.launch { d.save(target); p.refreshTree() } }
-    }
 
     val title = buildString {
         p.active?.let { append(if (it.dirty) "● " else ""); append(it.name); append(" — ") }
@@ -119,7 +92,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
     }
 
     Window(
-        onCloseRequest = { closeDocs(p.docs.toList()) { onClose() } },
+        onCloseRequest = { p.requestClose(p.docs.toList()) { onClose() } },
         title = title,
         icon = AppIcon.painter,
         state = rememberWindowState(size = DpSize(1320.dp, 840.dp)),
@@ -138,7 +111,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
         // ...and when the window loses focus (you go to another app), like IntelliJ.
         DisposableEffect(window) {
             val l = object : WindowAdapter() {
-                override fun windowLostFocus(e: WindowEvent?) { p.scope.launch { p.deps.autoSaver.flush(p.docs.toList()) } }
+                override fun windowLostFocus(e: WindowEvent?) { p.flushAutoSave() }
                 // Back from the terminal (a commit, a checkout...): re-read git status.
                 override fun windowGainedFocus(e: WindowEvent?) = p.git.requestRefresh()
             }
@@ -153,19 +126,16 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 Item("Open Folder…", shortcut = shortcut(Key.O)) { p.chooseFolder()?.let { p.openRoot(it) } }
                 Item("New Window") { p.deps.windows.newProjectWindow() }
                 Separator()
-                Item("Save", shortcut = shortcut(Key.S), enabled = p.active != null) { p.scope.launch { save(p.active) } }
-                CheckboxItem("Save Automatically", checked = p.deps.autoSaver.enabled) {
-                    p.deps.autoSaver.setEnabled(it)
-                    if (it) p.scope.launch { p.deps.autoSaver.flush(p.docs.toList()) }
-                }
+                Item("Save", shortcut = shortcut(Key.S), enabled = p.active != null) { p.save(p.active) }
+                CheckboxItem("Save Automatically", checked = p.deps.autoSaver.enabled) { p.setAutoSave(it) }
                 Item("Save As…", shortcut = shortcut(Key.S, shift = true), enabled = p.active != null) {
-                    p.active?.let { saveAs(it) }
+                    p.active?.let { p.saveAs(it) }
                 }
                 Item("Close Tab", shortcut = shortcut(Key.W), enabled = p.active != null) {
-                    p.active?.let { d -> closeDocs(listOf(d)) { p.closeDoc(d) } }
+                    p.active?.let { p.requestCloseTab(it) }
                 }
                 Separator()
-                Item("Close Project", enabled = p.root != null || p.docs.isNotEmpty()) { closeProject() }
+                Item("Close Project", enabled = p.root != null || p.docs.isNotEmpty()) { p.requestCloseProject() }
             }
             Menu("Edit") {
                 val d = p.active
@@ -219,17 +189,11 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 }
                 Separator()
                 Item("Undo Last Commit", enabled = (g.lastCommit?.parents ?: 0) > 0) {
-                    g.scope.launch {
-                        g.undoLastCommit()?.let { u ->
-                            if (g.commitMessage.isBlank()) g.commitMessage = u.fullMessage
-                            g.notice = es.hugoalvarezajenjo.sproutstudio.features.git.GitNotice.Undid(u.short)
-                            p.showTool(SidebarTool.COMMIT); p.refreshTree()
-                        }
-                    }
+                    p.gitFlow.undoLastCommit(showCommitPanel = true)
                 }
                 Item("Stash Changes…", enabled = g.status.head != null) { p.showTool(SidebarTool.COMMIT); g.requestStashPopup() }
                 Separator()
-                if (!g.isRepo) Item("Create Git Repository", enabled = p.root != null) { g.scope.launch { g.init() } }
+                if (!g.isRepo) Item("Create Git Repository", enabled = p.root != null) { p.gitFlow.init() }
                 Item("Refresh Git Status", enabled = g.isRepo) { g.requestRefresh() }
             }
             Menu("Help") {
@@ -243,18 +207,18 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 if (p.root == null && p.docs.isEmpty()) {
                     Welcome(p)
                 } else {
-                    Workspace(p, onSave = { d -> p.scope.launch { save(d) } }, onCloseTab = { d -> closeDocs(listOf(d)) { p.closeDoc(d) } })
+                    Workspace(p, onSave = { d -> p.save(d) }, onCloseTab = { d -> p.requestCloseTab(d) })
                 }
             }
 
             if (paletteOpen) {
                 val commands = projectCommands(
                     p,
-                    onSave = { p.scope.launch { save(p.active) } },
-                    onSaveAs = { p.active?.let { saveAs(it) } },
-                    onCloseTab = { p.active?.let { d -> closeDocs(listOf(d)) { p.closeDoc(d) } } },
+                    onSave = { p.save(p.active) },
+                    onSaveAs = { p.active?.let { p.saveAs(it) } },
+                    onCloseTab = { p.active?.let { p.requestCloseTab(it) } },
                     onOpenGallery = { paletteOpen = false; galleryOpen = true },
-                    onCloseProject = { closeProject() },
+                    onCloseProject = { p.requestCloseProject() },
                 )
                 CommandPalette(
                     commands,
@@ -275,23 +239,20 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
             }
             }
 
-            pending?.let { pc ->
+            p.pendingClose?.let { pc ->
                 AlertDialog(
-                    onDismissRequest = { pending = null },
+                    onDismissRequest = { p.cancelClose() },
                     containerColor = ide.popup,
                     shape = RoundedCornerShape(10.dp),
                     title = { Text("Save changes?", style = MaterialTheme.typography.titleMedium) },
                     text = { Text("${pc.docs.joinToString { it.name }} has unsaved changes.", style = MaterialTheme.typography.bodyMedium) },
                     confirmButton = {
-                        TextButton(onClick = {
-                            pending = null
-                            p.scope.launch { pc.docs.forEach { save(it) }; if (pc.docs.none { it.dirty }) pc.then() }
-                        }) { Text("Save") }
+                        TextButton(onClick = { p.saveAndClose() }) { Text("Save") }
                     },
                     dismissButton = {
                         Row {
-                            TextButton(onClick = { pending = null }) { Text("Cancel") }
-                            TextButton(onClick = { pending = null; pc.then() }) { Text("Don't Save", color = ide.error) }
+                            TextButton(onClick = { p.cancelClose() }) { Text("Cancel") }
+                            TextButton(onClick = { p.discardAndClose() }) { Text("Don't Save", color = ide.error) }
                         }
                     },
                 )

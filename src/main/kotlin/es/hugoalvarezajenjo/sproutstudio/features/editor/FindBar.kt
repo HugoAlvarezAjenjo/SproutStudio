@@ -92,7 +92,7 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
                 value = findValue,
                 onChange = {
                     findValue = it
-                    if (it.text != f.query.text) { f.query = f.query.copy(text = it.text); f.notice = null }
+                    if (it.text != f.query.text) { f.query = f.query.copy(text = it.text); f.clearReplaced() }
                 },
                 placeholder = "Find",
                 icon = true,
@@ -105,7 +105,7 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
             Box(Modifier.widthIn(min = 56.dp).padding(horizontal = 4.dp)) {
                 val (label, bad) = when {
                     result.error != null -> "Bad regex" to true
-                    f.notice != null -> f.notice!! to false
+                    f.replacedCount != null -> "${f.replacedCount} replaced" to false
                     f.query.text.isEmpty() -> "" to false
                     result.matches.isEmpty() -> "0 results" to true
                     current >= 0 -> "${current + 1}/${result.matches.size}" to false

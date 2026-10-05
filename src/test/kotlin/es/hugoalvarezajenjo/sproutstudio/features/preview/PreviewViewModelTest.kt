@@ -33,7 +33,10 @@ class PreviewViewModelTest {
         override suspend fun problems(key: Any, source: String, baseDir: File?) =
             source.withIndex().filter { it.value == '!' }.map { Problem(it.index + 1, "bang", 0) }
         override suspend fun thumbnail(source: String, dark: Boolean): ByteArray? = null
-        override suspend fun export(source: String, baseDir: File?, index: Int, format: ExportFormat, target: File) = Unit
+        var exportFails = false
+        override suspend fun export(source: String, baseDir: File?, index: Int, format: ExportFormat, target: File) {
+            if (exportFails) throw java.io.IOException("disk full")
+        }
         override suspend fun png(source: String, baseDir: File?, index: Int) = ByteArray(0)
     }
 
@@ -53,6 +56,31 @@ class PreviewViewModelTest {
         block()
         Snapshot.sendApplyNotifications()
         runCurrent()
+    }
+
+    @Test
+    fun exportReportsWhatHappened() = runTest {
+        val vm = viewModel()
+        runCurrent()
+        val target = File("out.svg")
+        vm.exportTo(ExportFormat.SVG, target)
+        runCurrent()
+        assertEquals(PreviewNotice.Saved(target), vm.notice)
+        render.exportFails = true
+        vm.exportTo(ExportFormat.SVG, target)
+        runCurrent()
+        assertEquals("disk full", (vm.notice as PreviewNotice.ExportFailed).cause.message)
+        vm.clearNotice()
+        assertEquals(null, vm.notice)
+        vm.close()
+    }
+
+    @Test
+    fun exportNameNumbersDiagramsOfAMultiDiagramFile() = runTest {
+        val vm = viewModel()
+        runCurrent() // the fake reports two diagrams
+        assertEquals("pizza-1", vm.exportName("pizza"))
+        vm.close()
     }
 
     @Test

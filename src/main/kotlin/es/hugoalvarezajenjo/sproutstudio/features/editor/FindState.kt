@@ -26,8 +26,12 @@ class FindState {
     val revealRequests: kotlinx.coroutines.flow.Flow<Unit> = revealChannel.receiveAsFlow()
 
     fun requestReveal() { revealChannel.trySend(Unit) }
-    /** Status for the bar after Replace All ("3 replaced"); cleared on the next edit of the query. */
-    var notice by mutableStateOf<String?>(null)
+    /** How many Replace All just replaced (the bar shows it); cleared on the next edit of the query. */
+    var replacedCount by mutableStateOf<Int?>(null)
+        private set
+
+    fun reportReplaced(count: Int) { replacedCount = count }
+    fun clearReplaced() { replacedCount = null }
 
     fun open(replace: Boolean, seed: String?) {
         visible = true
@@ -40,6 +44,6 @@ class FindState {
     fun close() {
         visible = false
         replaceVisible = false
-        notice = null
+        replacedCount = null
     }
 }

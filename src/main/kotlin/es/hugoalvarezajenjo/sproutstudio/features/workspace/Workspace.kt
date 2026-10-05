@@ -153,7 +153,7 @@ private fun EditorAndPreview(p: WorkspaceViewModel, doc: Document, preview: es.h
             if (split) {
                 Splitter(onDrag = { deltaPx ->
                     val deltaFrac = with(density) { deltaPx.toDp() } / total
-                    p.previewFraction = (p.previewFraction - deltaFrac).coerceIn(0.2f, 0.8f)
+                    p.resizePreview(deltaFrac)
                 })
             }
             if (p.previewVisible) {

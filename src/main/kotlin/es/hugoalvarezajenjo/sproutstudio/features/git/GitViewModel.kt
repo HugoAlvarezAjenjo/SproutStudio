@@ -77,12 +77,59 @@ class GitViewModel(
 
     // ── Commit window state (kept here so it survives hiding the panel) ──
     var commitMessage by mutableStateOf("")
+        private set
     /** Checkbox overrides by path; unset = default (tracked changes in, unversioned files out). */
-    val selection = mutableStateMapOf<String, Boolean>()
+    private val selection = mutableStateMapOf<String, Boolean>()
     /** What the last commit-window action did, shown under the Commit button. */
     var notice by mutableStateOf<GitNotice?>(null)
+        private set
     /** "Amend" ticked: the next commit replaces the last one instead of adding a new one. */
     var amend by mutableStateOf(false)
+        private set
+
+    /** Typing in the message box; the last notice no longer applies. */
+    fun editMessage(text: String) {
+        commitMessage = text
+        notice = null
+    }
+
+    /** Amending usually keeps the old message: start from it when the box is empty. */
+    fun toggleAmend() {
+        amend = !amend
+        if (amend && commitMessage.isBlank()) commitMessage = lastCommit?.fullMessage.orEmpty()
+    }
+
+    val canCommit: Boolean
+        get() = commitMessage.isNotBlank() && (if (amend) status.head != null else included.isNotEmpty())
+
+    /**
+     * Commits the ticked files with the typed message (or amends). On success the box is cleared
+     * and [notice] says what happened; on failure [error] is set.
+     */
+    suspend fun commitSelected(): Boolean {
+        if (!canCommit) return false
+        val files = included.map { it.file }
+        val amending = amend
+        val id = commit(files, commitMessage, amend = amending) ?: return false
+        commitMessage = ""
+        selection.clear()
+        amend = false
+        notice = when {
+            amending && files.isEmpty() -> GitNotice.Reworded(id)
+            amending -> GitNotice.Amended(files.size, id)
+            else -> GitNotice.Committed(files.size, id)
+        }
+        return true
+    }
+
+    /** Undo Last Commit, keeping its message in the box so it can be committed again. */
+    suspend fun undoLast(): Boolean {
+        val undone = undoLastCommit() ?: return false
+        if (commitMessage.isBlank()) commitMessage = undone.fullMessage
+        amend = false
+        notice = GitNotice.Undid(undone.short)
+        return true
+    }
 
     private val stashPopup = Channel<Unit>(Channel.CONFLATED)
     /** "Stash Changes…" in a menu asks the Commit panel to open its stash popup. */

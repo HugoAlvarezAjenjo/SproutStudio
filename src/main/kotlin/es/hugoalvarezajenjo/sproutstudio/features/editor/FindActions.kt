@@ -69,7 +69,7 @@ fun Document.replaceNext() {
 fun Document.replaceAll() {
     val (v, n) = replaceAllIn(value, find.query, find.replacement)
     value = v
-    find.notice = if (n == 1) "1 replaced" else "$n replaced"
+    find.reportReplaced(n)
 }
 
 fun Document.selectedText(): String = value.selection.let { text.substring(it.min, it.max) }

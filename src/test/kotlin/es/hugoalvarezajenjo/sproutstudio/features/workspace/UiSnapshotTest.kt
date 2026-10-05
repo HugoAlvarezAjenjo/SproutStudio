@@ -39,7 +39,7 @@ class UiSnapshotTest {
         openRoot(File("samples").absoluteFile)
         open(File("samples/pizza.puml").absoluteFile)
         open(File("samples/morning.puml").absoluteFile)
-        activeIndex = 0
+        selectTab(0)
     }
 
     @Test

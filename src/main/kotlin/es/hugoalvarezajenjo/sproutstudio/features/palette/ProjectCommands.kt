@@ -57,18 +57,17 @@ internal fun projectCommands(
     cmd("file.newWindow", "New Window", "File") { p.deps.windows.newProjectWindow() }
     p.root?.let { root ->
         val dir = d?.file?.absoluteFile?.parentFile?.takeIf { it == root.absoluteFile || it.startsWith(root.absoluteFile) } ?: root
-        cmd("file.newNamed", "New Diagram in Folder…", "File", restoresFocus = false) { p.fileAction = es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.NewDiagram(dir) }
-        cmd("file.newFolder", "New Folder…", "File", restoresFocus = false) { p.fileAction = es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.NewFolder(dir) }
+        cmd("file.newNamed", "New Diagram in Folder…", "File", restoresFocus = false) { p.showFileAction(es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.NewDiagram(dir)) }
+        cmd("file.newFolder", "New Folder…", "File", restoresFocus = false) { p.showFileAction(es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.NewFolder(dir)) }
         d?.file?.let { f ->
-            cmd("file.rename", "Rename File…", "File", restoresFocus = false) { p.fileAction = es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.Rename(f) }
-            cmd("file.trash", "Move File to Trash…", "File", restoresFocus = false) { p.fileAction = es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.Delete(f) }
+            cmd("file.rename", "Rename File…", "File", restoresFocus = false) { p.showFileAction(es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.Rename(f)) }
+            cmd("file.trash", "Move File to Trash…", "File", restoresFocus = false) { p.showFileAction(es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction.Delete(f)) }
         }
     }
     cmd("file.save", "Save", "File", shortcutHint("S"), enabled = has) { onSave() }
     cmd("file.saveAs", "Save As…", "File", shortcutHint("S", shift = true), enabled = has) { onSaveAs() }
     cmd("file.autosave", if (p.deps.autoSaver.enabled) "Turn Off Save Automatically" else "Turn On Save Automatically", "File") {
-        p.deps.autoSaver.setEnabled(!p.deps.autoSaver.enabled)
-        if (p.deps.autoSaver.enabled) p.scope.launch { p.deps.autoSaver.flush(p.docs.toList()) }
+        p.setAutoSave(!p.deps.autoSaver.enabled)
     }
     cmd("file.closeTab", "Close Tab", "File", shortcutHint("W"), enabled = has) { onCloseTab() }
     cmd("file.closeProject", "Close Project", "File", enabled = p.root != null || has, restoresFocus = false) { onCloseProject() }
@@ -124,20 +123,14 @@ internal fun projectCommands(
             d?.file?.let { p.deps.windows.showHistory(p, it) }
         }
         cmd("git.undo", "Undo Last Commit", "Git", enabled = (p.git.lastCommit?.parents ?: 0) > 0, restoresFocus = false) {
-            kotlinx.coroutines.MainScope().launch {
-                p.git.undoLastCommit()?.let { u ->
-                    if (p.git.commitMessage.isBlank()) p.git.commitMessage = u.fullMessage
-                    p.git.notice = es.hugoalvarezajenjo.sproutstudio.features.git.GitNotice.Undid(u.short)
-                    p.showTool(es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool.COMMIT); p.refreshTree()
-                }
-            }
+            p.gitFlow.undoLastCommit(showCommitPanel = true)
         }
         cmd("git.stash", "Stash Changes…", "Git", enabled = p.git.status.head != null, restoresFocus = false) {
             p.showTool(es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool.COMMIT); p.git.requestStashPopup()
         }
         if (!p.git.isRepo) cmd("git.init", "Create Git Repository", "Git") {
             p.showTool(es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool.COMMIT)
-            kotlinx.coroutines.MainScope().launch { p.git.init() }
+            p.gitFlow.init()
         }
     }
     cmd("view.theme", if (p.deps.theme.dark.value) "Switch to Light Theme" else "Switch to Dark Theme", "View") { p.deps.theme.toggle() }

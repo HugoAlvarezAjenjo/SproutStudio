@@ -188,7 +188,7 @@ class CloseProjectTest {
         val dir = Files.createTempDirectory("close").toFile().canonicalFile
         try {
             File(dir, "a.puml").writeText("@startuml\nA -> B\n@enduml\n"); File(dir, "d").mkdirs()
-            val p = TestGraph.workspace().apply { openRoot(dir); open(File(dir, "a.puml")); toggleDir(File(dir, "d")); rootCollapsed = true }
+            val p = TestGraph.workspace().apply { openRoot(dir); open(File(dir, "a.puml")); toggleDir(File(dir, "d")); toggleRootCollapsed() }
             p.closeProject()
             assertNull(p.root); assertTrue(p.docs.isEmpty()); assertTrue(p.tree.isEmpty()); assertTrue(p.expanded.isEmpty())
             assertFalse(p.rootCollapsed)

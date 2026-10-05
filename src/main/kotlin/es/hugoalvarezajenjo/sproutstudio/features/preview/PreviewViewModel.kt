@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.preview
 
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,6 +76,36 @@ class PreviewViewModel(
 
     fun previousDiagram() = showDiagram(index - 1)
     fun nextDiagram() = showDiagram(index + 1)
+
+    var notice by mutableStateOf<PreviewNotice?>(null)
+        private set
+
+    fun clearNotice() { notice = null }
+
+    /** File name for an export of the shown diagram: `pizza`, or `pizza-2` in a multi-diagram file. */
+    fun exportName(baseName: String) = if (diagramCount > 1) "$baseName-${index + 1}" else baseName
+
+    /**
+     * Copy and export run in this ViewModel's scope (closing a menu or a panel mid-export
+     * doesn't cancel them) and report through [notice].
+     */
+    fun copyToClipboard(): Job = scope.launch {
+        notice = attempt({ copyImage(); PreviewNotice.Copied }, PreviewNotice::CopyFailed)
+    }
+
+    fun exportTo(format: ExportFormat, target: File): Job = scope.launch {
+        notice = attempt({ export(format, target); PreviewNotice.Saved(target) }, PreviewNotice::ExportFailed)
+    }
+
+    /** Waits for the first render; false (with a notice) when there's no image to export. */
+    suspend fun awaitExportable(): Boolean {
+        snapshotFlow { firstDone }.first { it }
+        if (image == null) notice = PreviewNotice.NothingToExport
+        return image != null
+    }
+
+    private suspend fun attempt(block: suspend () -> PreviewNotice, failed: (Throwable) -> PreviewNotice): PreviewNotice =
+        try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { failed(e) }
 
     /** Writes the shown diagram to [target], in its original colours. */
     suspend fun export(format: ExportFormat, target: File) {

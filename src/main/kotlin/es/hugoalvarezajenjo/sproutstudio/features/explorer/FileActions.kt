@@ -71,7 +71,7 @@ private suspend fun WorkspaceViewModel.relocate(from: File, to: File): File {
     deps.autoSaver.flush(docs.toList())
     // No save may land on either path while it moves.
     store.exclusive(from, to) { files.move(from, to) }
-    for (d in docs) d.file?.absoluteFile?.let { f -> moved(f, from, to)?.let { d.file = it } }
+    for (d in docs) d.file?.absoluteFile?.let { f -> moved(f, from, to)?.let { d.relocate(it) } }
     val exp = expanded.toList(); expanded.clear(); exp.forEach { e -> expanded.add(moved(e.absoluteFile, from, to) ?: e) }
     refreshTree()
     return to
@@ -103,5 +103,5 @@ private fun WorkspaceViewModel.expandTo(dir: File) {
     val chain = ArrayList<File>()
     while (d != null && d != r && d.startsWith(r)) { chain += d; d = d.parentFile }
     chain.forEach { if (it !in expanded) expanded.add(it) }
-    rootCollapsed = false
+    expandRoot()
 }

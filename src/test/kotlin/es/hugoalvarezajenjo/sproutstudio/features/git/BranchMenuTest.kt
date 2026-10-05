@@ -13,7 +13,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
-import es.hugoalvarezajenjo.sproutstudio.features.git.switchingBranches
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitError
@@ -91,10 +90,10 @@ class BranchMenuTest {
         val p = TestGraph.workspace().apply { openRoot(dir); open(a) }
         runBlocking {
             p.git.open(dir)
-            assertTrue(p.switchingBranches { p.git.checkout("feature") })
+            assertTrue(p.gitFlow.changingWorkingTree { p.git.checkout("feature") })
             assertEquals("feature\n", p.active!!.text)
             p.open(File(dir, "only.puml"))
-            assertTrue(p.switchingBranches { p.git.checkout("main") })
+            assertTrue(p.gitFlow.changingWorkingTree { p.git.checkout("main") })
         }
         assertEquals(listOf("a.puml"), p.docs.map { it.name }) // only.puml isn't on main
         assertEquals("main\n", p.docs.single().text)

@@ -12,7 +12,9 @@ import es.hugoalvarezajenjo.sproutstudio.features.explorer.rename
 import java.io.File
 import es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.git.GitViewModel
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
@@ -27,6 +29,12 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         private set
     val docs = mutableStateListOf<Document>()
     var activeIndex by mutableStateOf(0)
+        private set
+
+    /** Clicking a tab. Switching tabs also autosaves (see [startAutoSave]). */
+    fun selectTab(i: Int) {
+        if (i in docs.indices) activeIndex = i
+    }
     /** Editor only / editor + preview / preview only, like IntelliJ's split-editor switcher. */
     var layout by mutableStateOf(deps.layout.editorLayout.value)
         private set
@@ -108,12 +116,114 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     fun persistSidebarWidth() {
         layoutSettings.sidebarWidth.value = sidebarWidth
     }
+    /** Share of the split editor area the preview takes. */
     var previewFraction by mutableStateOf(0.5f)
+        private set
+
+    /** Dragging the editor/preview splitter by [delta] of the area's width. */
+    fun resizePreview(delta: Float) {
+        previewFraction = (previewFraction - delta).coerceIn(0.2f, 0.8f)
+    }
+
     val expanded = mutableStateListOf<File>()
     /** The project folder's own row is collapsible too, like every folder under it. */
     var rootCollapsed by mutableStateOf(false)
+        private set
+
+    fun toggleRootCollapsed() { rootCollapsed = !rootCollapsed }
+    fun expandRoot() { rootCollapsed = false }
+
     /** New / rename / delete dialog the project tree is showing, if any. */
     var fileAction by mutableStateOf<FileAction?>(null)
+        private set
+
+    fun showFileAction(action: FileAction) { fileAction = action }
+    fun dismissFileAction() { fileAction = null }
+
+    /** Git operations that also touch the tabs and the tree. */
+    val gitFlow = GitWorkflow(this)
+
+    // ── Saving and closing ──────────────────────────────────────────────────────────────────
+
+    private var autoSaveJob: Job? = null
+
+    /**
+     * Autosave for this window: 1 s after you stop typing, and whenever you switch tab. The
+     * window starts it once it's on screen; it stops with this ViewModel.
+     */
+    fun startAutoSave() {
+        if (autoSaveJob != null) return
+        autoSaveJob = scope.launch {
+            launch { deps.autoSaver.watch({ docs.toList() }) }
+            snapshotFlow { activeIndex }.collect { deps.autoSaver.flush(docs.toList()) }
+        }
+    }
+
+    /** Autosave now (the window lost focus, autosave was just switched on). */
+    fun flushAutoSave(): Job = scope.launch { deps.autoSaver.flush(docs.toList()) }
+
+    fun setAutoSave(on: Boolean) {
+        deps.autoSaver.setEnabled(on)
+        if (on) flushAutoSave()
+    }
+
+    /** Every edited file-backed tab, written now (before a commit or a checkout). */
+    suspend fun saveDirty() {
+        docs.filter { it.file != null && it.dirty }.forEach { it.save() }
+    }
+
+    /** Save; an untitled diagram asks where first. False if cancelled or the write failed. */
+    suspend fun saveOrAsk(doc: Document): Boolean {
+        if (doc.file != null) return doc.save()
+        val target = chooseSaveTarget(doc.name, root) ?: return false
+        return doc.save(target).also { refreshTree() }
+    }
+
+    fun save(doc: Document?): Job? = doc?.let { d -> scope.launch { saveOrAsk(d) } }
+
+    fun saveAs(doc: Document): Job? {
+        val target = chooseSaveTarget(doc.name, doc.dir ?: root) ?: return null
+        return scope.launch { doc.save(target); refreshTree() }
+    }
+
+    /** The "unsaved changes" question the window is asking, if any. */
+    var pendingClose by mutableStateOf<PendingClose?>(null)
+        private set
+
+    /**
+     * Close [docs] (a tab, the project, the window), then run [then]. With autosave on only
+     * untitled diagrams are still dirty; if any are, [pendingClose] asks first.
+     */
+    fun requestClose(docs: List<Document>, then: () -> Unit): Job = scope.launch {
+        deps.autoSaver.flush(docs)
+        val dirty = docs.filter { it.dirty }
+        if (dirty.isEmpty()) then() else pendingClose = PendingClose(dirty, then)
+    }
+
+    fun requestCloseTab(doc: Document): Job = requestClose(listOf(doc)) { closeDoc(doc) }
+
+    /** File → Close Project: back to the welcome screen, after the usual question. */
+    fun requestCloseProject(): Job = requestClose(docs.toList()) {
+        closeProject()
+        git.openIn(null)
+    }
+
+    fun cancelClose() { pendingClose = null }
+
+    fun discardAndClose() {
+        val pc = pendingClose ?: return
+        pendingClose = null
+        pc.then()
+    }
+
+    fun saveAndClose(): Job? {
+        val pc = pendingClose ?: return null
+        pendingClose = null
+        return scope.launch {
+            pc.docs.forEach { saveOrAsk(it) }
+            if (pc.docs.none { it.dirty }) pc.then()
+        }
+    }
     var tree by mutableStateOf<List<es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode>>(emptyList())
         private set
 
@@ -128,8 +238,8 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     }
 
     /**
-     * File → Close Project: back to the welcome screen in this same window. Callers handle unsaved
-     * tabs first (the window asks, like on quit) and reset [git] (a suspend call).
+     * Back to the welcome screen in this same window, dropping the tabs as they are. Use
+     * [requestCloseProject], which asks about unsaved tabs and resets [git] too.
      */
     fun closeProject() {
         docs.clear()
@@ -155,7 +265,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
             var n = 1
             var f = File(dir, "new-diagram.puml")
             while (f.exists()) f = File(dir, "new-diagram-${++n}.puml")
-            f.writeText("") // empty: content only comes from a template you pick
+            deps.documents.writeNow(f, "") // empty: content only comes from a template you pick
             refreshTree()
             Document.open(f, deps.documents)
         } else Document(null, "", deps.documents)
@@ -186,6 +296,11 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
 
     fun toggleDir(dir: File) {
         if (dir in expanded) expanded.remove(dir) else expanded.add(dir)
+        refreshTree()
+    }
+
+    fun collapseAll() {
+        expanded.clear()
         refreshTree()
     }
 

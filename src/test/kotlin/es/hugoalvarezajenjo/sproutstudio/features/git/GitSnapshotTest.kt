@@ -70,7 +70,7 @@ class GitSnapshotTest {
     }
 
     @Test fun commitWindowAndGutter() {
-        val p = repo().apply { showTool(SidebarTool.COMMIT); git.commitMessage = "Add the rider to the delivery" }
+        val p = repo().apply { showTool(SidebarTool.COMMIT); git.editMessage("Add the rider to the delivery") }
         shoot("git-commit-window") { Workspace(p, onSave = {}, onCloseTab = {}) }
     }
 
