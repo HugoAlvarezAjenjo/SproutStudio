@@ -12,6 +12,9 @@ import es.hugoalvarezajenjo.sproutstudio.services.files.FileError
 import es.hugoalvarezajenjo.sproutstudio.services.files.FileOpException
 import es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode
 import java.io.File
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** The reason inside a failed file operation (anything unexpected becomes [FileError.Failed]). */
 val Throwable.fileError: FileError
@@ -36,6 +39,9 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
     /** The visible rows under the project folder; rebuilt by [refreshTree]. */
     var tree by mutableStateOf<List<TreeNode>>(emptyList())
         private set
+
+    /** The in-flight tree rebuild, cancelled when a newer one starts (latest wins). */
+    private var refreshJob: Job? = null
 
     /** Folders the user has opened. */
     val expanded = mutableStateListOf<File>()
@@ -66,23 +72,47 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
     fun onProjectOpened() {
         rootCollapsed = false
         expanded.clear()
-        refreshTree()
+        refreshTreeBlocking()
     }
 
     fun toggleDir(dir: File) {
         if (dir in expanded) expanded.remove(dir) else expanded.add(dir)
-        refreshTree()
+        refreshTreeBlocking()
     }
 
     fun collapseAll() {
         expanded.clear()
-        refreshTree()
+        refreshTreeBlocking()
+    }
+
+    /**
+     * Rebuild the tree for a direct navigation action (open a folder, toggle a row, Collapse All):
+     * one walk the user is waiting on, so it's done inline. The repeated case — a refresh after
+     * every save, rename, move or commit — goes through [refreshTreeNow]/[refreshTree] off the UI
+     * thread instead.
+     */
+    private fun refreshTreeBlocking() {
+        ws.git.requestRefresh()
+        val r = root ?: run { tree = emptyList(); return }
+        tree = files.tree(r, expanded.toList())
     }
 
     fun refreshTree() {
+        refreshJob?.cancel()
+        refreshJob = ws.scope.launch { refreshTreeNow() }
+    }
+
+    /**
+     * Rebuild the tree now, walking the folder off the UI thread, and return once [tree] holds
+     * the result. File operations await this so the new state is visible when they return; the
+     * fire-and-forget [refreshTree] is for the git workflow and the Refresh button.
+     */
+    suspend fun refreshTreeNow() {
         ws.git.requestRefresh()
         val r = root ?: run { tree = emptyList(); return }
-        tree = files.tree(r, expanded)
+        // Listing a folder is disk I/O: do it on io, then publish on the UI thread.
+        val built = withContext(ws.deps.dispatchers.io) { files.tree(r, expanded.toList()) }
+        tree = built
     }
 
     /** Every diagram under the root, expanded or not (for the command palette's "go to file"). */
@@ -101,7 +131,7 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
         val f = File(dir, n)
         store.write(f, template?.previewSource ?: "")
         expandTo(dir)
-        refreshTree()
+        refreshTreeNow()
         ws.open(f)
         template?.body?.indexOf("\$0")?.takeIf { it >= 0 }?.let { at ->
             ws.active?.let { d -> d.value = d.value.copy(selection = TextRange(at)) }
@@ -109,11 +139,11 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
         f
     }
 
-    fun newFolderIn(dir: File, name: String): Result<File> = runCatching {
+    suspend fun newFolderIn(dir: File, name: String): Result<File> = runCatching {
         val f = files.createFolder(dir, name)
         expandTo(dir)
         if (f !in expanded) expanded.add(f)
-        refreshTree()
+        refreshTreeNow()
         f
     }
 
@@ -131,14 +161,14 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
         val from = target.absoluteFile
         val dest = destDir.absoluteFile
         val to = files.moveTarget(root, from, dest) ?: return@runCatching from
-        relocate(from, to).also { expandTo(dest); if (dest != root?.absoluteFile && dest !in expanded) expanded.add(dest); refreshTree() }
+        relocate(from, to).also { expandTo(dest); if (dest != root?.absoluteFile && dest !in expanded) expanded.add(dest); refreshTreeNow() }
     }
 
     /** Whether dropping [target] on [destDir] would do something (for the drop highlight). */
     fun canMove(target: File, destDir: File): Boolean = files.canMove(target, destDir)
 
     /** Moves [target] to the Trash and closes its tabs (or every tab under it, for a folder). */
-    fun delete(target: File): Result<Unit> = runCatching {
+    suspend fun delete(target: File): Result<Unit> = runCatching {
         val f = target.absoluteFile
         if (f == root?.absoluteFile) throw FileOpException(FileError.ProjectFolder)
         val inside = ws.docs.filter { d -> d.file?.absoluteFile?.let { it == f || it.startsWith(f) } == true }
@@ -146,7 +176,7 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
         inside.forEach { ws.closeDoc(it) }
         files.moveToTrash(root, f)
         expanded.removeAll { it.absoluteFile == f || it.absoluteFile.startsWith(f) }
-        refreshTree()
+        refreshTreeNow()
     }
 
     /** The shared part of rename and move: moves on disk, then tabs and expanded folders follow. */
@@ -157,7 +187,7 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
         store.exclusive(from, to) { files.move(from, to) }
         for (d in ws.docs) d.file?.absoluteFile?.let { f -> moved(f, from, to)?.let { d.relocate(it) } }
         val exp = expanded.toList(); expanded.clear(); exp.forEach { e -> expanded.add(moved(e.absoluteFile, from, to) ?: e) }
-        refreshTree()
+        refreshTreeNow()
         return to
     }
 

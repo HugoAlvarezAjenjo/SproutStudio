@@ -244,8 +244,10 @@ private fun DeleteDialog(p: WorkspaceViewModel, target: File) {
         },
         confirmButton = {
             TextButton(onClick = {
-                failed = p.explorer.delete(f).exceptionOrNull()?.fileError?.describe()
-                if (failed == null) p.explorer.dismissFileAction()
+                p.scope.launch {
+                    failed = p.explorer.delete(f).exceptionOrNull()?.fileError?.describe()
+                    if (failed == null) p.explorer.dismissFileAction()
+                }
             }, modifier = Modifier.testTag("file-delete-confirm")) { Text("Move to Trash", color = c.error) }
         },
         dismissButton = { TextButton(onClick = { p.explorer.dismissFileAction() }) { Text("Cancel") } },

@@ -20,14 +20,14 @@ class GitWorkflow(private val ws: WorkspaceViewModel) {
         if (!git.canCommit) return@launch
         // Like IntelliJ: commit what you see, so unsaved editor text is written first.
         ws.saveDirty()
-        if (git.commitSelected()) ws.explorer.refreshTree()
+        if (git.commitSelected()) ws.explorer.refreshTreeNow()
     }
 
     /** Undo Last Commit, from the Commit panel, the Git menu or the palette. */
     fun undoLastCommit(showCommitPanel: Boolean = false): Job = git.scope.launch {
         if (!git.undoLast()) return@launch
         if (showCommitPanel) ws.showTool(SidebarTool.COMMIT)
-        ws.explorer.refreshTree()
+        ws.explorer.refreshTreeNow()
     }
 
     /** Throw away the uncommitted changes of one file, in the editor too. */
@@ -39,7 +39,7 @@ class GitWorkflow(private val ws: WorkspaceViewModel) {
         val restored = ws.deps.documents.exclusive(ch.file) { git.rollback(ch.file) }
         if (restored) {
             doc?.replaceFromDisk()
-            ws.explorer.refreshTree()
+            ws.explorer.refreshTreeNow()
         }
     }
 
@@ -61,7 +61,7 @@ class GitWorkflow(private val ws: WorkspaceViewModel) {
         val ok = ws.deps.documents.exclusive(*open) { op() }
         if (ok) {
             ws.docs.toList().forEach { d -> if (!d.syncWithDisk()) ws.closeDoc(d) }
-            ws.explorer.refreshTree()
+            ws.explorer.refreshTreeNow()
         }
         return ok
     }

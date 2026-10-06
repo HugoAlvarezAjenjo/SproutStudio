@@ -166,14 +166,14 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     suspend fun saveOrAsk(doc: Document): Boolean {
         if (doc.file != null) return doc.save()
         val target = chooseSaveTarget(doc.name, root) ?: return false
-        return doc.save(target).also { explorer.refreshTree() }
+        return doc.save(target).also { explorer.refreshTreeNow() }
     }
 
     fun save(doc: Document?): Job? = doc?.let { d -> scope.launch { saveOrAsk(d) } }
 
     fun saveAs(doc: Document): Job? {
         val target = chooseSaveTarget(doc.name, doc.dir ?: root) ?: return null
-        return scope.launch { doc.save(target); explorer.refreshTree() }
+        return scope.launch { doc.save(target); explorer.refreshTreeNow() }
     }
 
     /** The "unsaved changes" question the window is asking, if any. */
