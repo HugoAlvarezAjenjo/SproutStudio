@@ -63,7 +63,7 @@ class GitSnapshotTest {
         File(dir, "archive").mkdirs(); File(dir, "archive/old.puml").writeText("@startuml\nA -> B\n@enduml\n")
         return TestGraph.workspace().apply {
             openRoot(dir)
-            expanded.add(File(dir, "model")); expanded.add(File(dir, "archive")); refreshTree()
+            explorer.expanded.add(File(dir, "model")); explorer.expanded.add(File(dir, "archive")); explorer.refreshTree()
             open(order)
             changeLayout(EditorLayout.SPLIT)
         }

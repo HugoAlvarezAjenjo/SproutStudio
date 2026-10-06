@@ -65,10 +65,8 @@ import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileActionDialog
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.TreeDrag
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.canMove
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.describe
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.fileError
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.move
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.treeDrag
 import es.hugoalvarezajenjo.sproutstudio.features.git.canCompareWithHead
 import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
@@ -85,11 +83,11 @@ import kotlinx.coroutines.launch
 internal fun ProjectTree(p: WorkspaceViewModel) {
     val c = ide
     val root = p.root ?: return
-    val drag = remember(p) { TreeDrag { what, where -> p.canMove(what, where) } }
+    val drag = remember(p) { TreeDrag { what, where -> p.explorer.canMove(what, where) } }
     var message by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(message) { if (message != null) { kotlinx.coroutines.delay(4000); message = null } }
     val onDrop: (java.io.File, java.io.File) -> Unit = { what, where ->
-        p.scope.launch { p.move(what, where).exceptionOrNull()?.let { message = it.fileError.describe() } }
+        p.scope.launch { p.explorer.move(what, where).exceptionOrNull()?.let { message = it.fileError.describe() } }
     }
     var origin by remember { mutableStateOf(Offset.Zero) }
     // zIndex: the drag label may run past the panel, over the editor.
@@ -101,20 +99,20 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Project", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
-            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New Diagram…") { targetDir(p)?.let { p.showFileAction(FileAction.NewDiagram(it)) } }
-            ToolButton(Icons.Outlined.CreateNewFolder, "New Folder…") { targetDir(p)?.let { p.showFileAction(FileAction.NewFolder(it)) } }
-            ToolButton(Icons.Outlined.UnfoldLess, "Collapse All") { p.collapseAll() }
-            ToolButton(Icons.Outlined.Refresh, "Refresh (⌥⌘Y)") { p.refreshTree() }
+            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New Diagram…") { targetDir(p)?.let { p.explorer.showFileAction(FileAction.NewDiagram(it)) } }
+            ToolButton(Icons.Outlined.CreateNewFolder, "New Folder…") { targetDir(p)?.let { p.explorer.showFileAction(FileAction.NewFolder(it)) } }
+            ToolButton(Icons.Outlined.UnfoldLess, "Collapse All") { p.explorer.collapseAll() }
+            ToolButton(Icons.Outlined.Refresh, "Refresh (⌥⌘Y)") { p.explorer.refreshTree() }
             ToolButton(Icons.Outlined.Remove, "Hide (⌘1)") { p.showSidebar(false) }
         }
         // Root row: a folder like any other, so it collapses too.
         ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
             ListRow(
-                onClick = { p.toggleRootCollapsed() }, height = 26, startPadding = 6,
+                onClick = { p.explorer.toggleRootCollapsed() }, height = 26, startPadding = 6,
                 modifier = Modifier.treeDrag(drag, "root", root, file = null, onDrop).dropHighlight(drag.target == root.absoluteFile),
             ) {
-                Icon(if (p.rootCollapsed) Icons.Outlined.ChevronRight else Icons.Outlined.ExpandMore, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
-                Icon(if (p.rootCollapsed) Icons.Outlined.Folder else Icons.Outlined.FolderOpen, null, tint = c.textMuted, modifier = Modifier.size(16.dp))
+                Icon(if (p.explorer.rootCollapsed) Icons.Outlined.ChevronRight else Icons.Outlined.ExpandMore, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
+                Icon(if (p.explorer.rootCollapsed) Icons.Outlined.Folder else Icons.Outlined.FolderOpen, null, tint = c.textMuted, modifier = Modifier.size(16.dp))
                 Text(root.name, style = MaterialTheme.typography.labelLarge, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.testTag("tree-root"))
                 Text(
@@ -123,12 +121,12 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
                 )
             }
         }
-        if (!p.rootCollapsed) {
-            if (p.tree.isEmpty()) {
+        if (!p.explorer.rootCollapsed) {
+            if (p.explorer.tree.isEmpty()) {
                 Text("No diagrams in this folder", fontSize = 12.sp, color = c.textMuted, modifier = Modifier.padding(start = 34.dp, top = 6.dp))
             }
             LazyColumn(Modifier.weight(1f, fill = false).padding(horizontal = 4.dp)) {
-                items(p.tree, key = { it.file.absolutePath }) { node -> TreeRow(p, node, drag, onDrop) }
+                items(p.explorer.tree, key = { it.file.absolutePath }) { node -> TreeRow(p, node, drag, onDrop) }
             }
         }
         // The empty space below the tree: right-click creates in the project folder.
@@ -171,13 +169,13 @@ private fun targetDir(p: WorkspaceViewModel): java.io.File? {
 }
 
 private fun folderMenu(p: WorkspaceViewModel, dir: java.io.File, isRoot: Boolean) = buildList {
-    add(ContextMenuItem("New Diagram…") { p.showFileAction(FileAction.NewDiagram(dir)) })
-    add(ContextMenuItem("New Folder…") { p.showFileAction(FileAction.NewFolder(dir)) })
+    add(ContextMenuItem("New Diagram…") { p.explorer.showFileAction(FileAction.NewDiagram(dir)) })
+    add(ContextMenuItem("New Folder…") { p.explorer.showFileAction(FileAction.NewFolder(dir)) })
     if (!isRoot) {
-        add(ContextMenuItem("Rename…") { p.showFileAction(FileAction.Rename(dir)) })
-        add(ContextMenuItem("Move to Trash…") { p.showFileAction(FileAction.Delete(dir)) })
+        add(ContextMenuItem("Rename…") { p.explorer.showFileAction(FileAction.Rename(dir)) })
+        add(ContextMenuItem("Move to Trash…") { p.explorer.showFileAction(FileAction.Delete(dir)) })
     } else {
-        add(ContextMenuItem(if (p.rootCollapsed) "Expand" else "Collapse") { p.toggleRootCollapsed() })
+        add(ContextMenuItem(if (p.explorer.rootCollapsed) "Expand" else "Collapse") { p.explorer.toggleRootCollapsed() })
     }
     add(ContextMenuItem(if (Os.isMac) "Reveal in Finder" else "Open Containing Folder") { p.deps.platform.reveal(dir) })
 }
@@ -190,10 +188,10 @@ private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDro
         if (node.isDir) folderMenu(p, f, isRoot = false) else buildList {
             val dir = f.absoluteFile.parentFile
             add(ContextMenuItem("Open") { p.open(f) })
-            add(ContextMenuItem("New Diagram…") { p.showFileAction(FileAction.NewDiagram(dir)) })
-            add(ContextMenuItem("New Folder…") { p.showFileAction(FileAction.NewFolder(dir)) })
-            add(ContextMenuItem("Rename…") { p.showFileAction(FileAction.Rename(f)) })
-            add(ContextMenuItem("Move to Trash…") { p.showFileAction(FileAction.Delete(f)) })
+            add(ContextMenuItem("New Diagram…") { p.explorer.showFileAction(FileAction.NewDiagram(dir)) })
+            add(ContextMenuItem("New Folder…") { p.explorer.showFileAction(FileAction.NewFolder(dir)) })
+            add(ContextMenuItem("Rename…") { p.explorer.showFileAction(FileAction.Rename(f)) })
+            add(ContextMenuItem("Move to Trash…") { p.explorer.showFileAction(FileAction.Delete(f)) })
             add(ContextMenuItem(if (Os.isMac) "Reveal in Finder" else "Open Containing Folder") { p.deps.platform.reveal(f) })
             if (p.git.status.head != null) {
                 if (canCompareWithHead(p, f)) add(ContextMenuItem("Compare Diagram with HEAD") { p.deps.windows.compareWithHead(p, f) })
@@ -208,10 +206,10 @@ private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDro
 private fun TreeRowContent(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDrop: (java.io.File, java.io.File) -> Unit) {
     val c = ide
     val isActive = p.active?.file?.absoluteFile == node.file.absoluteFile
-    val open = node.isDir && node.file in p.expanded
+    val open = node.isDir && node.file in p.explorer.expanded
     ListRow(
         selected = isActive,
-        onClick = { if (node.isDir) p.toggleDir(node.file) else p.open(node.file) },
+        onClick = { if (node.isDir) p.explorer.toggleDir(node.file) else p.open(node.file) },
         height = 26,
         startPadding = 6 + (node.depth + 1) * 16,
         modifier = Modifier.testTag("tree-row-${node.file.name}")

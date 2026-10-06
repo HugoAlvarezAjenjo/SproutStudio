@@ -39,12 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.delete
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.describe
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.fileError
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.newDiagramIn
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.newFolderIn
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.rename
 import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateGallery
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.files.FileError
@@ -56,7 +52,7 @@ import kotlinx.coroutines.launch
 /** Shows the dialog for [WorkspaceViewModel.fileAction]: a name prompt, or a Trash confirmation. */
 @Composable
 internal fun FileActionDialog(p: WorkspaceViewModel) {
-    when (val a = p.fileAction ?: return) {
+    when (val a = p.explorer.fileAction ?: return) {
         is FileAction.NewDiagram -> NewDiagramDialog(p, a.dir)
 
         is FileAction.NewFolder -> NameDialog(
@@ -65,9 +61,9 @@ internal fun FileActionDialog(p: WorkspaceViewModel) {
             state = remember(a) { mutableStateOf(selected(p.deps.files.freeName(a.dir, "new-folder"), false)) },
             hint = "in ${where(p, a.dir)}",
             check = { p.deps.files.validate(a.dir, it)?.describe() },
-            onDismiss = { p.dismissFileAction() },
+            onDismiss = { p.explorer.dismissFileAction() },
             scope = p.scope,
-        ) { p.newFolderIn(a.dir, it).exceptionOrNull()?.fileError?.describe() }
+        ) { p.explorer.newFolderIn(a.dir, it).exceptionOrNull()?.fileError?.describe() }
 
         is FileAction.Rename -> NameDialog(
             title = if (a.target.isDirectory) "Rename Folder" else "Rename File", label = "New name", confirm = "Rename",
@@ -75,9 +71,9 @@ internal fun FileActionDialog(p: WorkspaceViewModel) {
             state = remember(a) { mutableStateOf(selected(a.target.name, !a.target.isDirectory)) },
             hint = null,
             check = { p.deps.files.validate(a.target.absoluteFile.parentFile, it, except = a.target)?.describe() },
-            onDismiss = { p.dismissFileAction() },
+            onDismiss = { p.explorer.dismissFileAction() },
             scope = p.scope,
-        ) { p.rename(a.target, it).exceptionOrNull()?.fileError?.describe() }
+        ) { p.explorer.rename(a.target, it).exceptionOrNull()?.fileError?.describe() }
 
         is FileAction.Delete -> DeleteDialog(p, a.target)
     }
@@ -107,7 +103,7 @@ private fun NewDiagramDialog(p: WorkspaceViewModel, dir: File) {
         state = name, initial = initial,
         hint = "in ${where(p, dir)} · .puml is added if missing",
         check = { n -> (if (n.isBlank()) FileError.EmptyName else p.deps.files.validate(dir, p.deps.files.diagramName(n)))?.describe() },
-        onDismiss = { p.dismissFileAction() },
+        onDismiss = { p.explorer.dismissFileAction() },
         scope = p.scope,
         extra = {
             val c = ide
@@ -128,7 +124,7 @@ private fun NewDiagramDialog(p: WorkspaceViewModel, dir: File) {
                 }
             }
         },
-    ) { p.newDiagramIn(dir, it, template).exceptionOrNull()?.fileError?.describe() }
+    ) { p.explorer.newDiagramIn(dir, it, template).exceptionOrNull()?.fileError?.describe() }
 }
 
 private fun selected(text: String, selectBase: Boolean): TextFieldValue {
@@ -226,7 +222,7 @@ private fun DeleteDialog(p: WorkspaceViewModel, target: File) {
     val inside = remember(f) { if (f.isDirectory) f.walkTopDown().count { it.isFile } else 0 }
     val unsaved = p.docs.filter { d -> d.dirty && d.file?.absoluteFile?.let { it == f || it.startsWith(f) } == true }
     AlertDialog(
-        onDismissRequest = { p.dismissFileAction() },
+        onDismissRequest = { p.explorer.dismissFileAction() },
         containerColor = c.popup,
         shape = RoundedCornerShape(10.dp),
         title = { Text("Move “${f.name}” to the Trash?", style = MaterialTheme.typography.titleMedium) },
@@ -248,11 +244,11 @@ private fun DeleteDialog(p: WorkspaceViewModel, target: File) {
         },
         confirmButton = {
             TextButton(onClick = {
-                failed = p.delete(f).exceptionOrNull()?.fileError?.describe()
-                if (failed == null) p.dismissFileAction()
+                failed = p.explorer.delete(f).exceptionOrNull()?.fileError?.describe()
+                if (failed == null) p.explorer.dismissFileAction()
             }, modifier = Modifier.testTag("file-delete-confirm")) { Text("Move to Trash", color = c.error) }
         },
-        dismissButton = { TextButton(onClick = { p.dismissFileAction() }) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = { p.explorer.dismissFileAction() }) { Text("Cancel") } },
     )
 }
 

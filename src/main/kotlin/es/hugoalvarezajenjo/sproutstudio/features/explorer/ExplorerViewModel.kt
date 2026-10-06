@@ -1,0 +1,180 @@
+package es.hugoalvarezajenjo.sproutstudio.features.explorer
+
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextRange
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
+import es.hugoalvarezajenjo.sproutstudio.services.files.FileError
+import es.hugoalvarezajenjo.sproutstudio.services.files.FileOpException
+import es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode
+import java.io.File
+
+/** The reason inside a failed file operation (anything unexpected becomes [FileError.Failed]). */
+val Throwable.fileError: FileError
+    get() = (this as? FileOpException)?.error ?: FileError.Failed(message ?: javaClass.simpleName)
+
+/**
+ * The project tree: what it shows, which folders are open, the pending name/confirm dialog, and
+ * creating, renaming, moving and trashing in it. Open tabs are kept in step (a renamed file's tab
+ * follows, a deleted file's tab closes), which is why it holds its parent [ws]: the tree view
+ * state is its own, the tab coupling runs through the workspace — the same split as GitWorkflow.
+ *
+ * Not a [ViewModel]: it has no scope of its own. File operations run in [ws]'s scope (the views
+ * launch them there), so a panel closing mid-operation never cancels them. Refusals come back as a
+ * [FileError] inside a [Result].
+ */
+@Stable
+class ExplorerViewModel(private val ws: WorkspaceViewModel) {
+    private val store get() = ws.deps.documents
+    private val files get() = ws.deps.files
+    private val root get() = ws.root
+
+    /** The visible rows under the project folder; rebuilt by [refreshTree]. */
+    var tree by mutableStateOf<List<TreeNode>>(emptyList())
+        private set
+
+    /** Folders the user has opened. */
+    val expanded = mutableStateListOf<File>()
+
+    /** The project folder's own row is collapsible too, like every folder under it. */
+    var rootCollapsed by mutableStateOf(false)
+        private set
+
+    fun toggleRootCollapsed() { rootCollapsed = !rootCollapsed }
+    fun expandRoot() { rootCollapsed = false }
+
+    /** New / rename / delete dialog the tree is showing, if any. */
+    var fileAction by mutableStateOf<FileAction?>(null)
+        private set
+
+    fun showFileAction(action: FileAction) { fileAction = action }
+    fun dismissFileAction() { fileAction = null }
+
+    /** Reset to the welcome state (the project was closed). */
+    fun clear() {
+        expanded.clear()
+        rootCollapsed = false
+        fileAction = null
+        tree = emptyList()
+    }
+
+    /** A project folder was opened: forget the old tree state and show the new one. */
+    fun onProjectOpened() {
+        rootCollapsed = false
+        expanded.clear()
+        refreshTree()
+    }
+
+    fun toggleDir(dir: File) {
+        if (dir in expanded) expanded.remove(dir) else expanded.add(dir)
+        refreshTree()
+    }
+
+    fun collapseAll() {
+        expanded.clear()
+        refreshTree()
+    }
+
+    fun refreshTree() {
+        ws.git.requestRefresh()
+        val r = root ?: run { tree = emptyList(); return }
+        tree = files.tree(r, expanded)
+    }
+
+    /** Every diagram under the root, expanded or not (for the command palette's "go to file"). */
+    fun allDiagrams(limit: Int = 2000): List<File> {
+        val r = root ?: return emptyList()
+        return files.allDiagrams(r, limit)
+    }
+
+    // ── File operations (keep the open tabs in step) ─────────────────────────────────────────
+
+    /** A new diagram file: empty, or holding [template] with the caret on its `$0` marker. */
+    suspend fun newDiagramIn(dir: File, name: String, template: Template? = null): Result<File> = runCatching {
+        if (name.isBlank()) throw FileOpException(FileError.EmptyName)
+        val n = files.diagramName(name)
+        files.validate(dir, n)?.let { throw FileOpException(it) }
+        val f = File(dir, n)
+        store.write(f, template?.previewSource ?: "")
+        expandTo(dir)
+        refreshTree()
+        ws.open(f)
+        template?.body?.indexOf("\$0")?.takeIf { it >= 0 }?.let { at ->
+            ws.active?.let { d -> d.value = d.value.copy(selection = TextRange(at)) }
+        }
+        f
+    }
+
+    fun newFolderIn(dir: File, name: String): Result<File> = runCatching {
+        val f = files.createFolder(dir, name)
+        expandTo(dir)
+        if (f !in expanded) expanded.add(f)
+        refreshTree()
+        f
+    }
+
+    suspend fun rename(target: File, newName: String): Result<File> = runCatching {
+        val from = target.absoluteFile
+        val to = files.renameTarget(root, from, newName)
+        if (to == from) from else relocate(from, to)
+    }
+
+    /**
+     * Drag & drop: moves [target] (a file or a folder) into [destDir], keeping its name.
+     * Refuses a move onto itself, into its own subfolder, or over an existing name.
+     */
+    suspend fun move(target: File, destDir: File): Result<File> = runCatching {
+        val from = target.absoluteFile
+        val dest = destDir.absoluteFile
+        val to = files.moveTarget(root, from, dest) ?: return@runCatching from
+        relocate(from, to).also { expandTo(dest); if (dest != root?.absoluteFile && dest !in expanded) expanded.add(dest); refreshTree() }
+    }
+
+    /** Whether dropping [target] on [destDir] would do something (for the drop highlight). */
+    fun canMove(target: File, destDir: File): Boolean = files.canMove(target, destDir)
+
+    /** Moves [target] to the Trash and closes its tabs (or every tab under it, for a folder). */
+    fun delete(target: File): Result<Unit> = runCatching {
+        val f = target.absoluteFile
+        if (f == root?.absoluteFile) throw FileOpException(FileError.ProjectFolder)
+        val inside = ws.docs.filter { d -> d.file?.absoluteFile?.let { it == f || it.startsWith(f) } == true }
+        // Close first: autosave must not write a deleted file back.
+        inside.forEach { ws.closeDoc(it) }
+        files.moveToTrash(root, f)
+        expanded.removeAll { it.absoluteFile == f || it.absoluteFile.startsWith(f) }
+        refreshTree()
+    }
+
+    /** The shared part of rename and move: moves on disk, then tabs and expanded folders follow. */
+    private suspend fun relocate(from: File, to: File): File {
+        // Unsaved edits go to the old path first, so the move carries them.
+        ws.deps.autoSaver.flush(ws.docs.toList())
+        // No save may land on either path while it moves.
+        store.exclusive(from, to) { files.move(from, to) }
+        for (d in ws.docs) d.file?.absoluteFile?.let { f -> moved(f, from, to)?.let { d.relocate(it) } }
+        val exp = expanded.toList(); expanded.clear(); exp.forEach { e -> expanded.add(moved(e.absoluteFile, from, to) ?: e) }
+        refreshTree()
+        return to
+    }
+
+    /** Expands every folder from the root down to [dir], so a new item is visible. */
+    private fun expandTo(dir: File) {
+        val r = root?.absoluteFile ?: return
+        var d: File? = dir.absoluteFile
+        val chain = ArrayList<File>()
+        while (d != null && d != r && d.startsWith(r)) { chain += d; d = d.parentFile }
+        chain.forEach { if (it !in expanded) expanded.add(it) }
+        expandRoot()
+    }
+}
+
+/** [f] after [from] became [to]: itself, or a file inside a renamed folder. Null if unaffected. */
+private fun moved(f: File, from: File, to: File): File? = when {
+    f == from -> to
+    f.startsWith(from) -> File(to, f.relativeTo(from).path)
+    else -> null
+}

@@ -165,7 +165,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 CheckboxItem("Dark Theme", checked = p.deps.theme.dark.value) { p.deps.theme.toggle() }
                 CheckboxItem("Dark Diagram Preview", checked = p.deps.diagram.dark.value) { p.deps.diagram.toggle() }
                 Separator()
-                Item("Refresh Files", shortcut = KeyShortcut(Key.Y, meta = Os.isMac, ctrl = !Os.isMac, alt = true)) { p.refreshTree() }
+                Item("Refresh Files", shortcut = KeyShortcut(Key.Y, meta = Os.isMac, ctrl = !Os.isMac, alt = true)) { p.explorer.refreshTree() }
             }
             Menu("Git") {
                 val g = p.git

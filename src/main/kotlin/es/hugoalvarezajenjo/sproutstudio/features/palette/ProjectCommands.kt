@@ -58,11 +58,11 @@ internal fun projectCommands(
     cmd("file.newWindow", "New Window", "File") { p.deps.windows.newProjectWindow() }
     p.root?.let { root ->
         val dir = d?.file?.absoluteFile?.parentFile?.takeIf { it == root.absoluteFile || it.startsWith(root.absoluteFile) } ?: root
-        cmd("file.newNamed", "New Diagram in Folder…", "File", restoresFocus = false) { p.showFileAction(FileAction.NewDiagram(dir)) }
-        cmd("file.newFolder", "New Folder…", "File", restoresFocus = false) { p.showFileAction(FileAction.NewFolder(dir)) }
+        cmd("file.newNamed", "New Diagram in Folder…", "File", restoresFocus = false) { p.explorer.showFileAction(FileAction.NewDiagram(dir)) }
+        cmd("file.newFolder", "New Folder…", "File", restoresFocus = false) { p.explorer.showFileAction(FileAction.NewFolder(dir)) }
         d?.file?.let { f ->
-            cmd("file.rename", "Rename File…", "File", restoresFocus = false) { p.showFileAction(FileAction.Rename(f)) }
-            cmd("file.trash", "Move File to Trash…", "File", restoresFocus = false) { p.showFileAction(FileAction.Delete(f)) }
+            cmd("file.rename", "Rename File…", "File", restoresFocus = false) { p.explorer.showFileAction(FileAction.Rename(f)) }
+            cmd("file.trash", "Move File to Trash…", "File", restoresFocus = false) { p.explorer.showFileAction(FileAction.Delete(f)) }
         }
     }
     cmd("file.save", "Save", "File", shortcutHint("S"), enabled = has) { onSave() }
@@ -105,7 +105,7 @@ internal fun projectCommands(
         cmd("view.sidebar", if (p.sidebarVisible) "Hide Project Panel" else "Show Project Panel", "View", shortcutHint("1")) {
             p.showSidebar(!p.sidebarVisible)
         }
-        cmd("view.refresh", "Refresh Files", "View", shortcutHint("Y", alt = true)) { p.refreshTree() }
+        cmd("view.refresh", "Refresh Files", "View", shortcutHint("Y", alt = true)) { p.explorer.refreshTree() }
         cmd("view.commitPanel", if (p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT) "Hide Commit Panel" else "Show Commit Panel", "View", shortcutHint("0")) {
             p.toggleTool(SidebarTool.COMMIT)
         }
@@ -157,7 +157,7 @@ internal fun projectCommands(
 
     // Files of this project: type part of a name to open it.
     val root = p.root
-    p.allDiagrams().forEach { f ->
+    p.explorer.allDiagrams().forEach { f ->
         val rel = root?.let { f.parentFile.relativeTo(it.absoluteFile).path }.orEmpty()
         out += Command(
             "open:${f.path}", f.name, if (rel.isEmpty()) "${root?.name ?: ""}/" else "$rel/",

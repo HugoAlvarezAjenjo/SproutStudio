@@ -64,7 +64,7 @@ class ProjectTreeTest {
     }
 
     @Test fun newFolderFromTheDialogShowsUpEvenWhenEmpty() = runComposeUiTest {
-        val p = TestGraph.workspace().apply { openRoot(dir); showFileAction(FileAction.NewFolder(dir)) }
+        val p = TestGraph.workspace().apply { openRoot(dir); explorer.showFileAction(FileAction.NewFolder(dir)) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         waitForIdle()
         run {
@@ -78,24 +78,24 @@ class ProjectTreeTest {
         onNodeWithTag("file-name-confirm").performClick()
         waitForIdle()
         assertTrue(File(dir, "diagrams").isDirectory)
-        assertNull(p.fileAction)
+        assertNull(p.explorer.fileAction)
         assertEquals(1, count("tree-row-diagrams", this))
     }
 
     @Test fun anExistingNameIsRefusedInTheDialog() = runComposeUiTest {
-        val p = TestGraph.workspace().apply { openRoot(dir); showFileAction(FileAction.NewFolder(dir)) }
+        val p = TestGraph.workspace().apply { openRoot(dir); explorer.showFileAction(FileAction.NewFolder(dir)) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         onNodeWithTag("file-name-field").performTextClearance()
         onNodeWithTag("file-name-field").performTextInput("docs")
         waitForIdle()
         onNodeWithTag("file-name-confirm").performClick()
         waitForIdle()
-        assertTrue(p.fileAction != null, "dialog stays open")
+        assertTrue(p.explorer.fileAction != null, "dialog stays open")
         assertTrue(onAllNodes(androidx.compose.ui.test.hasText("already exists", substring = true)).fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test fun renameAndDeleteFromTheDialogs() = runComposeUiTest {
-        val p = TestGraph.workspace().apply { openRoot(dir); open(File(dir, "a.puml")); showFileAction(FileAction.Rename(File(dir, "a.puml"))) }
+        val p = TestGraph.workspace().apply { openRoot(dir); open(File(dir, "a.puml")); explorer.showFileAction(FileAction.Rename(File(dir, "a.puml"))) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         onNodeWithTag("file-name-field").performTextClearance()
         onNodeWithTag("file-name-field").performTextInput("order.puml")
@@ -104,7 +104,7 @@ class ProjectTreeTest {
         assertTrue(File(dir, "order.puml").exists())
         assertEquals("order.puml", p.active?.name)
 
-        p.showFileAction(FileAction.Delete(File(dir, "order.puml")))
+        p.explorer.showFileAction(FileAction.Delete(File(dir, "order.puml")))
         waitForIdle()
         onNodeWithTag("file-delete-confirm").performClick()
         waitForIdle()
@@ -145,7 +145,7 @@ class ProjectTreeTest {
     }
 
     @Test fun draggingBackOntoTheProjectFolderRowMovesToTheRoot() = runComposeUiTest {
-        val p = TestGraph.workspace().apply { openRoot(dir); toggleDir(File(dir, "docs")) }
+        val p = TestGraph.workspace().apply { openRoot(dir); explorer.toggleDir(File(dir, "docs")) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         waitForIdle()
         dragMouse(center("tree-row-b.puml"), center("tree-root"))
@@ -168,7 +168,7 @@ class ProjectTreeTest {
     }
 
     @Test fun newDiagramWithATemplateChosenFromTheGallery() = runComposeUiTest {
-        val p = TestGraph.workspace().apply { openRoot(dir); showFileAction(FileAction.NewDiagram(dir)) }
+        val p = TestGraph.workspace().apply { openRoot(dir); explorer.showFileAction(FileAction.NewDiagram(dir)) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1100.dp, 760.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         onNodeWithTag("file-name-field").performTextClearance()
         onNodeWithTag("file-name-field").performTextInput("login")
@@ -193,7 +193,7 @@ class ProjectTreeTest {
     }
 
     @Test fun newDiagramWithoutATemplateIsEmpty() = runComposeUiTest {
-        val p = TestGraph.workspace().apply { openRoot(dir); showFileAction(FileAction.NewDiagram(dir)) }
+        val p = TestGraph.workspace().apply { openRoot(dir); explorer.showFileAction(FileAction.NewDiagram(dir)) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1100.dp, 760.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         onNodeWithTag("file-name-confirm").performClick()
         waitForIdle()

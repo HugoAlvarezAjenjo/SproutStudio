@@ -2,7 +2,6 @@ package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
-import es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import androidx.compose.runtime.Stable
@@ -11,9 +10,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.delete
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.rename
+import es.hugoalvarezajenjo.sproutstudio.features.explorer.ExplorerViewModel
 import java.io.File
 import es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.git.GitViewModel
@@ -130,20 +127,8 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         previewFraction = (previewFraction - delta).coerceIn(0.2f, 0.8f)
     }
 
-    val expanded = mutableStateListOf<File>()
-    /** The project folder's own row is collapsible too, like every folder under it. */
-    var rootCollapsed by mutableStateOf(false)
-        private set
-
-    fun toggleRootCollapsed() { rootCollapsed = !rootCollapsed }
-    fun expandRoot() { rootCollapsed = false }
-
-    /** New / rename / delete dialog the project tree is showing, if any. */
-    var fileAction by mutableStateOf<FileAction?>(null)
-        private set
-
-    fun showFileAction(action: FileAction) { fileAction = action }
-    fun dismissFileAction() { fileAction = null }
+    /** The project tree: its rows, open folders, pending dialog and file operations. */
+    val explorer = ExplorerViewModel(this)
 
     /** Git operations that also touch the tabs and the tree. */
     val gitFlow = GitWorkflow(this)
@@ -181,14 +166,14 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     suspend fun saveOrAsk(doc: Document): Boolean {
         if (doc.file != null) return doc.save()
         val target = chooseSaveTarget(doc.name, root) ?: return false
-        return doc.save(target).also { refreshTree() }
+        return doc.save(target).also { explorer.refreshTree() }
     }
 
     fun save(doc: Document?): Job? = doc?.let { d -> scope.launch { saveOrAsk(d) } }
 
     fun saveAs(doc: Document): Job? {
         val target = chooseSaveTarget(doc.name, doc.dir ?: root) ?: return null
-        return scope.launch { doc.save(target); refreshTree() }
+        return scope.launch { doc.save(target); explorer.refreshTree() }
     }
 
     /** The "unsaved changes" question the window is asking, if any. */
@@ -229,17 +214,13 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
             if (pc.docs.none { it.dirty }) pc.then()
         }
     }
-    var tree by mutableStateOf<List<TreeNode>>(emptyList())
-        private set
 
     val active: Document? get() = docs.getOrNull(activeIndex)
 
     fun openRoot(dir: File) {
         root = dir
-        rootCollapsed = false
-        expanded.clear()
         deps.recents.add(dir)
-        refreshTree()
+        explorer.onProjectOpened()
     }
 
     /**
@@ -250,10 +231,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         docs.clear()
         activeIndex = 0
         root = null
-        expanded.clear()
-        rootCollapsed = false
-        fileAction = null
-        tree = emptyList()
+        explorer.clear()
     }
 
     fun open(file: File) {
@@ -271,7 +249,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
             var f = File(dir, "new-diagram.puml")
             while (f.exists()) f = File(dir, "new-diagram-${++n}.puml")
             deps.documents.writeNow(f, "") // empty: content only comes from a template you pick
-            refreshTree()
+            explorer.refreshTree()
             Document.open(f, deps.documents)
         } else Document(null, "", deps.documents)
         docs += doc
@@ -297,28 +275,6 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         docs.removeAt(i)
         if (activeIndex >= docs.size) activeIndex = (docs.size - 1).coerceAtLeast(0)
         else if (i < activeIndex) activeIndex--
-    }
-
-    fun toggleDir(dir: File) {
-        if (dir in expanded) expanded.remove(dir) else expanded.add(dir)
-        refreshTree()
-    }
-
-    fun collapseAll() {
-        expanded.clear()
-        refreshTree()
-    }
-
-    fun refreshTree() {
-        git.requestRefresh()
-        val r = root ?: run { tree = emptyList(); return }
-        tree = deps.files.tree(r, expanded)
-    }
-
-    /** Every diagram under the root, expanded or not (for the command palette's "go to file"). */
-    fun allDiagrams(limit: Int = 2000): List<File> {
-        val r = root ?: return emptyList()
-        return deps.files.allDiagrams(r, limit)
     }
 
     /** Closes the window's state: its git ViewModel and anything still running. */
