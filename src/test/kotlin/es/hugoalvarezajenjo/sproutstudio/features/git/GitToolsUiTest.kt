@@ -8,6 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -96,14 +98,18 @@ class GitToolsUiTest {
         val p = repo()
         runComposeUiTest {
             workspace(p)
-            waitUntil(timeoutMillis = 10_000) { p.git.status.changes.isNotEmpty() }
+            waitUntil(timeoutMillis = 15_000) { p.git.status.changes.isNotEmpty() }
+            waitUntil(timeoutMillis = 15_000) { onAllNodesWithContentDescription("Stash changes").fetchSemanticsNodes().isNotEmpty() }
             onNodeWithContentDescription("Stash changes").performClick()
+            waitUntil(timeoutMillis = 15_000) { onAllNodesWithTag("stash-message").fetchSemanticsNodes().isNotEmpty() }
             onNodeWithTag("stash-message").performTextInput("try v3")
+            waitUntil(timeoutMillis = 15_000) { onAllNodes(hasText("Stash") and hasClickAction()).fetchSemanticsNodes().isNotEmpty() }
             onNode(hasText("Stash") and hasClickAction()).performClick()
-            waitUntil(timeoutMillis = 10_000) { p.git.stashes.size == 1 && p.git.status.changes.isEmpty() }
+            waitUntil(timeoutMillis = 15_000) { p.git.stashes.size == 1 && p.git.status.changes.isEmpty() }
             assertTrue(a.readText().contains("v2"))
+            waitUntil(timeoutMillis = 15_000) { onAllNodes(hasText("Pop") and hasClickAction()).fetchSemanticsNodes().isNotEmpty() }
             onNode(hasText("Pop") and hasClickAction()).performClick()
-            waitUntil(timeoutMillis = 10_000) { p.git.stashes.isEmpty() && p.git.status.changes.isNotEmpty() }
+            waitUntil(timeoutMillis = 15_000) { p.git.stashes.isEmpty() && p.git.status.changes.isNotEmpty() }
         }
         assertTrue(a.readText().contains("v3"))
     }

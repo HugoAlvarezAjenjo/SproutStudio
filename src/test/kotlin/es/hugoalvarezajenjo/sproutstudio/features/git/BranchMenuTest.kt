@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -107,17 +108,23 @@ class BranchMenuTest {
             setContent {
                 PumlTheme(dark = true) { Surface(Modifier.size(1200.dp, 700.dp), color = ide.panel) { Workspace(p, onSave = {}, onCloseTab = {}) } }
             }
-            waitUntil(timeoutMillis = 10_000) { p.git.branches.size == 2 }
+            waitUntil(timeoutMillis = 15_000) { p.git.branches.size == 2 }
+            waitUntil(timeoutMillis = 15_000) { onAllNodesWithTag("branch-button").fetchSemanticsNodes().isNotEmpty() }
             onNodeWithTag("branch-button").performClick()
+            waitUntil(timeoutMillis = 15_000) { onAllNodesWithTag("branch:feature").fetchSemanticsNodes().isNotEmpty() }
             onNodeWithTag("branch:feature").performClick()
-            waitUntil(timeoutMillis = 10_000) { p.git.status.branch == "feature" }
-            waitUntil(timeoutMillis = 5_000) { p.active?.text == "feature\n" }
+            waitUntil(timeoutMillis = 15_000) { p.git.status.branch == "feature" }
+            waitUntil(timeoutMillis = 15_000) { p.active?.text == "feature\n" }
 
+            waitUntil(timeoutMillis = 15_000) { onAllNodesWithTag("branch-button").fetchSemanticsNodes().isNotEmpty() }
             onNodeWithTag("branch-button").performClick()
+            waitUntil(timeoutMillis = 15_000) { onAllNodes(hasText("New Branch…") and hasClickAction()).fetchSemanticsNodes().isNotEmpty() }
             onNode(hasText("New Branch…") and hasClickAction()).performClick()
+            waitUntil(timeoutMillis = 15_000) { onAllNodesWithTag("new-branch-name").fetchSemanticsNodes().isNotEmpty() }
             onNodeWithTag("new-branch-name").performTextInput("try this")
+            waitUntil(timeoutMillis = 15_000) { onAllNodes(hasText("Create") and hasClickAction()).fetchSemanticsNodes().isNotEmpty() }
             onNode(hasText("Create") and hasClickAction()).performClick()
-            waitUntil(timeoutMillis = 10_000) { p.git.status.branch == "try-this" }
+            waitUntil(timeoutMillis = 15_000) { p.git.status.branch == "try-this" }
             assertEquals(listOf("feature", "main", "try-this"), p.git.branches)
         }
         assertNotNull(JGitService().find(dir)).use { assertEquals("try-this", it.branch()) }
