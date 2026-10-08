@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
  * .puml opened the welcome window instead of (or next to) the preview.
  */
 class StartupOrderTest {
-    private val main = File("src/main/kotlin/es/hugoalvarezajenjo/sproutstudio/Main.kt").readText()
+    private val main = File("src/main/kotlin/es/hugoalvarezajenjo/sproutstudio/app/Main.kt").readText()
 
     @Test
     fun `dock icon is installed only after the open-file and quit handlers`() {
@@ -24,7 +24,7 @@ class StartupOrderTest {
 
     @Test
     fun `boot welcome is decided on the UI thread`() {
-        val boot = main.indexOf("AppState.openBootWelcome()")
+        val boot = main.indexOf("windows.openBootWelcome()")
         val edt = main.indexOf("SwingUtilities.invokeAndWait")
         assertTrue(edt in 0 until boot, "openBootWelcome() must run inside SwingUtilities.invokeAndWait")
     }

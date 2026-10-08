@@ -1,0 +1,97 @@
+package es.hugoalvarezajenjo.sproutstudio.features.quickpreview
+
+
+import androidx.compose.ui.input.key.KeyShortcut
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.openDiagramDialog
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.openFolderDialog
+import java.io.File
+import es.hugoalvarezajenjo.sproutstudio.core.os.Os
+
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Schema
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.MenuBar
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.rememberWindowState
+import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewPane
+import es.hugoalvarezajenjo.sproutstudio.features.preview.rememberPreviewViewModel
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.AppIcon
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.Tag
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.map
+
+/**
+ * The "just show me the diagram" window opened by double-clicking a file.
+ * It watches the file, so editing it anywhere else refreshes the picture.
+ */
+@Composable
+fun QuickPreviewWindow(file: File, deps: WorkspaceDeps, onClose: () -> Unit) {
+    // Follows the file, so editing it anywhere else refreshes the picture; read off the UI thread.
+    val disk by remember(file) { deps.documents.watch(file).map { DiskText(it) } }.collectAsState(null)
+    val text = disk?.text.orEmpty()
+    val missing = disk != null && disk?.text == null
+
+    Window(
+        onCloseRequest = onClose,
+        title = "${file.name} — SproutStudio",
+        icon = AppIcon.painter,
+        state = rememberWindowState(size = DpSize(980.dp, 720.dp)),
+    ) {
+        MenuBar {
+            Menu("File") {
+                Item("Edit This Diagram", shortcut = KeyShortcut(Key.E, meta = Os.isMac, ctrl = !Os.isMac)) {
+                    deps.windows.editFile(file)
+                }
+                Item("Open Diagram…") { deps.openDiagramDialog() }
+                Item("Open Folder…") { deps.openFolderDialog() }
+                Separator()
+                Item("Close", shortcut = KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
+            }
+            Menu("View") {
+                CheckboxItem("Dark Theme", checked = deps.theme.dark.value) { deps.theme.toggle() }
+                CheckboxItem("Dark Diagram Preview", checked = deps.diagram.dark.value) { deps.diagram.toggle() }
+            }
+        }
+        PumlTheme(dark = deps.theme.dark.value) {
+            Surface(Modifier.fillMaxSize(), color = ide.panel) {
+                if (missing) {
+                    EmptyState(Icons.Outlined.ErrorOutline, "File not found", file.absolutePath)
+                } else {
+                    val preview = rememberPreviewViewModel(deps, text, file.parentFile, debounceMs = 50)
+                    PreviewPane(
+                        preview = preview,
+                        baseDir = file.parentFile,
+                        baseName = file.nameWithoutExtension,
+                        leadingTools = {
+                            Tag(file.name, Icons.Outlined.Schema)
+                            Spacer(Modifier.width(4.dp))
+                            ToolButton(Icons.Outlined.Edit, "Open in the editor (⌘E)", label = "Edit") { deps.windows.editFile(file) }
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** One read of the watched file; [text] null = it doesn't exist. (A null DiskText = not read yet.) */
+private class DiskText(val text: String?)

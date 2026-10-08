@@ -22,6 +22,8 @@ kotlin {
 
 dependencies {
     implementation(compose.desktop.currentOs)
+    // Dispatchers.Main = the Swing UI thread, for ViewModel scopes (same version Compose uses).
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.9.0")
     implementation("org.jetbrains.compose.material3:material3:1.9.0")
     // Vector icons (compiled into the app, no runtime download).
     implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
@@ -44,10 +46,14 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.compose.ui:ui-test-junit4:1.12.1")
+    // Virtual time for ViewModel and service tests (same version ui-test already brings in).
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
 
 tasks.test {
     useJUnitPlatform()
+    // Tests never read or write the user's real preferences (window layout, recents...).
+    systemProperty("sproutstudio.settings", "memory")
 }
 
 // Finder litter in src/main/resources must not end up inside the app jar.
@@ -92,7 +98,7 @@ tasks.matching { it.name.startsWith("createDistributable") || it.name.startsWith
 
 compose.desktop {
     application {
-        mainClass = "es.hugoalvarezajenjo.sproutstudio.MainKt"
+        mainClass = "es.hugoalvarezajenjo.sproutstudio.app.MainKt"
         // Skiko loads its native renderer; declare it so newer JDKs do not warn.
         jvmArgs += "--enable-native-access=ALL-UNNAMED"
 

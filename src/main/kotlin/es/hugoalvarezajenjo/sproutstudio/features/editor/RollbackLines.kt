@@ -1,0 +1,29 @@
+package es.hugoalvarezajenjo.sproutstudio.features.editor
+
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange
+import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff
+import es.hugoalvarezajenjo.sproutstudio.features.document.Document
+
+/**
+ * "Rollback Lines": put the committed version of one changed block back, in the editor (not on
+ * disk; autosave writes it like any edit). Remembers the previous text for [undoRollback].
+ */
+fun Document.rollbackChange(change: LineChange): Boolean {
+    val base = gitLines.base ?: return false
+    val r = LineDiff.revert(base, text, change)
+    if (r.text == text) return false
+    applyRollback(TextFieldValue(r.text, TextRange(r.caret)))
+    return true
+}
+
+/** The block under the caret, if it has one. */
+fun Document.changeAtCaret(): LineChange? {
+    val t = text
+    val caret = value.selection.start.coerceIn(0, t.length)
+    val line = t.substring(0, caret).count { it == '\n' }
+    return gitLines.changeForCaret(line)
+}
+
+fun Document.rollbackAtCaret(): Boolean = changeAtCaret()?.let { rollbackChange(it) } ?: false
