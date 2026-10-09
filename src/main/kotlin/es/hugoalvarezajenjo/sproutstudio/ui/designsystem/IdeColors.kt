@@ -39,6 +39,8 @@ data class IdeColors(
     /** Find: every match / the selected one (IntelliJ search-result colours). */
     val findMatch: Color,
     val findCurrent: Color,
+    /** Every occurrence of the symbol under the caret (IntelliJ's "identifier under caret"). */
+    val symbolUsage: Color,
     /** Git, IntelliJ's VCS file colours: names in the tree / Commit window. */
     val vcsModified: Color,
     val vcsAdded: Color,
@@ -77,6 +79,7 @@ val DarkIde = IdeColors(
     onTooltip = Color(0xFFDFE1E5),
     findMatch = Color(0xFF2E4A36),
     findCurrent = Color(0xFF3F6E4A),
+    symbolUsage = Color(0xFF3A3D57),
     vcsModified = Color(0xFF6C9BE0),
     vcsAdded = Color(0xFF73BD79),
     vcsDeleted = Color(0xFF868A91),
@@ -125,6 +128,7 @@ val LightIde = IdeColors(
     onTooltip = Color(0xFFDFE1E5),
     findMatch = Color(0xFFFCEFB4),
     findCurrent = Color(0xFFF5D76E),
+    symbolUsage = Color(0xFFE3E4FA),
     vcsModified = Color(0xFF2B5FC7),
     vcsAdded = Color(0xFF208A3C),
     vcsDeleted = Color(0xFF6C707E),

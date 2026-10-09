@@ -13,8 +13,11 @@ enum class DiagramKind(val label: String) {
     UNKNOWN("Diagram"),
 }
 
-/** A symbol the user declared in the file (participant, class, ...). */
-data class Symbol(val name: String, val kind: String, val line: Int)
+/**
+ * A symbol the user declared in the file (participant, class, procedure...), at its declaration:
+ * [line] is 1-based, [range] covers the name, [scope] as in [Occurrence].
+ */
+data class Symbol(val name: String, val kind: String, val line: Int, val range: IntRange = IntRange.EMPTY, val scope: Int = 0)
 
 object PlantUmlLanguage {
 
@@ -106,35 +109,8 @@ object PlantUmlLanguage {
             .toSet()
     }
 
-    private val declaration = Regex(
-        """^\s*(participant|actor|boundary|control|entity|database|collections|queue|""" +
-            """abstract\s+class|class|interface|enum|annotation|struct|component|node|cloud|folder|frame|""" +
-            """artifact|storage|usecase|state|object|rectangle|package|namespace)\s+""" +
-            """(?:"([^"]+)"|([\w.:$]+))(?:\s+as\s+([\w.:$]+))?""",
-        RegexOption.IGNORE_CASE,
-    )
-    private val arrowEndpoints = Regex("""^\s*([A-Za-z_][\w.]*)\s*[-.=<>ox*|\\/+#\[\]]*?(?:->|-->|<-|<--|->>|\.\.>|--|\.\.)[^\w]*\s*([A-Za-z_][\w.]*)""")
-
-    /** Symbols declared or implicitly used (arrow endpoints) in [text]. */
-    fun symbols(text: String): List<Symbol> {
-        val seen = LinkedHashMap<String, Symbol>()
-        text.lineSequence().forEachIndexed { i, line ->
-            if (line.trimStart().startsWith("'")) return@forEachIndexed
-            declaration.find(line)?.let { m ->
-                val kind = m.groupValues[1].lowercase().replace(Regex("\\s+"), " ")
-                val alias = m.groupValues[4]
-                val name = alias.ifEmpty { m.groupValues[3].ifEmpty { m.groupValues[2] } }
-                if (name.isNotEmpty()) seen.putIfAbsent(name, Symbol(name, kind, i + 1))
-                return@forEachIndexed
-            }
-            arrowEndpoints.find(line)?.let { m ->
-                listOf(m.groupValues[1], m.groupValues[2]).forEach { n ->
-                    if (n.isNotEmpty() && n !in allKeywords) seen.putIfAbsent(n, Symbol(n, "used", i + 1))
-                }
-            }
-        }
-        return seen.values.toList()
-    }
+    /** Symbols declared or implicitly used (arrow endpoints) in [text], one per name. */
+    fun symbols(text: String): List<Symbol> = SymbolIndex.of(text).symbols
 
     /** Guess the diagram kind of the block containing [offset]. */
     fun kindAt(text: String, offset: Int): DiagramKind {

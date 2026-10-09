@@ -3,7 +3,6 @@ package es.hugoalvarezajenjo.sproutstudio.features.editor
 import es.hugoalvarezajenjo.sproutstudio.resources.change_added
 import es.hugoalvarezajenjo.sproutstudio.resources.change_deleted
 import es.hugoalvarezajenjo.sproutstudio.resources.change_modified
-import es.hugoalvarezajenjo.sproutstudio.resources.editor_completion_hint
 
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.common_close_esc
@@ -123,6 +122,16 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.editorTextStyle
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.LocalEditorTextStyle
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import es.hugoalvarezajenjo.sproutstudio.core.os.Os
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Navigation
+import java.io.File
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 
@@ -148,6 +157,8 @@ fun CodeEditor(
     /** Git markers against HEAD (empty outside a repo or for uncommitted files). */
     lineChanges: LineDiff.Index = LineDiff.Index.Empty,
     onCaretMoved: (line: Int, col: Int) -> Unit = { _, _ -> },
+    /** ⌘-click on an `!include` path: the file to open. */
+    onOpenFile: (File) -> Unit = {},
 ) {
     SideEffect { doc.updateGitLines(lineChanges) }
     /** Change block whose popup is open, and the y (px, in the scrolled content) to show it at. */
@@ -197,36 +208,12 @@ fun CodeEditor(
         onCaretMoved(before.count { it == '\n' } + 1, caret - (before.lastIndexOf('\n') + 1) + 1)
     }
 
-    // Jump-to-line requests from the preview's error banner.
-    LaunchedEffect(doc) {
-        doc.jumpRequests.collect { line ->
-            // Wait for the text to be laid out (the editor may have just appeared).
-            val l = snapshotFlow { layout }.filterNotNull().first()
-            doc.value = doc.value.copy(selection = EditOps.selectLine(doc.text, line)) // unfolds if hidden
-            delay(16) // layout of the unfolded text
-            val l2 = layout ?: l
-            val idx = l2.getLineForOffset(l2.safeOffset(liveT(doc.value.selection.min)))
-            vScroll.animateScrollTo((l2.getLineTop(idx) - 120f).toInt().coerceAtLeast(0))
-            runCatching { focus.requestFocus() }
-        }
-    }
-
-    // ── find / replace ──
-    val find = doc.find
-    val findResult = remember(value.text, find.query, find.visible) {
-        if (find.visible) FindReplace.find(value.text, find.query) else FindResult.Empty
-    }
-    val currentMatch = currentMatchIndex(value, findResult.matches)
     var viewportPx by remember { mutableStateOf(0) }
-    // Typing in the find field (or flipping a toggle) jumps to the first hit from the caret.
-    LaunchedEffect(find.query, find.visible) {
-        if (!find.visible || find.query.text.isEmpty()) return@LaunchedEffect
-        findIncremental(doc.value, find.query)?.let { doc.value = it; find.requestReveal() }
-    }
-    // Scroll the selected match into view after any find action.
-    LaunchedEffect(find) { find.revealRequests.collect {
-        delay(16) // let the layout catch up with a Replace that changed the text
-        val l = layout ?: return@collect
+
+    /** Scroll the selection into view (a third down the viewport) when it is off screen. */
+    suspend fun revealSelection() {
+        delay(16) // let the layout catch up with a text that just changed (Replace, an unfold)
+        val l = layout ?: return
         val line = l.getLineForOffset(l.safeOffset(liveT(doc.value.selection.min)))
         val top = l.getLineTop(line).toInt()
         val bottom = l.getLineBottom(line).toInt()
@@ -239,7 +226,62 @@ fun CodeEditor(
         if (viewW > 0 && (x < hScroll.value || x > hScroll.value + viewW - margin)) {
             hScroll.animateScrollTo((x - viewW / 3).coerceAtLeast(0))
         }
-    } }
+    }
+
+    // Selections asked for from outside: the Problems panel, Go to Declaration, Back.
+    LaunchedEffect(doc) {
+        doc.jumpRequests.collect { sel ->
+            snapshotFlow { layout }.filterNotNull().first() // the editor may have just appeared
+            doc.value = doc.value.copy(selection = sel) // unfolds if hidden
+            revealSelection()
+            runCatching { focus.requestFocus() }
+        }
+    }
+
+    // ── find / replace ──
+    val find = doc.find
+    val findResult = remember(value.text, find.query, find.visible) {
+        if (find.visible) FindReplace.find(value.text, find.query) else FindResult.Empty
+    }
+    val currentMatch = currentMatchIndex(value, findResult.matches)
+    // Typing in the find field (or flipping a toggle) jumps to the first hit from the caret.
+    LaunchedEffect(find.query, find.visible) {
+        if (!find.visible || find.query.text.isEmpty()) return@LaunchedEffect
+        findIncremental(doc.value, find.query)?.let { doc.value = it; find.requestReveal() }
+    }
+    // Scroll the selected match into view after any find action.
+    LaunchedEffect(find) { find.revealRequests.collect { revealSelection() } }
+
+    // ── navigation: usages of the symbol at the caret, ⌘-hover links, ⌘-click ──
+    val nav = doc.nav
+    val scope = rememberCoroutineScope()
+    val currentOnOpenFile by rememberUpdatedState(onOpenFile)
+    val usageRanges = remember(value.text, caret) {
+        Navigation.occurrencesAt(value.text, caret).takeIf { it.size > 1 }.orEmpty().map { it.range }
+    }
+    /** ⌘ (Ctrl off macOS) is held: what's under the mouse can be followed. */
+    var linkKeyDown by remember { mutableStateOf(false) }
+    var hoverPos by remember { mutableStateOf<Offset?>(null) }
+    var link by remember(doc) { mutableStateOf<IntRange?>(null) }
+    var pressedLink by remember(doc) { mutableStateOf<Int?>(null) }
+
+    /** Text offset under [pos] (field content coordinates), if it is on a line at all. */
+    fun offsetAt(pos: Offset): Int? {
+        val l = layout ?: return null
+        val t = l.getOffsetForPosition(pos)
+        val line = l.getLineForOffset(t)
+        if (pos.y < l.getLineTop(line) || pos.y > l.getLineBottom(line)) return null
+        return currentMapping.transformedToOriginal(t).coerceIn(0, doc.text.length)
+    }
+
+    /** The span a ⌘-click at [pos] would follow, when the pointer is really over it. */
+    fun linkAt(pos: Offset): IntRange? {
+        val l = layout ?: return null
+        val r = offsetAt(pos)?.let { Navigation.linkAt(doc.text, it) } ?: return null
+        val x1 = l.getHorizontalPosition(l.safeOffset(liveT(r.first)), true)
+        val x2 = l.getHorizontalPosition(l.safeOffset(liveT(r.last + 1)), true)
+        return r.takeIf { pos.x in x1..x2 }
+    }
     fun closeFind() {
         find.close()
         runCatching { focus.requestFocus() }
@@ -250,6 +292,8 @@ fun CodeEditor(
         if (typed) {
             doc.dropRollbackUndo() // typing after a rollback: its Undo would lose that typing
             hunk = null
+            nav.closeUsages()
+            link = null
             completion = CompletionEngine.complete(newValue.text, newValue.selection.start)
             selected = 0
         }
@@ -299,7 +343,7 @@ fun CodeEditor(
                         val typed = nv.text != doc.text
                         val moved = !typed && nv.selection != doc.value.selection
                         update(nv, typed)
-                        if (moved) completion = null
+                        if (moved) { completion = null; nav.closeUsages() }
                     },
                     textStyle = textStyle.copy(color = c.syntax.symbol),
                     cursorBrush = SolidColor(c.text),
@@ -310,6 +354,37 @@ fun CodeEditor(
                         .focusRequester(focus)
                         .onSizeChanged { fieldHeightPx = it.height }
                         .padding(start = 12.dp, end = 24.dp, top = 10.dp, bottom = 120.dp)
+                        .pointerHoverIcon(if (link != null) PointerIcon.Hand else PointerIcon.Text, overrideDescendants = link != null)
+                        .pointerInput(doc) {
+                            // Initial pass: a ⌘-click on a link is ours, before the field moves the caret.
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val e = awaitPointerEvent(PointerEventPass.Initial)
+                                    val pos = e.changes.firstOrNull()?.position ?: continue
+                                    val mods = e.keyboardModifiers
+                                    linkKeyDown = if (Os.isMac) mods.isMetaPressed else mods.isCtrlPressed
+                                    when (e.type) {
+                                        PointerEventType.Exit -> { hoverPos = null; link = null }
+                                        PointerEventType.Press -> if (linkKeyDown && e.buttons.isPrimaryPressed && linkAt(pos) != null) {
+                                            pressedLink = offsetAt(pos)
+                                            e.changes.forEach { it.consume() }
+                                        }
+                                        PointerEventType.Release -> pressedLink?.let { o ->
+                                            pressedLink = null
+                                            e.changes.forEach { it.consume() }
+                                            // A frame later: after anything the field itself did with the click.
+                                            scope.launch {
+                                                withFrameNanos { }
+                                                completion = null
+                                                link = null
+                                                doc.goToDeclaration(o)?.let(currentOnOpenFile)
+                                            }
+                                        }
+                                        else -> { hoverPos = pos; link = if (linkKeyDown) linkAt(pos) else null }
+                                    }
+                                }
+                            }
+                        }
                         .drawBehind {
                             val l = layout ?: return@drawBehind
                             fun band(line0: Int, color: Color) {
@@ -321,6 +396,18 @@ fun CodeEditor(
                             for (e in errs) {
                                 if (e - 1 in lineStarts.indices) band(l.getLineForOffset(l.safeOffset(toT(lineStarts[e - 1]))), c.errorBg)
                             }
+                            for (r in usageRanges) {
+                                val s = l.safeOffset(toT(r.first)); val e = l.safeOffset(toT(r.last + 1))
+                                if (e > s) drawPath(l.getPathForRange(s, e), c.symbolUsage)
+                            }
+                            link?.let { r ->
+                                val s = l.safeOffset(toT(r.first)); val e = l.safeOffset(toT(r.last + 1))
+                                val y = l.getLineBaseline(l.getLineForOffset(s)) + 2.dp.toPx()
+                                drawLine(
+                                    c.accent, Offset(l.getHorizontalPosition(s, true), y), Offset(l.getHorizontalPosition(e, true), y),
+                                    strokeWidth = 1.dp.toPx(),
+                                )
+                            }
                             // Find hits: draw at most what's reasonable, current one stronger.
                             findResult.matches.asSequence().take(2000).forEachIndexed { i, m ->
                                 val s = l.safeOffset(toT(m.first)); val e = l.safeOffset(toT(m.last + 1))
@@ -328,10 +415,24 @@ fun CodeEditor(
                             }
                         }
                         .onPreviewKeyEvent { ev ->
+                            val isLinkKey = if (Os.isMac) ev.key == Key.MetaLeft || ev.key == Key.MetaRight
+                                else ev.key == Key.CtrlLeft || ev.key == Key.CtrlRight
+                            if (isLinkKey) {
+                                // ⌘ pressed or let go over a name: underline it without waiting for the mouse to move.
+                                linkKeyDown = ev.type == KeyEventType.KeyDown
+                                link = if (linkKeyDown) hoverPos?.let { linkAt(it) } else null
+                                return@onPreviewKeyEvent false
+                            }
                             if (ev.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                             val cmd = ev.isMetaPressed || ev.isCtrlPressed
                             val req = completion
+                            val usages = nav.usages
                             when {
+                                // ── usages list navigation ──
+                                usages != null && ev.key == Key.DirectionDown -> { nav.moveSelection(1); true }
+                                usages != null && ev.key == Key.DirectionUp -> { nav.moveSelection(-1); true }
+                                usages != null && ev.key == Key.Enter -> { doc.openSelectedUsage(); true }
+                                usages != null && ev.key == Key.Escape -> { nav.closeUsages(); true }
                                 // ── completion popup navigation ──
                                 req != null && ev.key == Key.DirectionDown -> { selected = (selected + 1) % req.items.size; true }
                                 req != null && ev.key == Key.DirectionUp -> { selected = (selected - 1 + req.items.size) % req.items.size; true }
@@ -365,6 +466,20 @@ fun CodeEditor(
                         properties = PopupProperties(focusable = false),
                     ) {
                         CompletionPopup(req, selected, onPick = { accept(it) })
+                    }
+                }
+                // ── usages list, same place ──
+                val us = nav.usages
+                if (us != null && l != null) {
+                    val rect = l.getCursorRect(l.safeOffset(toT(caret)))
+                    val pad = with(density) { 12.dp.toPx() }
+                    val top = with(density) { 10.dp.toPx() }
+                    Popup(
+                        offset = IntOffset((rect.left + pad - 8).toInt(), (rect.bottom + top + 4).toInt()),
+                        onDismissRequest = { nav.closeUsages() },
+                        properties = PopupProperties(focusable = false),
+                    ) {
+                        UsagesPopup(us, value.text, onPick = { nav.closeUsages(); doc.navigateTo(it.range) })
                     }
                 }
             }
@@ -555,77 +670,6 @@ private fun Gutter(
                 }
             },
     )
-}
-
-/** [label] with the characters at [indices] drawn in [style]: shows why a suggestion matched. */
-private fun highlightMatches(label: String, indices: List<Int>, style: SpanStyle): AnnotatedString =
-    buildAnnotatedString {
-        append(label)
-        for (i in indices) if (i in label.indices) addStyle(style, i, i + 1)
-    }
-
-@Composable
-private fun CompletionPopup(req: CompletionRequest, selected: Int, onPick: (Completion) -> Unit) {
-    val listState = rememberLazyListState()
-    LaunchedEffect(selected) { listState.animateScrollToItem((selected - 3).coerceAtLeast(0)) }
-    val c = ide
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        shadowElevation = 12.dp,
-        color = c.popup,
-        modifier = Modifier.widthIn(min = 260.dp, max = 380.dp).border(1.dp, c.popupBorder, RoundedCornerShape(8.dp)),
-    ) {
-        Column {
-            LazyColumn(state = listState, modifier = Modifier.heightIn(max = 260.dp).padding(4.dp)) {
-                itemsIndexed(req.items) { i, item ->
-                    val isSel = i == selected
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(if (isSel) c.selection else Color.Transparent)
-                            .clickable { onPick(item) }
-                            .padding(horizontal = 8.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        KindBadge(item.kind)
-                        Text(
-                            highlightMatches(item.label, item.matched, SpanStyle(color = c.accent, fontWeight = FontWeight.Bold)),
-                            style = editorTextStyle.copy(fontSize = 13.sp, color = c.text),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                        if (item.detail.isNotEmpty()) {
-                            Text(item.detail, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                        }
-                    }
-                }
-            }
-            Box(Modifier.fillMaxWidth().height(1.dp).background(c.popupBorder))
-            Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp)) {
-                Text(tr(Res.string.editor_completion_hint), fontSize = 11.sp, color = c.textMuted)
-                Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun KindBadge(kind: CompletionKind) {
-    // IntelliJ completion icons: a coloured glyph per kind, no filled pill.
-    val s = ide.syntax
-    val fg = when (kind) {
-        CompletionKind.KEYWORD -> s.keyword
-        CompletionKind.SYMBOL -> s.arrow
-        CompletionKind.SNIPPET -> s.string
-        CompletionKind.SKINPARAM -> s.color
-        CompletionKind.DIRECTIVE -> s.directive
-    }
-    Box(Modifier.width(30.dp), contentAlignment = Alignment.Center) {
-        Text(kind.badge, fontSize = 10.sp, color = fg, fontWeight = FontWeight.SemiBold)
-    }
 }
 
 /**

@@ -3,6 +3,11 @@ package es.hugoalvarezajenjo.sproutstudio.features.palette
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_insert
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.cat_symbol
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_usages
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_go_to_declaration
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_back
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_forward
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_recent_project
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_autosave_off
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_autosave_on
@@ -76,6 +81,8 @@ import es.hugoalvarezajenjo.sproutstudio.features.workspace.openDiagramDialog
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.SymbolIndex
+import es.hugoalvarezajenjo.sproutstudio.features.editor.navigateTo
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Templates
 import es.hugoalvarezajenjo.sproutstudio.features.document.PreviewAction
 import es.hugoalvarezajenjo.sproutstudio.features.editor.EditorSettings
@@ -163,6 +170,13 @@ internal fun projectCommands(
     cmd("code.foldAll", text(Res.string.menu_fold_all), text(Res.string.menu_code), shortcutHint("-", shift = true), enabled = has) { p.revealEditor(); d?.foldAll() }
     cmd("code.unfoldAll", text(Res.string.menu_unfold_all), text(Res.string.menu_code), shortcutHint("=", shift = true), enabled = has) { p.revealEditor(); d?.unfoldAll() }
 
+    // Code → Navigate
+    val altCmd = if (Os.isMac) "⌥⌘" else "Ctrl+Alt+"
+    cmd("code.declaration", text(Res.string.menu_go_to_declaration), text(Res.string.menu_code), shortcutHint("B"), enabled = has) { p.goToDeclaration() }
+    cmd("code.usages", text(Res.string.menu_find_usages), text(Res.string.menu_code), if (Os.isMac) "⌥F7" else "Alt+F7", enabled = has) { p.findUsages() }
+    cmd("code.back", text(Res.string.menu_navigate_back), text(Res.string.menu_code), "$altCmd←", enabled = d?.nav?.canGoBack == true) { p.navigateBack() }
+    cmd("code.forward", text(Res.string.menu_navigate_forward), text(Res.string.menu_code), "$altCmd→", enabled = d?.nav?.canGoForward == true) { p.navigateForward() }
+
     // View
     EditorLayout.entries.forEach { l ->
         cmd("view.layout.${l.name}", text(l.label), text(Res.string.menu_view), shortcutHint("${l.ordinal + 1}", alt = true), enabled = p.layout != l) { p.changeLayout(l) }
@@ -224,6 +238,16 @@ internal fun projectCommands(
     Templates.all.forEach { t ->
         cmd("insert.${t.id}", text(if (t.whole) Res.string.cmd_insert_template else Res.string.cmd_insert_block, t.name), text(Res.string.cat_insert), enabled = has) {
             d?.let { p.revealEditor(); it.value = EditOps.insertTemplate(it.value, t) }
+        }
+    }
+
+    // Symbols of this file: type part of a name to jump to its declaration.
+    d?.let { doc ->
+        SymbolIndex.of(doc.text).definitions.forEach { s ->
+            out += Command(
+                "symbol:${s.name}:${s.range.first}", s.name, text(Res.string.cat_symbol, "${s.kind} · ${s.line}"),
+                searchOnly = true,
+            ) { p.revealEditor(); doc.navigateTo(s.range) }
         }
     }
 

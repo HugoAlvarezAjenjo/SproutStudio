@@ -10,6 +10,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
+import es.hugoalvarezajenjo.sproutstudio.features.editor.findUsages
+import es.hugoalvarezajenjo.sproutstudio.features.editor.goToDeclaration
+import es.hugoalvarezajenjo.sproutstudio.features.editor.navigateBack
+import es.hugoalvarezajenjo.sproutstudio.features.editor.navigateForward
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.ExplorerViewModel
 import java.io.File
 import es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel
@@ -241,6 +245,13 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         docs += Document.open(f, deps.documents)
         activeIndex = docs.lastIndex
     }
+
+    // ── Code → Navigate: on the active tab; an `!include` opens its file in a tab ──
+
+    fun goToDeclaration() { active?.let { revealEditor(); it.goToDeclaration()?.let(::open) } }
+    fun findUsages() { active?.let { revealEditor(); it.findUsages() } }
+    fun navigateBack() { active?.let { revealEditor(); it.navigateBack() } }
+    fun navigateForward() { active?.let { revealEditor(); it.navigateForward() } }
 
     fun newDocument(): Document {
         val dir = root

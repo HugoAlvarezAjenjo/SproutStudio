@@ -159,6 +159,7 @@ private fun EditorAndPreview(p: WorkspaceViewModel, doc: Document, preview: Prev
                     lineChanges = rememberLineChanges(p.git, doc.file, doc.text),
                     modifier = Modifier.weight(if (split) 1f - p.previewFraction else 1f).fillMaxHeight(),
                     onCaretMoved = onCaret,
+                    onOpenFile = { p.open(it) },
                 )
             }
             if (split) {

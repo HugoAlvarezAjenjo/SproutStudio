@@ -2,6 +2,8 @@ package es.hugoalvarezajenjo.sproutstudio.features.document
 
 import es.hugoalvarezajenjo.sproutstudio.features.editor.FindState
 import es.hugoalvarezajenjo.sproutstudio.features.editor.FoldState
+import es.hugoalvarezajenjo.sproutstudio.features.editor.NavigationState
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
 import es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -49,18 +51,20 @@ class Document(
     // One-shot requests to this document's editor and preview. Channels, not state: a request
     // is delivered exactly once, even if the editor isn't on screen yet (preview-only layout),
     // and two requests in a row are never merged into one.
-    private val jumps = Channel<Int>(Channel.BUFFERED)
+    private val jumps = Channel<TextRange>(Channel.BUFFERED)
     private val focusRequests = Channel<Unit>(Channel.CONFLATED)
     private val previewCommands = Channel<PreviewAction>(Channel.CONFLATED)
 
-    /** Lines the editor should scroll to and select (the error strip, the Problems panel). */
-    val jumpRequests: Flow<Int> = jumps.receiveAsFlow()
+    /** Selections the editor should make and scroll into view (Problems panel, Go to Declaration...). */
+    val jumpRequests: Flow<TextRange> = jumps.receiveAsFlow()
     /** Asks for the keyboard back (e.g. after the command palette closes). */
     val focusRequestFlow: Flow<Unit> = focusRequests.receiveAsFlow()
     /** Copy / export asked for from outside the preview (the command palette). */
     val previewCommandFlow: Flow<PreviewAction> = previewCommands.receiveAsFlow()
 
-    fun jumpTo(line: Int) { jumps.trySend(line) }
+    /** Select 1-based [line] and scroll to it. */
+    fun jumpTo(line: Int) = jumpTo(EditOps.selectLine(text, line))
+    fun jumpTo(selection: TextRange) { jumps.trySend(selection) }
     fun requestFocus() { focusRequests.trySend(Unit) }
     fun requestPreview(action: PreviewAction) { previewCommands.trySend(action) }
 
@@ -103,6 +107,9 @@ class Document(
 
     /** The editor's ⌘F / ⌘R bar. */
     val find = FindState()
+
+    /** Go to Declaration's back/forward trail and usages list. */
+    val nav = NavigationState()
 
     val text: String get() = value.text
     val dirty: Boolean get() = text != savedText

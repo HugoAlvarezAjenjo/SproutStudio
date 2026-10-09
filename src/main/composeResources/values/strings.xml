@@ -412,4 +412,14 @@
         <item quantity="one">%1$d line changed</item>
         <item quantity="other">%1$d lines changed</item>
     </plurals>
+    <string name="menu_go_to_declaration">Go to Declaration</string>
+    <string name="menu_find_usages">Find Usages</string>
+    <string name="menu_navigate_back">Back</string>
+    <string name="menu_navigate_forward">Forward</string>
+    <string name="cat_symbol">Symbol · %1$s</string>
+    <string name="nav_usages_hint">⏎ to go   ·   esc to close</string>
+    <plurals name="nav_usages">
+        <item quantity="one">%1$d usage of %2$s</item>
+        <item quantity="other">%1$d usages of %2$s</item>
+    </plurals>
 </resources>

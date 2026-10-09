@@ -4,6 +4,7 @@ import es.hugoalvarezajenjo.sproutstudio.TestGraph
 
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 import es.hugoalvarezajenjo.sproutstudio.features.document.PreviewAction
+import androidx.compose.ui.text.TextRange
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -20,14 +21,14 @@ class DocumentEventsTest {
         val d = TestGraph.document(null, "a\nb\nc\nd")
         d.jumpTo(2) // e.g. clicked in the Problems panel while in preview-only layout
         d.jumpTo(4)
-        assertEquals(listOf(2, 4), d.jumpRequests.take(2).toList())
+        assertEquals(listOf(TextRange(2, 3), TextRange(6, 7)), d.jumpRequests.take(2).toList())
     }
 
     @Test
     fun theSameLineTwiceIsTwoJumps() = runBlocking {
         val d = TestGraph.document(null, "a\nb")
         d.jumpTo(2); d.jumpTo(2)
-        assertEquals(listOf(2, 2), d.jumpRequests.take(2).toList())
+        assertEquals(listOf(TextRange(2, 3), TextRange(2, 3)), d.jumpRequests.take(2).toList())
     }
 
     @Test

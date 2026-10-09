@@ -21,6 +21,10 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_next
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_previous
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_all
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_block
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_usages
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_go_to_declaration
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_back
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_forward
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_git
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_help
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_diagram
@@ -114,8 +118,8 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 
-private fun shortcut(key: Key, shift: Boolean = false) =
-    KeyShortcut(key, meta = Os.isMac, ctrl = !Os.isMac, shift = shift)
+private fun shortcut(key: Key, shift: Boolean = false, alt: Boolean = false) =
+    KeyShortcut(key, meta = Os.isMac, ctrl = !Os.isMac, shift = shift, alt = alt)
 
 @Composable
 fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit) {
@@ -199,6 +203,11 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 Item(tr(Res.string.menu_unfold_block), shortcut = shortcut(Key.Equals), enabled = d != null) { p.revealEditor(); d?.unfoldAtCaret() }
                 Item(tr(Res.string.menu_fold_all), shortcut = shortcut(Key.Minus, shift = true), enabled = d != null) { p.revealEditor(); d?.foldAll() }
                 Item(tr(Res.string.menu_unfold_all), shortcut = shortcut(Key.Equals, shift = true), enabled = d != null) { p.revealEditor(); d?.unfoldAll() }
+                Separator()
+                Item(tr(Res.string.menu_go_to_declaration), shortcut = shortcut(Key.B), enabled = d != null) { p.goToDeclaration() }
+                Item(tr(Res.string.menu_find_usages), shortcut = KeyShortcut(Key.F7, alt = true), enabled = d != null) { p.findUsages() }
+                Item(tr(Res.string.menu_navigate_back), shortcut = shortcut(Key.DirectionLeft, alt = true), enabled = d?.nav?.canGoBack == true) { p.navigateBack() }
+                Item(tr(Res.string.menu_navigate_forward), shortcut = shortcut(Key.DirectionRight, alt = true), enabled = d?.nav?.canGoForward == true) { p.navigateForward() }
             }
             Menu(tr(Res.string.menu_view)) {
                 EditorLayout.entries.forEach { l ->
