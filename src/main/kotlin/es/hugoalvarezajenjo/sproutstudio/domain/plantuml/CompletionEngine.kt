@@ -35,10 +35,18 @@ object CompletionEngine {
 
     /**
      * Suggestions at [caret]. When [force] is false we only answer once the user has typed
-     * something (or a trigger char), so the popup never nags.
+     * something (or a trigger char), so the popup never nags. [file] is the absolute path of
+     * the text being edited (null when unsaved) and [paths] lists folders for `!include path`.
      */
-    fun complete(text: String, caret: Int, force: Boolean = false): CompletionRequest? {
+    fun complete(
+        text: String,
+        caret: Int,
+        force: Boolean = false,
+        file: String? = null,
+        paths: PathLister = PathLister.NONE,
+    ): CompletionRequest? {
         includePath(text, caret)?.let { return it }
+        localIncludePath(text, caret, file, paths)?.let { return it }
         val (start, prefix) = prefixAt(text, caret)
         if (!force && prefix.isEmpty()) return null
 
@@ -102,6 +110,42 @@ object CompletionEngine {
             .map { it.first }
             .take(40)
         return if (items.isEmpty()) null else CompletionRequest(c - typed.length, typed, items)
+    }
+
+    /**
+     * `!include ` (or `!include_many `…, not `!includeurl`) followed by a path that isn't `<…>`,
+     * up to the caret; group 1 is the path typed so far (absent right after the space).
+     */
+    private val localIncludeOpen = Regex("""^\s*!include(?!url)\w*\s+([^<\s]\S*)?$""", RegexOption.IGNORE_CASE)
+
+    /** Extensions offered as include targets (folders are always offered). */
+    private val includable = setOf("puml", "iuml", "pu", "plantuml", "wsd")
+
+    /**
+     * Inside `!include path`: the folders and PlantUML files of the folder typed so far, relative
+     * to [file]'s folder. Only the last path segment is replaced, so the popup works one folder
+     * at a time; folders come first and end in `/`.
+     */
+    private fun localIncludePath(text: String, caret: Int, file: String?, paths: PathLister): CompletionRequest? {
+        val c = caret.coerceIn(0, text.length)
+        val lineStart = text.lastIndexOf('\n', c - 1) + 1
+        val m = localIncludeOpen.find(text.substring(lineStart, c)) ?: return null
+        val typed = m.groups[1]?.value ?: ""
+        if ("://" in typed) return null
+        val cut = typed.lastIndexOf('/') + 1
+        val name = typed.substring(cut)
+        val entries = paths.list(file, typed.substring(0, cut)) ?: return null
+        val candidates = entries
+            .filter { it.isDirectory || it.name.substringAfterLast('.', "").lowercase() in includable }
+            .map {
+                if (it.isDirectory) Completion("${it.name}/", "${it.name}/", CompletionKind.DIRECTIVE, "folder")
+                else Completion(it.name, it.name, CompletionKind.DIRECTIVE, "file")
+            }
+        val items = rank(candidates, name)
+            .sortedWith(compareBy<Pair<Completion, Int>>({ it.second }, { !it.first.label.endsWith('/') }, { it.first.label.lowercase() }))
+            .map { it.first }
+            .take(40)
+        return if (items.isEmpty()) null else CompletionRequest(c - name.length, name, items)
     }
 
     /** True right after a skinparam whose value is a colour (so we offer colour names). */

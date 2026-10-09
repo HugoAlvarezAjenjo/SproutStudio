@@ -132,6 +132,7 @@ import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.IncludeReader
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.PathLister
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Navigation
 import java.io.File
 import kotlinx.coroutines.flow.filterNotNull
@@ -163,6 +164,8 @@ fun CodeEditor(
     onOpenFile: (FileJump) -> Unit = {},
     /** Reads included files, so ⌘-hover and ⌘-click reach declarations in them. */
     includes: IncludeReader = IncludeFiles.DISK,
+    /** Lists folders, so completion inside `!include path` offers local files. */
+    paths: PathLister = IncludePaths,
 ) {
     SideEffect { doc.updateGitLines(lineChanges) }
     /** Change block whose popup is open, and the y (px, in the scrolled content) to show it at. */
@@ -292,6 +295,9 @@ fun CodeEditor(
         runCatching { focus.requestFocus() }
     }
 
+    fun complete(text: String, at: Int, force: Boolean = false) =
+        CompletionEngine.complete(text, at, force, doc.file?.absolutePath, paths)
+
     fun update(newValue: TextFieldValue, typed: Boolean) {
         doc.value = newValue
         if (typed) {
@@ -299,7 +305,7 @@ fun CodeEditor(
             hunk = null
             nav.closeUsages()
             link = null
-            completion = CompletionEngine.complete(newValue.text, newValue.selection.start)
+            completion = complete(newValue.text, newValue.selection.start)
             selected = 0
         }
     }
@@ -308,7 +314,9 @@ fun CodeEditor(
         val req = completion ?: return
         val applied = CompletionEngine.apply(doc.text, req, item, doc.value.selection.start)
         doc.value = TextFieldValue(applied.text, TextRange(applied.caret))
-        completion = null
+        // A folder (`common/`, `C4/`): keep walking into it.
+        completion = if (item.insert.endsWith('/')) complete(applied.text, applied.caret) else null
+        selected = 0
     }
 
     Column(modifier.background(c.editor)) {
@@ -446,7 +454,7 @@ fun CodeEditor(
                                 ev.key == Key.Escape && find.visible -> { closeFind(); true }
                                 // ── editing shortcuts ──
                                 ev.isCtrlPressed && ev.key == Key.Spacebar -> {
-                                    completion = CompletionEngine.complete(doc.text, doc.value.selection.start, force = true); selected = 0; true
+                                    completion = complete(doc.text, doc.value.selection.start, force = true); selected = 0; true
                                 }
                                 cmd && ev.key == Key.Slash -> { update(EditOps.toggleComment(doc.value), false); true }
                                 cmd && ev.key == Key.D -> { update(EditOps.duplicateLines(doc.value), false); true }
