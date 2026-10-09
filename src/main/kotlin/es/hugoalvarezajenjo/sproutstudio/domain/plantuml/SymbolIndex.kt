@@ -34,6 +34,12 @@ class SymbolIndex private constructor(
     /** One per symbol (name + scope), at its declaration, in text order. */
     val definitions: List<Symbol>,
     val includes: List<IncludeRef>,
+    /**
+     * Names this text uses but declares nowhere, as [GLOBAL] references: where an included
+     * file's procedures, functions, macros and `$variables` are used. Before a line's label any
+     * word counts; inside it only `$names` and calls (`name(`).
+     */
+    val unknown: List<Occurrence>,
 ) {
     /** One per name, for completion and highlighting. */
     val symbols: List<Symbol> = definitions.distinctBy { it.name }
@@ -53,16 +59,28 @@ class SymbolIndex private constructor(
     /** The `!include` whose path is under [offset] (or just after it). */
     fun includeAt(offset: Int): IncludeRef? = includes.firstOrNull { offset in it.range.first..it.range.last + 1 }
 
+    /** The [unknown] name under [offset] (or just after it). */
+    fun unknownAt(offset: Int): Occurrence? =
+        unknown.firstOrNull { offset in it.range } ?: unknown.firstOrNull { offset == it.range.last + 1 }
+
+    /** Where this text declares the preprocessor name [name], if it does. */
+    fun globalDeclaration(name: String): Occurrence? =
+        occurrences.firstOrNull { it.name == name && it.scope == GLOBAL && it.role == OccurrenceRole.DECLARATION }
+
     companion object {
         const val GLOBAL = -1
 
         // Highlighting, completion and navigation all ask for the same text on a keystroke.
         @Volatile private var last: SymbolIndex? = null
 
+        /** The index of the text being edited, reused while it doesn't change. */
         fun of(text: String): SymbolIndex {
             last?.let { if (it.text === text || it.text == text) return it }
-            return Parser(text).build().also { last = it }
+            return parse(text).also { last = it }
         }
+
+        /** A fresh index, leaving [of]'s cache alone (for other files). */
+        fun parse(text: String): SymbolIndex = Parser(text).build()
     }
 
     private class Parser(private val text: String) {
@@ -86,7 +104,8 @@ class SymbolIndex private constructor(
             val lines = lines()
             for (l in lines) if (!l.inNoteBody) collectDeclarations(l)
             val occurrences = ArrayList<Occurrence>()
-            for (l in lines) if (!l.inNoteBody) collectOccurrences(l, occurrences)
+            val unknown = ArrayList<Occurrence>()
+            for (l in lines) if (!l.inNoteBody) collectOccurrences(l, occurrences, unknown)
             occurrences.sortBy { it.range.first }
 
             val definitions = occurrences
@@ -96,7 +115,7 @@ class SymbolIndex private constructor(
                     Symbol(d.name, decls[key]?.kind ?: "used", d.line, d.range, d.scope)
                 }
                 .sortedBy { it.range.first }
-            return SymbolIndex(text, occurrences, definitions, includes)
+            return SymbolIndex(text, occurrences, definitions, includes, unknown)
         }
 
         private fun markComments() {
@@ -178,9 +197,11 @@ class SymbolIndex private constructor(
             return IncludeRef(raw, (l.start + from) until (l.start + from + raw.length), l.no, stdlib)
         }
 
-        private fun collectOccurrences(l: Line, out: MutableList<Occurrence>) {
+        private fun collectOccurrences(l: Line, out: MutableList<Occurrence>, unknown: MutableList<Occurrence>) {
             if (isComment(l)) return
             val s = l.text
+            // The name a declaration line introduces, and an include's path, are never "used here".
+            val declares = include.containsMatchIn(s) || preprocessorDecl.containsMatchIn(s) || defineDecl.containsMatchIn(s)
             val scopeNames = names[l.scope].orEmpty()
             // `A -> B : text`, `A : field`, `:action;` — the label is prose.
             val strings = Regex(""""[^"\n]*"""").findAll(s).map { it.range }.toList()
@@ -206,6 +227,9 @@ class SymbolIndex private constructor(
                 when {
                     n in globals -> emit(n, abs(l, m.range), GLOBAL)
                     a < label && n in scopeNames -> emit(n, abs(l, m.range), l.scope)
+                    declares || n[0].isDigit() || n in PlantUmlLanguage.allKeywords -> {}
+                    a < label || n.startsWith("$") || s.getOrNull(m.range.last + 1) == '(' ->
+                        unknown += Occurrence(n, abs(l, m.range), OccurrenceRole.REFERENCE, l.no, GLOBAL)
                 }
             }
         }

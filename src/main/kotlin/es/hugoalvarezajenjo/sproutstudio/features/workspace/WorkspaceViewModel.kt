@@ -10,10 +10,13 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
+import es.hugoalvarezajenjo.sproutstudio.features.editor.FileJump
+import es.hugoalvarezajenjo.sproutstudio.features.editor.IncludeFiles
 import es.hugoalvarezajenjo.sproutstudio.features.editor.findUsages
 import es.hugoalvarezajenjo.sproutstudio.features.editor.goToDeclaration
 import es.hugoalvarezajenjo.sproutstudio.features.editor.navigateBack
 import es.hugoalvarezajenjo.sproutstudio.features.editor.navigateForward
+import es.hugoalvarezajenjo.sproutstudio.features.editor.reveal
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.ExplorerViewModel
 import java.io.File
 import es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel
@@ -246,9 +249,18 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         activeIndex = docs.lastIndex
     }
 
-    // ── Code → Navigate: on the active tab; an `!include` opens its file in a tab ──
+    /** Open [jump]'s file and select its range, if it has one. */
+    fun open(jump: FileJump) {
+        open(jump.file)
+        jump.range?.let { r -> active?.reveal(r) }
+    }
 
-    fun goToDeclaration() { active?.let { revealEditor(); it.goToDeclaration()?.let(::open) } }
+    /** `!include`d files for navigation, read from the open tab when there is one. */
+    val includes = IncludeFiles { f -> docs.firstOrNull { it.file?.absoluteFile?.normalize() == f }?.text }
+
+    // ── Code → Navigate: on the active tab; ⌘B into an included file opens it in a tab ──
+
+    fun goToDeclaration() { active?.let { revealEditor(); it.goToDeclaration(includes = includes)?.let { j -> open(j) } } }
     fun findUsages() { active?.let { revealEditor(); it.findUsages() } }
     fun navigateBack() { active?.let { revealEditor(); it.navigateBack() } }
     fun navigateForward() { active?.let { revealEditor(); it.navigateForward() } }

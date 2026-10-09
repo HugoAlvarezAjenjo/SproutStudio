@@ -10,4 +10,7 @@ sealed interface NavigationTarget {
 
     /** Another file, [path] as written in the `!include` (relative to the including file). */
     data class IncludedFile(val path: String) : NavigationTarget
+
+    /** A place in another file: select [range] of the file at absolute [path]. */
+    data class InFile(val path: String, val range: IntRange) : NavigationTarget
 }

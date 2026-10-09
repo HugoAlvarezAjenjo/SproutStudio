@@ -68,9 +68,53 @@ class NavigationActionsTest {
             val style = File(dir, "parts/style.puml").apply { writeText("skinparam monochrome true\n") }
             val t = "!include parts/style.puml\n!include parts/missing.puml\n"
             val main = File(dir, "main.puml")
-            assertEquals(style.canonicalFile, doc(t.indexOf("style"), t, main).goToDeclaration()?.canonicalFile)
+            assertEquals(style.canonicalFile, doc(t.indexOf("style"), t, main).goToDeclaration()?.file?.canonicalFile)
             assertNull(doc(t.indexOf("missing"), t, main).goToDeclaration())
             assertNull(doc(t.indexOf("style"), t, null).goToDeclaration(), "an unsaved diagram has no folder")
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun aProcedureDeclaredInAnIncludedFileOpensThatFileAtTheDeclaration() {
+        val dir = Files.createTempDirectory("nav").toFile()
+        try {
+            File(dir, "lib").mkdirs()
+            val nested = "!procedure \$deep()\n  A -> B\n!endprocedure\n"
+            File(dir, "lib/deep.puml").writeText(nested)
+            val common = "!include deep.puml\n!\$color = \"#Wheat\"\n!procedure \$call(\$from, \$to)\n  \$from -> \$to\n!endprocedure\n"
+            val commonFile = File(dir, "lib/common.puml").apply { writeText(common) }
+            val t = "@startuml\n!include lib/common.puml\n\$call(User, API)\n\$deep()\nUser -> API : \$color\n@enduml\n"
+            val main = File(dir, "main.puml")
+
+            val call = assertNotNull(doc(t.indexOf("\$call") + 1, t, main).goToDeclaration())
+            assertEquals(commonFile.canonicalFile, call.file.canonicalFile)
+            assertEquals(common.indexOf("\$call").let { it..it + 4 }, call.range)
+
+            val deep = assertNotNull(doc(t.indexOf("\$deep") + 1, t, main).goToDeclaration(), "through a nested include")
+            assertEquals("deep.puml", deep.file.name)
+            assertEquals(nested.indexOf("\$deep").let { it..it + 4 }, deep.range)
+
+            val color = assertNotNull(doc(t.indexOf("\$color") + 1, t, main).goToDeclaration(), "a variable in a label")
+            assertEquals(common.indexOf("\$color").let { it..it + 5 }, color.range)
+
+            assertNull(doc(t.indexOf("\$call") + 1, t, null).goToDeclaration(), "an unsaved diagram has no folder")
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun anOpenTabsUnsavedTextWinsOverTheDisk() {
+        val dir = Files.createTempDirectory("nav").toFile()
+        try {
+            val lib = File(dir, "lib.puml").apply { writeText("!procedure \$p()\n!endprocedure\n") }
+            val live = "' moved down\n\n!procedure \$p()\n!endprocedure\n"
+            val reader = IncludeFiles { f -> if (f == lib.absoluteFile.normalize()) live else null }
+            val t = "!include lib.puml\n\$p()\n"
+            val jump = assertNotNull(doc(t.indexOf("\$p") + 1, t, File(dir, "main.puml")).goToDeclaration(includes = reader))
+            assertEquals(live.indexOf("\$p").let { it..it + 1 }, jump.range)
         } finally {
             dir.deleteRecursively()
         }

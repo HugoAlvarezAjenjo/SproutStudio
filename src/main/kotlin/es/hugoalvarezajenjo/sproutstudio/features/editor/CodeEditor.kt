@@ -130,6 +130,7 @@ import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.IncludeReader
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Navigation
 import java.io.File
 import kotlinx.coroutines.flow.filterNotNull
@@ -157,8 +158,10 @@ fun CodeEditor(
     /** Git markers against HEAD (empty outside a repo or for uncommitted files). */
     lineChanges: LineDiff.Index = LineDiff.Index.Empty,
     onCaretMoved: (line: Int, col: Int) -> Unit = { _, _ -> },
-    /** ⌘-click on an `!include` path: the file to open. */
-    onOpenFile: (File) -> Unit = {},
+    /** ⌘-click into another file (an `!include`, or a declaration in an included file): the file to open. */
+    onOpenFile: (FileJump) -> Unit = {},
+    /** Reads included files, so ⌘-hover and ⌘-click reach declarations in them. */
+    includes: IncludeReader = IncludeFiles.DISK,
 ) {
     SideEffect { doc.updateGitLines(lineChanges) }
     /** Change block whose popup is open, and the y (px, in the scrolled content) to show it at. */
@@ -256,6 +259,7 @@ fun CodeEditor(
     val nav = doc.nav
     val scope = rememberCoroutineScope()
     val currentOnOpenFile by rememberUpdatedState(onOpenFile)
+    val currentIncludes by rememberUpdatedState(includes)
     val usageRanges = remember(value.text, caret) {
         Navigation.occurrencesAt(value.text, caret).takeIf { it.size > 1 }.orEmpty().map { it.range }
     }
@@ -277,7 +281,7 @@ fun CodeEditor(
     /** The span a ⌘-click at [pos] would follow, when the pointer is really over it. */
     fun linkAt(pos: Offset): IntRange? {
         val l = layout ?: return null
-        val r = offsetAt(pos)?.let { Navigation.linkAt(doc.text, it) } ?: return null
+        val r = offsetAt(pos)?.let { Navigation.linkAt(doc.text, it, doc.file?.absolutePath, currentIncludes) } ?: return null
         val x1 = l.getHorizontalPosition(l.safeOffset(liveT(r.first)), true)
         val x2 = l.getHorizontalPosition(l.safeOffset(liveT(r.last + 1)), true)
         return r.takeIf { pos.x in x1..x2 }
@@ -377,7 +381,7 @@ fun CodeEditor(
                                                 withFrameNanos { }
                                                 completion = null
                                                 link = null
-                                                doc.goToDeclaration(o)?.let(currentOnOpenFile)
+                                                doc.goToDeclaration(o, currentIncludes)?.let(currentOnOpenFile)
                                             }
                                         }
                                         else -> { hoverPos = pos; link = if (linkKeyDown) linkAt(pos) else null }

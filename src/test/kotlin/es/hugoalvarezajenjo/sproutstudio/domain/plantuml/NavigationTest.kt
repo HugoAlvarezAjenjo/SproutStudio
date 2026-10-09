@@ -8,6 +8,33 @@ import kotlin.test.assertTrue
 
 class NavigationTest {
 
+    /** Files by path, as an in-memory [IncludeReader] (paths resolve as written, ignoring the includer). */
+    private fun reader(vararg files: Pair<String, String>) = IncludeReader { _, path ->
+        files.toMap()[path]?.let { SourceFile(path, it) }
+    }
+
+    @Test
+    fun includedDeclarationsAreFoundThroughIncludeCyclesAndSkipTheStdlib() {
+        val main = "!include <C4/C4_Container>\n!include a.puml\nContainer(api)\n\$fromB()\n"
+        val r = reader(
+            "a.puml" to "!include a.puml\n!include b.puml\n",
+            "b.puml" to "!include a.puml\n!procedure \$fromB()\n!endprocedure\n",
+        )
+        val t = assertIs<NavigationTarget.InFile>(Navigation.definitionAt(main, main.indexOf("\$fromB") + 1, "/p/main.puml", r))
+        assertEquals("b.puml", t.path)
+        assertNull(Navigation.definitionAt(main, main.indexOf("Container") + 1, "/p/main.puml", r), "declared nowhere we can read")
+        assertEquals(main.indexOf("\$fromB").let { it..it + 5 }, Navigation.linkAt(main, main.indexOf("\$fromB"), "/p/main.puml", r))
+    }
+
+    @Test
+    fun labelProseDoesNotLinkToAnIncludedNameButACallInItDoes() {
+        val main = "!include lib.puml\nA -> B : bold text \$bold(\"x\")\n"
+        val r = reader("lib.puml" to "!function \$bold(\$t)\n!return \$t\n!endfunction\n!define bold x\n")
+        assertNull(Navigation.linkAt(main, main.indexOf("bold text") + 1, "/p/main.puml", r))
+        assertIs<NavigationTarget.InFile>(Navigation.definitionAt(main, main.indexOf("\$bold") + 1, "/p/main.puml", r))
+        assertNull(Navigation.definitionAt(main, main.indexOf("\$bold") + 1), "no reader: within the text only")
+    }
+
     private val seq = """
         @startuml
         actor User

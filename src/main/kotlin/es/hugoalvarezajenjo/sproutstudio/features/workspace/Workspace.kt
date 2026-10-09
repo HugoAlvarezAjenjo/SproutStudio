@@ -160,6 +160,7 @@ private fun EditorAndPreview(p: WorkspaceViewModel, doc: Document, preview: Prev
                     modifier = Modifier.weight(if (split) 1f - p.previewFraction else 1f).fillMaxHeight(),
                     onCaretMoved = onCaret,
                     onOpenFile = { p.open(it) },
+                    includes = p.includes,
                 )
             }
             if (split) {
