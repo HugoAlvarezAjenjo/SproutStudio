@@ -412,6 +412,7 @@
         <item quantity="one">%1$d line changed</item>
         <item quantity="other">%1$d lines changed</item>
     </plurals>
+    <string name="menu_reformat_code">Reformat Code</string>
     <string name="menu_go_to_declaration">Go to Declaration</string>
     <string name="menu_find_usages">Find Usages</string>
     <string name="menu_navigate_back">Back</string>

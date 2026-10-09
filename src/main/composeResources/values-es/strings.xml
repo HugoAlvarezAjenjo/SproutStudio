@@ -413,6 +413,7 @@
         <item quantity="one">%1$d línea cambiada</item>
         <item quantity="other">%1$d líneas cambiadas</item>
     </plurals>
+    <string name="menu_reformat_code">Reformatear código</string>
     <string name="menu_go_to_declaration">Ir a la declaración</string>
     <string name="menu_find_usages">Buscar usos</string>
     <string name="menu_navigate_back">Atrás</string>

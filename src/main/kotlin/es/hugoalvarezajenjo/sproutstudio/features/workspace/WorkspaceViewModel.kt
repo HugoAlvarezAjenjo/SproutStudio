@@ -1,6 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.PlantUmlFormatter
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -257,6 +258,9 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
 
     /** `!include`d files for navigation, read from the open tab when there is one. */
     val includes = IncludeFiles { f -> docs.firstOrNull { it.file?.absoluteFile?.normalize() == f }?.text }
+
+    /** ⌥⌘L: reformat the active tab, or only its selected lines. */
+    fun reformatCode() { active?.let { revealEditor(); it.value = PlantUmlFormatter.format(it.value) } }
 
     // ── Code → Navigate: on the active tab; ⌘B into an included file opens it in a tab ──
 

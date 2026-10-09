@@ -28,6 +28,7 @@ import es.hugoalvarezajenjo.sproutstudio.domain.text.FindResult
 import es.hugoalvarezajenjo.sproutstudio.domain.text.FindReplace
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.FoldRegion
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Folding
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.TextLines
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -192,7 +193,7 @@ fun CodeEditor(
     }
     val mapping = folded.second
     fun toT(o: Int) = mapping.originalToTransformed(o.coerceIn(0, value.text.length))
-    val lineStarts = remember(value.text) { Folding.lineStarts(value.text) }
+    val lineStarts = remember(value.text) { TextLines.starts(value.text) }
     val transformation = remember(folded) {
         VisualTransformation { TransformedText(folded.first, folded.second) }
     }
@@ -528,7 +529,7 @@ private fun Gutter(
 ) {
     val topPad = with(density) { 10.dp.toPx() }
     val text = doc.text
-    val currentLine = Folding.lineOf(lineStarts, caret.coerceIn(0, text.length)) + 1
+    val currentLine = TextLines.of(lineStarts, caret.coerceIn(0, text.length)) + 1
     val regions = doc.folds.regions(text)
     val byStart = remember(regions) { regions.groupBy { it.startLine } }
     val barW = with(density) { CHANGE_BAR_DP.dp.toPx() }
@@ -540,7 +541,7 @@ private fun Gutter(
         // Compose reports the empty line after a trailing '\n' as starting on the previous line.
         if (i == l.lineCount - 1 && i > 0 && text.endsWith('\n')) return lineStarts.size - 1
         val o = mapping.transformedToOriginal(l.getLineStart(i).coerceIn(0, l.layoutInput.text.length))
-        return Folding.lineOf(lineStarts, o.coerceIn(0, text.length))
+        return TextLines.of(lineStarts, o.coerceIn(0, text.length))
     }
 
     val gutterW = with(density) { GUTTER_DP.dp.toPx() }

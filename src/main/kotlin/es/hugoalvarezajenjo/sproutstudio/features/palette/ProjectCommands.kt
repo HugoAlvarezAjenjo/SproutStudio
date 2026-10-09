@@ -6,6 +6,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.cat_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_symbol
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_usages
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_go_to_declaration
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_reformat_code
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_back
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_forward
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_recent_project
@@ -169,6 +170,8 @@ internal fun projectCommands(
     cmd("code.unfold", text(Res.string.menu_unfold_block), text(Res.string.menu_code), shortcutHint("="), enabled = has) { p.revealEditor(); d?.unfoldAtCaret() }
     cmd("code.foldAll", text(Res.string.menu_fold_all), text(Res.string.menu_code), shortcutHint("-", shift = true), enabled = has) { p.revealEditor(); d?.foldAll() }
     cmd("code.unfoldAll", text(Res.string.menu_unfold_all), text(Res.string.menu_code), shortcutHint("=", shift = true), enabled = has) { p.revealEditor(); d?.unfoldAll() }
+
+    cmd("code.reformat", text(Res.string.menu_reformat_code), text(Res.string.menu_code), shortcutHint("L", alt = true), enabled = has) { p.reformatCode() }
 
     // Code → Navigate
     val altCmd = if (Os.isMac) "⌥⌘" else "Ctrl+Alt+"

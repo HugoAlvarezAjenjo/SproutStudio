@@ -3,12 +3,13 @@ package es.hugoalvarezajenjo.sproutstudio.features.editor
 import androidx.compose.ui.text.TextRange
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.FoldRegion
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Folding
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.TextLines
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 
 // ── Document commands (Code → Folding menu, gutter clicks) ──────────────────────────────────
 
 private fun Document.caretLine(): Int =
-    Folding.lineOf(Folding.lineStarts(text), value.selection.start)
+    TextLines.of(TextLines.starts(text), value.selection.start)
 
 /** Fold [r]; if the caret would end up hidden, park it at the end of the opening line first. */
 fun Document.foldRegion(r: FoldRegion) {

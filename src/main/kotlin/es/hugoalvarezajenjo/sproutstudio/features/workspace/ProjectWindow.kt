@@ -23,6 +23,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_all
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_block
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_usages
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_go_to_declaration
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_reformat_code
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_back
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_forward
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_git
@@ -203,6 +204,8 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 Item(tr(Res.string.menu_unfold_block), shortcut = shortcut(Key.Equals), enabled = d != null) { p.revealEditor(); d?.unfoldAtCaret() }
                 Item(tr(Res.string.menu_fold_all), shortcut = shortcut(Key.Minus, shift = true), enabled = d != null) { p.revealEditor(); d?.foldAll() }
                 Item(tr(Res.string.menu_unfold_all), shortcut = shortcut(Key.Equals, shift = true), enabled = d != null) { p.revealEditor(); d?.unfoldAll() }
+                Separator()
+                Item(tr(Res.string.menu_reformat_code), shortcut = shortcut(Key.L, alt = true), enabled = d != null) { p.reformatCode() }
                 Separator()
                 Item(tr(Res.string.menu_go_to_declaration), shortcut = shortcut(Key.B), enabled = d != null) { p.goToDeclaration() }
                 Item(tr(Res.string.menu_find_usages), shortcut = KeyShortcut(Key.F7, alt = true), enabled = d != null) { p.findUsages() }
