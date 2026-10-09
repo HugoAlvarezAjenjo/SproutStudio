@@ -117,6 +117,7 @@ import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.CompletionKind
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.CompletionRequest
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.BlockComment
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.MoveLines
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 import es.hugoalvarezajenjo.sproutstudio.features.editor.Highlighter
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.IdeColors
@@ -443,6 +444,13 @@ fun CodeEditor(
                             val req = completion
                             val usages = nav.usages
                             when {
+                                // ── move lines (before the popups, which would take the arrows) ──
+                                ev.isAltPressed && !cmd && !ev.isShiftPressed && (ev.key == Key.DirectionUp || ev.key == Key.DirectionDown) -> {
+                                    completion = null
+                                    nav.closeUsages()
+                                    update(if (ev.key == Key.DirectionUp) MoveLines.up(doc.value) else MoveLines.down(doc.value), false)
+                                    true
+                                }
                                 // ── usages list navigation ──
                                 usages != null && ev.key == Key.DirectionDown -> { nav.moveSelection(1); true }
                                 usages != null && ev.key == Key.DirectionUp -> { nav.moveSelection(-1); true }

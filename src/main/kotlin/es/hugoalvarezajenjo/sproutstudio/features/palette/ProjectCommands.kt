@@ -15,6 +15,8 @@ import es.hugoalvarezajenjo.sproutstudio.resources.cmd_autosave_on
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_copy_image
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_dark_theme
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_duplicate_line
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_move_line_down
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_move_line_up
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_export_pdf
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_export_png
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_export_svg
@@ -84,6 +86,7 @@ import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.BlockComment
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.MoveLines
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.SymbolIndex
 import es.hugoalvarezajenjo.sproutstudio.features.editor.navigateTo
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Templates
@@ -168,6 +171,13 @@ internal fun projectCommands(
     }
     cmd("edit.duplicate", text(Res.string.cmd_duplicate_line), text(Res.string.menu_edit), shortcutHint("D"), enabled = has) {
         d?.let { p.revealEditor(); it.value = EditOps.duplicateLines(it.value) }
+    }
+    val altKey = if (Os.isMac) "⌥" else "Alt+"
+    cmd("edit.moveLineUp", text(Res.string.cmd_move_line_up), text(Res.string.menu_edit), "$altKey↑", enabled = has) {
+        d?.let { p.revealEditor(); it.value = MoveLines.up(it.value) }
+    }
+    cmd("edit.moveLineDown", text(Res.string.cmd_move_line_down), text(Res.string.menu_edit), "$altKey↓", enabled = has) {
+        d?.let { p.revealEditor(); it.value = MoveLines.down(it.value) }
     }
 
     // Code

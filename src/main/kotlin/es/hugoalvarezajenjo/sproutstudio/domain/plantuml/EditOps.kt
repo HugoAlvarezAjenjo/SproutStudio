@@ -97,7 +97,8 @@ object EditOps {
         return TextRange(start, TextLines.endAt(text, start))
     }
 
-    private fun selectedLineRange(v: TextFieldValue): Pair<Int, Int> {
+    /** Start of the first and end of the last line the selection touches (a trailing `\n` doesn't count). */
+    internal fun selectedLineRange(v: TextFieldValue): Pair<Int, Int> {
         val text = v.text
         val s = TextLines.startAt(text, v.selection.min)
         val endPos = if (!v.selection.collapsed && v.selection.max > 0 && text.getOrNull(v.selection.max - 1) == '\n') v.selection.max - 1 else v.selection.max
