@@ -1,5 +1,21 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_create
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_current
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_current_desc
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_delete
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_delete_named
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_delete_text
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_delete_title
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_local
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_need_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_new
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_new_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_stash_and_switch
+import es.hugoalvarezajenjo.sproutstudio.resources.dialog_cancel
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
@@ -73,7 +89,7 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 
 /**
  * The branch in the status bar, as a button: IntelliJ's branch popup with the local branches
- * (click to switch), "New Branch…" and delete. Local only: no fetch, pull or push.
+ * (click to switch), tr(Res.string.branch_new) and delete. Local only: no fetch, pull or push.
  */
 @Composable
 internal fun BranchButton(p: WorkspaceViewModel, initiallyOpen: Boolean = false) {
@@ -139,13 +155,13 @@ private fun BranchPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
                         onCreate = { name -> run({ git.createBranch(name) }) },
                     )
                 } else {
-                    MenuRow(Icons.Outlined.Add, "New Branch…", enabled = git.status.head != null && !busy) {
+                    MenuRow(Icons.Outlined.Add, tr(Res.string.branch_new), enabled = git.status.head != null && !busy) {
                         git.clearError(); creating = true
                     }
-                    if (git.status.head == null) Hint("Make the first commit to create branches")
+                    if (git.status.head == null) Hint(tr(Res.string.branch_need_commit))
                     Box(Modifier.padding(vertical = 4.dp).fillMaxWidth().height(1.dp).background(c.popupBorder))
                     Text(
-                        "Local Branches", fontSize = 11.sp, color = c.textMuted,
+                        tr(Res.string.branch_local), fontSize = 11.sp, color = c.textMuted,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                     )
                     LazyColumn(Modifier.heightIn(max = 320.dp)) {
@@ -163,7 +179,7 @@ private fun BranchPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
                     }
                     git.blockedCheckout?.let { target ->
                         Row(Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) {
-                            ToolButton(null, label = "Stash changes and switch to $target", primary = true, enabled = !busy) {
+                            ToolButton(null, label = tr(Res.string.branch_stash_and_switch, target), primary = true, enabled = !busy) {
                                 run({ git.stashAndCheckout(target) })
                             }
                         }
@@ -178,12 +194,12 @@ private fun BranchPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
             onDismissRequest = { confirmDelete = null },
             containerColor = ide.popup,
             shape = RoundedCornerShape(10.dp),
-            title = { Text("Delete branch \"$b\"?", style = MaterialTheme.typography.titleMedium) },
-            text = { Text("Only if its commits are already merged into ${git.status.branch}; otherwise it is kept.", style = MaterialTheme.typography.bodyMedium) },
+            title = { Text(tr(Res.string.branch_delete_title, b), style = MaterialTheme.typography.titleMedium) },
+            text = { Text(tr(Res.string.branch_delete_text, git.status.branch.orEmpty()), style = MaterialTheme.typography.bodyMedium) },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = null; run({ git.deleteBranch(b) }, closeOnSuccess = false) }) { Text("Delete", color = ide.error) }
+                TextButton(onClick = { confirmDelete = null; run({ git.deleteBranch(b) }, closeOnSuccess = false) }) { Text(tr(Res.string.branch_delete), color = ide.error) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(tr(Res.string.dialog_cancel)) } },
         )
     }
 }
@@ -195,7 +211,7 @@ private fun NewBranchField(error: String?, onCancel: () -> Unit, onCreate: (Stri
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("New branch from the current commit", fontSize = 12.sp, color = c.textMuted)
+        Text(tr(Res.string.branch_new_hint), fontSize = 12.sp, color = c.textMuted)
         Box(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(c.editor)
                 .border(1.dp, if (error != null) c.error else c.accent, RoundedCornerShape(6.dp))
@@ -222,8 +238,8 @@ private fun NewBranchField(error: String?, onCancel: () -> Unit, onCreate: (Stri
         error?.let { Text(it, color = c.error, fontSize = 12.sp) }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Spacer(Modifier.weight(1f))
-            ToolButton(null, label = "Cancel") { onCancel() }
-            ToolButton(null, label = "Create", primary = true, enabled = name.isNotBlank()) { onCreate(name.trim()) }
+            ToolButton(null, label = tr(Res.string.dialog_cancel)) { onCancel() }
+            ToolButton(null, label = tr(Res.string.branch_create), primary = true, enabled = name.isNotBlank()) { onCreate(name.trim()) }
         }
     }
 }
@@ -263,19 +279,19 @@ private fun BranchRow(name: String, current: Boolean, enabled: Boolean, onClick:
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(Modifier.size(15.dp), contentAlignment = Alignment.Center) {
-            if (current) Icon(Icons.Outlined.Check, "Current branch", tint = c.accent, modifier = Modifier.size(15.dp))
+            if (current) Icon(Icons.Outlined.Check, tr(Res.string.branch_current_desc), tint = c.accent, modifier = Modifier.size(15.dp))
             else Icon(Icons.AutoMirrored.Outlined.CallSplit, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
         }
         Text(
             name, style = MaterialTheme.typography.bodyMedium, color = c.text,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
-        if (current) Text("current", fontSize = 11.sp, color = c.textMuted, modifier = Modifier.padding(end = 6.dp))
+        if (current) Text(tr(Res.string.branch_current), fontSize = 11.sp, color = c.textMuted, modifier = Modifier.padding(end = 6.dp))
         if (onDelete != null && hovered) {
             Box(
                 Modifier.size(22.dp).clip(RoundedCornerShape(4.dp)).clickable(enabled = enabled, onClick = onDelete),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Outlined.DeleteOutline, "Delete $name", tint = c.textMuted, modifier = Modifier.size(15.dp)) }
+            ) { Icon(Icons.Outlined.DeleteOutline, tr(Res.string.branch_delete_named, name), tint = c.textMuted, modifier = Modifier.size(15.dp)) }
         }
     }
 }

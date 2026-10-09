@@ -1,5 +1,17 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.problems_none
+import es.hugoalvarezajenjo.sproutstudio.resources.status_kind_diagrams
+import es.hugoalvarezajenjo.sproutstudio.resources.status_modified
+import es.hugoalvarezajenjo.sproutstudio.resources.status_not_saved
+import es.hugoalvarezajenjo.sproutstudio.resources.status_offline
+import es.hugoalvarezajenjo.sproutstudio.resources.status_problems
+import es.hugoalvarezajenjo.sproutstudio.resources.status_save_failed
+import es.hugoalvarezajenjo.sproutstudio.resources.status_saved
+import es.hugoalvarezajenjo.sproutstudio.resources.status_saved_auto
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.runtime.getValue
 
 import androidx.compose.foundation.background
@@ -52,9 +64,9 @@ internal fun StatusBar(p: WorkspaceViewModel, line: Int, col: Int, info: StatusI
         if (doc != null) {
             info?.let {
                 val problemText = when {
-                    it.problems == 0 -> "No problems"
-                    it.problems == 1 -> "1 problem"
-                    else -> "${it.problems} problems"
+                    it.problems == 0 -> tr(Res.string.problems_none)
+                    it.problems == 1 -> tr(Res.plurals.status_problems, 1, 1)
+                    else -> tr(Res.plurals.status_problems, it.problems, it.problems)
                 }
                 StatusClickable(
                     text = problemText,
@@ -62,17 +74,17 @@ internal fun StatusBar(p: WorkspaceViewModel, line: Int, col: Int, info: StatusI
                     icon = if (it.problems == 0) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
                     onClick = { p.showProblems(true) },
                 )
-                StatusText(if (it.diagrams > 1) "${it.kind} · ${it.diagrams} diagrams" else it.kind)
+                StatusText(if (it.diagrams > 1) tr(Res.string.status_kind_diagrams, it.kind, it.diagrams) else it.kind)
             }
             StatusText("$line:$col")
             when {
-                doc.saveError != null -> StatusText("Save failed: ${doc.saveError}", c.error, Icons.Outlined.ErrorOutline)
-                doc.dirty -> StatusText(if (doc.file == null) "Not saved yet" else "Modified")
-                else -> StatusText(if (p.deps.autoSaver.enabled) "Saved automatically" else "Saved")
+                doc.saveError != null -> StatusText(tr(Res.string.status_save_failed, doc.saveError.toString()), c.error, Icons.Outlined.ErrorOutline)
+                doc.dirty -> StatusText(if (doc.file == null) tr(Res.string.status_not_saved) else tr(Res.string.status_modified))
+                else -> StatusText(if (p.deps.autoSaver.enabled) tr(Res.string.status_saved_auto) else tr(Res.string.status_saved))
             }
         }
         BranchButton(p)
-        StatusText("Offline", icon = Icons.Outlined.Lock)
+        StatusText(tr(Res.string.status_offline), icon = Icons.Outlined.Lock)
     }
 }
 

@@ -1,5 +1,11 @@
 package es.hugoalvarezajenjo.sproutstudio.features.templates
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.common_close_esc
+import es.hugoalvarezajenjo.sproutstudio.resources.gallery_filter
+import es.hugoalvarezajenjo.sproutstudio.resources.gallery_title
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -113,7 +119,7 @@ fun TemplateGallery(
                         Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Text("New from template", fontSize = 15.sp, color = c.text)
+                        Text(tr(Res.string.gallery_title), fontSize = 15.sp, color = c.text)
                         Spacer(Modifier.weight(1f))
                         Row(
                             Modifier.width(220.dp).clip(RoundedCornerShape(6.dp)).background(c.hover)
@@ -122,7 +128,7 @@ fun TemplateGallery(
                         ) {
                             Icon(Icons.Outlined.Search, null, tint = c.textMuted, modifier = Modifier.width(15.dp))
                             Box(Modifier.weight(1f)) {
-                                if (query.isEmpty()) Text("Filter templates…", fontSize = 13.sp, color = c.textMuted)
+                                if (query.isEmpty()) Text(tr(Res.string.gallery_filter), fontSize = 13.sp, color = c.textMuted)
                                 BasicTextField(
                                     query, { query = it }, singleLine = true,
                                     textStyle = editorTextStyle.copy(fontSize = 13.sp, color = c.text),
@@ -131,7 +137,7 @@ fun TemplateGallery(
                                 )
                             }
                         }
-                        ToolButton(Icons.Outlined.Close, "Close (esc)") { onDismiss() }
+                        ToolButton(Icons.Outlined.Close, tr(Res.string.common_close_esc)) { onDismiss() }
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(c.popupBorder))
                     LazyVerticalGrid(

@@ -1,5 +1,9 @@
 package es.hugoalvarezajenjo.sproutstudio.features.templates
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_templates
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.runtime.setValue
@@ -69,7 +73,7 @@ fun TemplateSidebar(thumbnails: TemplateThumbnails, onPick: (Template) -> Unit) 
         ) {
             Icon(Icons.Outlined.Search, null, tint = c.textMuted, modifier = Modifier.width(14.dp))
             Box(Modifier.weight(1f)) {
-                if (query.isEmpty()) Text("Templates", fontSize = 12.sp, color = c.textMuted)
+                if (query.isEmpty()) Text(tr(Res.string.tool_templates), fontSize = 12.sp, color = c.textMuted)
                 BasicTextField(
                     query, { query = it }, singleLine = true,
                     textStyle = editorTextStyle.copy(fontSize = 12.sp, color = c.text),

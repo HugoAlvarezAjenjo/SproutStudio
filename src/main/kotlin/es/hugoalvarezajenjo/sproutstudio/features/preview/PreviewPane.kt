@@ -1,5 +1,38 @@
 package es.hugoalvarezajenjo.sproutstudio.features.preview
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_actual_size
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_cant_render_yet
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_copied
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_copy
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_copy_failed
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_dark_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_export
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_export_failed
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_export_title
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_fit
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_fix_error
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_go_to_line
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_light_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_line_prefix
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_n_of_m
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_next_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_no_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_nothing
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_nothing_to_export
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_on_its_way
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_previous_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_remote_include
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_rendering
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_saved
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_syntax_prefix
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_type_start
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_wrap
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_zoom_in
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_zoom_out
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -117,19 +150,19 @@ fun PreviewPane(
         ) {
             leadingTools()
             if (preview.diagramCount > 1) {
-                ToolButton(Icons.Outlined.ChevronLeft, "Previous diagram", enabled = preview.index > 0) { preview.previousDiagram() }
+                ToolButton(Icons.Outlined.ChevronLeft, tr(Res.string.preview_previous_diagram), enabled = preview.index > 0) { preview.previousDiagram() }
                 Text(
-                    "${preview.index + 1} of ${preview.diagramCount}",
+                    tr(Res.string.preview_n_of_m, preview.index + 1, preview.diagramCount),
                     style = MaterialTheme.typography.labelMedium,
                     color = c.textMuted,
                 )
-                ToolButton(Icons.Outlined.ChevronRight, "Next diagram", enabled = preview.index < preview.diagramCount - 1) { preview.nextDiagram() }
+                ToolButton(Icons.Outlined.ChevronRight, tr(Res.string.preview_next_diagram), enabled = preview.index < preview.diagramCount - 1) { preview.nextDiagram() }
             }
             Spacer(Modifier.weight(1f))
             if (preview.rendering && preview.firstDone) {
-                Text("Rendering…", fontSize = 11.sp, color = c.textMuted, modifier = Modifier.padding(end = 6.dp))
+                Text(tr(Res.string.preview_rendering), fontSize = 11.sp, color = c.textMuted, modifier = Modifier.padding(end = 6.dp))
             }
-            ToolButton(Icons.Outlined.Remove, "Zoom out (mouse wheel)") { zoom.zoomBy(1 / 1.25f) }
+            ToolButton(Icons.Outlined.Remove, tr(Res.string.preview_zoom_out)) { zoom.zoomBy(1 / 1.25f) }
             Text(
                 "${(zoom.scale * 100).toInt()}%",
                 style = MaterialTheme.typography.labelMedium,
@@ -137,24 +170,24 @@ fun PreviewPane(
                 modifier = Modifier.width(40.dp),
                 textAlign = TextAlign.Center,
             )
-            ToolButton(Icons.Outlined.Add, "Zoom in (mouse wheel)") { zoom.zoomBy(1.25f) }
-            ToolButton(Icons.Outlined.FitScreen, "Fit to window (double-click)", selected = zoom.autoFit) {
+            ToolButton(Icons.Outlined.Add, tr(Res.string.preview_zoom_in)) { zoom.zoomBy(1.25f) }
+            ToolButton(Icons.Outlined.FitScreen, tr(Res.string.preview_fit), selected = zoom.autoFit) {
                 preview.image?.let { zoom.fit(it.width, it.height) }
             }
-            ToolButton(Icons.Outlined.ImageSearch, "Actual size") { preview.image?.let { zoom.actualSize(it.width, it.height) } }
+            ToolButton(Icons.Outlined.ImageSearch, tr(Res.string.preview_actual_size)) { preview.image?.let { zoom.actualSize(it.width, it.height) } }
             ToolSeparator()
             ToolButton(
                 if (preview.diagram.dark.value) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
-                if (preview.diagram.dark.value) "Dark diagram (exports keep original colours) — click for light"
-                else "Light diagram — click for dark",
+                if (preview.diagram.dark.value) tr(Res.string.preview_dark_hint)
+                else tr(Res.string.preview_light_hint),
                 selected = preview.diagram.dark.value,
             ) { preview.diagram.toggle() }
             ToolSeparator()
-            ToolButton(Icons.Outlined.ContentCopy, "Copy image to clipboard", enabled = preview.image != null) {
+            ToolButton(Icons.Outlined.ContentCopy, tr(Res.string.preview_copy), enabled = preview.image != null) {
                 copyImage()
             }
             Box {
-                ToolButton(Icons.Outlined.FileDownload, "Export…", enabled = preview.image != null) { exportMenu = true }
+                ToolButton(Icons.Outlined.FileDownload, tr(Res.string.preview_export), enabled = preview.image != null) { exportMenu = true }
                 DropdownMenu(exportMenu, onDismissRequest = { exportMenu = false }) {
                     ExportFormat.entries.forEach { f ->
                         DropdownMenuItem(text = { Text(f.label(), style = MaterialTheme.typography.bodyMedium) }, onClick = {
@@ -178,10 +211,10 @@ fun PreviewPane(
         Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(img?.background ?: c.editor)) {
             when {
                 img != null -> DiagramView(img, zoom, dimmed = preview.stale)
-                !preview.firstDone -> EmptyState(Icons.Outlined.Draw, "Rendering…", "Your diagram is on its way", Modifier.align(Alignment.Center))
-                preview.error != null -> EmptyState(Icons.Outlined.ErrorOutline, "Can't render yet", "Fix the error above to see the diagram", Modifier.align(Alignment.Center))
-                preview.text.isBlank() -> EmptyState(Icons.Outlined.Draw, "Nothing to render", "Type @startuml to begin", Modifier.align(Alignment.Center))
-                else -> EmptyState(Icons.Outlined.Draw, "No diagram found", "Wrap your diagram in @startuml … @enduml", Modifier.align(Alignment.Center))
+                !preview.firstDone -> EmptyState(Icons.Outlined.Draw, tr(Res.string.preview_rendering), tr(Res.string.preview_on_its_way), Modifier.align(Alignment.Center))
+                preview.error != null -> EmptyState(Icons.Outlined.ErrorOutline, tr(Res.string.preview_cant_render_yet), tr(Res.string.preview_fix_error), Modifier.align(Alignment.Center))
+                preview.text.isBlank() -> EmptyState(Icons.Outlined.Draw, tr(Res.string.preview_nothing), tr(Res.string.preview_type_start), Modifier.align(Alignment.Center))
+                else -> EmptyState(Icons.Outlined.Draw, tr(Res.string.preview_no_diagram), tr(Res.string.preview_wrap), Modifier.align(Alignment.Center))
             }
             Toast(toast, Modifier.align(Alignment.BottomCenter).padding(16.dp))
         }
@@ -191,20 +224,20 @@ fun PreviewPane(
 /** The export dialog, with the format's extension added when the user drops it. */
 private fun chooseExportTarget(preview: PreviewViewModel, baseDir: File?, format: ExportFormat, baseName: String): File? {
     val dir = baseDir ?: File(System.getProperty("user.home"))
-    val f = preview.chooseExportTarget("Export diagram as ${format.label()}", "$baseName.${format.extension}", dir) ?: return null
+    val f = preview.chooseExportTarget(text(Res.string.preview_export_title, format.label()), "$baseName.${format.extension}", dir) ?: return null
     return if (f.name.endsWith(".${format.extension}")) f else File(f.parentFile, "${f.name}.${format.extension}")
 }
 
-private fun PreviewNotice.describe(): String = when (this) {
-    PreviewNotice.Copied -> "Image copied to clipboard"
-    is PreviewNotice.CopyFailed -> "Couldn't copy: ${exportFailure(cause)}"
-    is PreviewNotice.Saved -> "Saved ${file.name}"
-    is PreviewNotice.ExportFailed -> "Export failed: ${exportFailure(cause)}"
-    PreviewNotice.NothingToExport -> "Nothing to export: fix the diagram first"
+@Composable private fun PreviewNotice.describe(): String = when (this) {
+    PreviewNotice.Copied -> tr(Res.string.preview_copied)
+    is PreviewNotice.CopyFailed -> tr(Res.string.preview_copy_failed, exportFailure(cause))
+    is PreviewNotice.Saved -> tr(Res.string.preview_saved, file.name)
+    is PreviewNotice.ExportFailed -> tr(Res.string.preview_export_failed, exportFailure(cause))
+    PreviewNotice.NothingToExport -> tr(Res.string.preview_nothing_to_export)
 }
 
-private fun exportFailure(t: Throwable) = when (t) {
-    is OfflineIncludeException -> "line ${t.line} has a remote include, and SproutStudio works offline"
+@Composable private fun exportFailure(t: Throwable): String = when (t) {
+    is OfflineIncludeException -> tr(Res.string.preview_remote_include, t.line)
     else -> t.message ?: t.javaClass.simpleName
 }
 
@@ -241,7 +274,7 @@ private fun ErrorStrip(err: RenderError, onJumpToLine: ((Int) -> Unit)?) {
             Icon(Icons.Outlined.ErrorOutline, null, tint = c.error, modifier = Modifier.size(16.dp))
             Text(
                 buildString {
-                    append(if (err.line != null) "Line ${err.line}: " else "Syntax error: ")
+                    append(if (err.line != null) tr(Res.string.preview_line_prefix, err.line ?: 0) else tr(Res.string.preview_syntax_prefix)); append(' ')
                     append(err.describe())
                 },
                 style = MaterialTheme.typography.bodyMedium,
@@ -250,7 +283,7 @@ private fun ErrorStrip(err: RenderError, onJumpToLine: ((Int) -> Unit)?) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).widthIn(min = 0.dp),
             )
-            if (clickable) Text("Go to line", style = MaterialTheme.typography.labelMedium, color = c.accent)
+            if (clickable) Text(tr(Res.string.preview_go_to_line), style = MaterialTheme.typography.labelMedium, color = c.accent)
         }
         HLine()
     }

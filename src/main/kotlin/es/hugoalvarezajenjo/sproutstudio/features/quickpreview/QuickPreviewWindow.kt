@@ -1,5 +1,20 @@
 package es.hugoalvarezajenjo.sproutstudio.features.quickpreview
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.common_close
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_theme
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_open_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_open_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_settings
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_view
+import es.hugoalvarezajenjo.sproutstudio.resources.quick_edit
+import es.hugoalvarezajenjo.sproutstudio.resources.quick_edit_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.quick_not_found
+import es.hugoalvarezajenjo.sproutstudio.resources.quick_open_editor
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 
 import androidx.compose.ui.input.key.KeyShortcut
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
@@ -57,26 +72,26 @@ fun QuickPreviewWindow(file: File, deps: WorkspaceDeps, onClose: () -> Unit) {
         state = rememberWindowState(size = DpSize(980.dp, 720.dp)),
     ) {
         MenuBar {
-            Menu("File") {
-                Item("Edit This Diagram", shortcut = KeyShortcut(Key.E, meta = Os.isMac, ctrl = !Os.isMac)) {
+            Menu(tr(Res.string.menu_file)) {
+                Item(tr(Res.string.quick_edit_diagram), shortcut = KeyShortcut(Key.E, meta = Os.isMac, ctrl = !Os.isMac)) {
                     deps.windows.editFile(file)
                 }
-                Item("Open Diagram…") { deps.openDiagramDialog() }
-                Item("Open Folder…") { deps.openFolderDialog() }
+                Item(tr(Res.string.menu_open_diagram)) { deps.openDiagramDialog() }
+                Item(tr(Res.string.menu_open_folder)) { deps.openFolderDialog() }
                 Separator()
-                Item("Close", shortcut = KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
+                Item(tr(Res.string.common_close), shortcut = KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
             }
-            Menu("View") {
-                CheckboxItem("Dark Theme", checked = deps.theme.dark.value) { deps.theme.toggle() }
-                CheckboxItem("Dark Diagram Preview", checked = deps.diagram.dark.value) { deps.diagram.toggle() }
+            Menu(tr(Res.string.menu_view)) {
+                CheckboxItem(tr(Res.string.menu_dark_theme), checked = deps.theme.dark.value) { deps.theme.toggle() }
+                CheckboxItem(tr(Res.string.menu_dark_diagram_preview), checked = deps.diagram.dark.value) { deps.diagram.toggle() }
                 Separator()
-                Item("Settings…") { deps.windows.openSettings() }
+                Item(tr(Res.string.menu_settings)) { deps.windows.openSettings() }
             }
         }
         PumlTheme(dark = deps.theme.dark.value) {
             Surface(Modifier.fillMaxSize(), color = ide.panel) {
                 if (missing) {
-                    EmptyState(Icons.Outlined.ErrorOutline, "File not found", file.absolutePath)
+                    EmptyState(Icons.Outlined.ErrorOutline, tr(Res.string.quick_not_found), file.absolutePath)
                 } else {
                     val preview = rememberPreviewViewModel(deps, text, file.parentFile, debounceMs = 50)
                     PreviewPane(
@@ -86,7 +101,7 @@ fun QuickPreviewWindow(file: File, deps: WorkspaceDeps, onClose: () -> Unit) {
                         leadingTools = {
                             Tag(file.name, Icons.Outlined.Schema)
                             Spacer(Modifier.width(4.dp))
-                            ToolButton(Icons.Outlined.Edit, "Open in the editor (⌘E)", label = "Edit") { deps.windows.editFile(file) }
+                            ToolButton(Icons.Outlined.Edit, tr(Res.string.quick_open_editor), label = tr(Res.string.quick_edit)) { deps.windows.editFile(file) }
                         },
                     )
                 }

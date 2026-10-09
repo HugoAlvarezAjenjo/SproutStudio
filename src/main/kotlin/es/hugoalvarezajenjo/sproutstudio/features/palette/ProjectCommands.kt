@@ -1,5 +1,72 @@
 package es.hugoalvarezajenjo.sproutstudio.features.palette
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.cat_insert
+import es.hugoalvarezajenjo.sproutstudio.resources.cat_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.cat_recent_project
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_autosave_off
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_autosave_on
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_copy_image
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_dark_theme
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_duplicate_line
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_export_pdf
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_export_png
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_export_svg
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_font_bigger
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_font_reset
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_font_smaller
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_hide_commit_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_hide_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_hide_problems
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_hide_project_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_insert_block
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_insert_template
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_light_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_light_theme
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_diagram_in_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_rename_file
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_toggle_comment
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_trash_file
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_close_project
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_close_tab
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_code
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_edit
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_next
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_previous
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_all
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_block
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_git
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_from_template
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_window
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_open_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_open_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_refresh_files
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_replace
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_rollback_lines
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_save
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_save_as
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_settings
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_commit_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_diff_with_head
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_history
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_problems
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_project_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_stash_changes
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_undo_last_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_unfold_all
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_unfold_block
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_view
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
+
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.chooseFolder
@@ -52,111 +119,110 @@ internal fun projectCommands(
     ) { out += Command(id, title, category, shortcut, enabled, restoresFocus, run = run) }
 
     // File
-    cmd("file.new", "New Diagram", "File", shortcutHint("N")) { p.newDocument() }
-    cmd("file.gallery", "New from Template…", "File", shortcutHint("N", shift = true), restoresFocus = false) { onOpenGallery() }
-    cmd("file.openDiagram", "Open Diagram…", "File", shortcutHint("O", shift = true)) { p.openDiagramDialog() }
-    cmd("file.openFolder", "Open Folder…", "File", shortcutHint("O")) { p.chooseFolder()?.let { p.openRoot(it) } }
-    cmd("file.newWindow", "New Window", "File") { p.deps.windows.newProjectWindow() }
+    cmd("file.new", text(Res.string.menu_new_diagram), text(Res.string.menu_file), shortcutHint("N")) { p.newDocument() }
+    cmd("file.gallery", text(Res.string.menu_new_from_template), text(Res.string.menu_file), shortcutHint("N", shift = true), restoresFocus = false) { onOpenGallery() }
+    cmd("file.openDiagram", text(Res.string.menu_open_diagram), text(Res.string.menu_file), shortcutHint("O", shift = true)) { p.openDiagramDialog() }
+    cmd("file.openFolder", text(Res.string.menu_open_folder), text(Res.string.menu_file), shortcutHint("O")) { p.chooseFolder()?.let { p.openRoot(it) } }
+    cmd("file.newWindow", text(Res.string.menu_new_window), text(Res.string.menu_file)) { p.deps.windows.newProjectWindow() }
     p.root?.let { root ->
         val dir = d?.file?.absoluteFile?.parentFile?.takeIf { it == root.absoluteFile || it.startsWith(root.absoluteFile) } ?: root
-        cmd("file.newNamed", "New Diagram in Folder…", "File", restoresFocus = false) { p.explorer.showFileAction(FileAction.NewDiagram(dir)) }
-        cmd("file.newFolder", "New Folder…", "File", restoresFocus = false) { p.explorer.showFileAction(FileAction.NewFolder(dir)) }
+        cmd("file.newNamed", text(Res.string.cmd_new_diagram_in_folder), text(Res.string.menu_file), restoresFocus = false) { p.explorer.showFileAction(FileAction.NewDiagram(dir)) }
+        cmd("file.newFolder", text(Res.string.cmd_new_folder), text(Res.string.menu_file), restoresFocus = false) { p.explorer.showFileAction(FileAction.NewFolder(dir)) }
         d?.file?.let { f ->
-            cmd("file.rename", "Rename File…", "File", restoresFocus = false) { p.explorer.showFileAction(FileAction.Rename(f)) }
-            cmd("file.trash", "Move File to Trash…", "File", restoresFocus = false) { p.explorer.showFileAction(FileAction.Delete(f)) }
+            cmd("file.rename", text(Res.string.cmd_rename_file), text(Res.string.menu_file), restoresFocus = false) { p.explorer.showFileAction(FileAction.Rename(f)) }
+            cmd("file.trash", text(Res.string.cmd_trash_file), text(Res.string.menu_file), restoresFocus = false) { p.explorer.showFileAction(FileAction.Delete(f)) }
         }
     }
-    cmd("file.save", "Save", "File", shortcutHint("S"), enabled = has) { onSave() }
-    cmd("file.saveAs", "Save As…", "File", shortcutHint("S", shift = true), enabled = has) { onSaveAs() }
-    cmd("file.autosave", if (p.deps.autoSaver.enabled) "Turn Off Save Automatically" else "Turn On Save Automatically", "File") {
+    cmd("file.save", text(Res.string.menu_save), text(Res.string.menu_file), shortcutHint("S"), enabled = has) { onSave() }
+    cmd("file.saveAs", text(Res.string.menu_save_as), text(Res.string.menu_file), shortcutHint("S", shift = true), enabled = has) { onSaveAs() }
+    cmd("file.autosave", if (p.deps.autoSaver.enabled) text(Res.string.cmd_autosave_off) else text(Res.string.cmd_autosave_on), text(Res.string.menu_file)) {
         p.setAutoSave(!p.deps.autoSaver.enabled)
     }
-    cmd("file.closeTab", "Close Tab", "File", shortcutHint("W"), enabled = has) { onCloseTab() }
-    cmd("file.closeProject", "Close Project", "File", enabled = p.root != null || has, restoresFocus = false) { onCloseProject() }
+    cmd("file.closeTab", text(Res.string.menu_close_tab), text(Res.string.menu_file), shortcutHint("W"), enabled = has) { onCloseTab() }
+    cmd("file.closeProject", text(Res.string.menu_close_project), text(Res.string.menu_file), enabled = p.root != null || has, restoresFocus = false) { onCloseProject() }
 
     // Edit
-    cmd("edit.find", "Find…", "Edit", shortcutHint("F"), enabled = has, restoresFocus = false) {
+    cmd("edit.find", text(Res.string.menu_find), text(Res.string.menu_edit), shortcutHint("F"), enabled = has, restoresFocus = false) {
         d?.let { p.revealEditor(); it.find.open(replace = false, seed = it.selectedText()) }
     }
-    cmd("edit.replace", "Replace…", "Edit", shortcutHint("R"), enabled = has, restoresFocus = false) {
+    cmd("edit.replace", text(Res.string.menu_replace), text(Res.string.menu_edit), shortcutHint("R"), enabled = has, restoresFocus = false) {
         d?.let { p.revealEditor(); it.find.open(replace = true, seed = it.selectedText()) }
     }
-    cmd("edit.findNext", "Find Next", "Edit", shortcutHint("G"), enabled = has) { p.revealEditor(); d?.findNext(true) }
-    cmd("edit.findPrev", "Find Previous", "Edit", shortcutHint("G", shift = true), enabled = has) { p.revealEditor(); d?.findNext(false) }
-    cmd("edit.comment", "Comment / Uncomment Lines", "Edit", shortcutHint("/"), enabled = has) {
+    cmd("edit.findNext", text(Res.string.menu_find_next), text(Res.string.menu_edit), shortcutHint("G"), enabled = has) { p.revealEditor(); d?.findNext(true) }
+    cmd("edit.findPrev", text(Res.string.menu_find_previous), text(Res.string.menu_edit), shortcutHint("G", shift = true), enabled = has) { p.revealEditor(); d?.findNext(false) }
+    cmd("edit.comment", text(Res.string.cmd_toggle_comment), text(Res.string.menu_edit), shortcutHint("/"), enabled = has) {
         d?.let { p.revealEditor(); it.value = EditOps.toggleComment(it.value) }
     }
-    cmd("edit.duplicate", "Duplicate Line", "Edit", shortcutHint("D"), enabled = has) {
+    cmd("edit.duplicate", text(Res.string.cmd_duplicate_line), text(Res.string.menu_edit), shortcutHint("D"), enabled = has) {
         d?.let { p.revealEditor(); it.value = EditOps.duplicateLines(it.value) }
     }
 
     // Code
-    cmd("code.fold", "Fold Block", "Code", shortcutHint("-"), enabled = has) { p.revealEditor(); d?.foldAtCaret() }
-    cmd("code.unfold", "Unfold Block", "Code", shortcutHint("="), enabled = has) { p.revealEditor(); d?.unfoldAtCaret() }
-    cmd("code.foldAll", "Fold All", "Code", shortcutHint("-", shift = true), enabled = has) { p.revealEditor(); d?.foldAll() }
-    cmd("code.unfoldAll", "Unfold All", "Code", shortcutHint("=", shift = true), enabled = has) { p.revealEditor(); d?.unfoldAll() }
+    cmd("code.fold", text(Res.string.menu_fold_block), text(Res.string.menu_code), shortcutHint("-"), enabled = has) { p.revealEditor(); d?.foldAtCaret() }
+    cmd("code.unfold", text(Res.string.menu_unfold_block), text(Res.string.menu_code), shortcutHint("="), enabled = has) { p.revealEditor(); d?.unfoldAtCaret() }
+    cmd("code.foldAll", text(Res.string.menu_fold_all), text(Res.string.menu_code), shortcutHint("-", shift = true), enabled = has) { p.revealEditor(); d?.foldAll() }
+    cmd("code.unfoldAll", text(Res.string.menu_unfold_all), text(Res.string.menu_code), shortcutHint("=", shift = true), enabled = has) { p.revealEditor(); d?.unfoldAll() }
 
     // View
     EditorLayout.entries.forEach { l ->
-        cmd("view.layout.${l.name}", l.label, "View", shortcutHint("${l.ordinal + 1}", alt = true), enabled = p.layout != l) { p.changeLayout(l) }
+        cmd("view.layout.${l.name}", text(l.label), text(Res.string.menu_view), shortcutHint("${l.ordinal + 1}", alt = true), enabled = p.layout != l) { p.changeLayout(l) }
     }
-    cmd("view.preview", if (p.previewVisible) "Hide Preview" else "Show Preview", "View", shortcutHint("P")) { p.togglePreview() }
-    cmd("view.problems", if (p.problemsExpanded) "Hide Problems" else "Show Problems", "View", shortcutHint("6"), enabled = has) { p.toggleProblems() }
+    cmd("view.preview", if (p.previewVisible) text(Res.string.cmd_hide_preview) else text(Res.string.menu_show_preview), text(Res.string.menu_view), shortcutHint("P")) { p.togglePreview() }
+    cmd("view.problems", if (p.problemsExpanded) text(Res.string.cmd_hide_problems) else text(Res.string.menu_show_problems), text(Res.string.menu_view), shortcutHint("6"), enabled = has) { p.toggleProblems() }
     if (p.root != null) {
-        cmd("view.sidebar", if (p.sidebarVisible) "Hide Project Panel" else "Show Project Panel", "View", shortcutHint("1")) {
+        cmd("view.sidebar", if (p.sidebarVisible) text(Res.string.cmd_hide_project_panel) else text(Res.string.menu_show_project_panel), text(Res.string.menu_view), shortcutHint("1")) {
             p.showSidebar(!p.sidebarVisible)
         }
-        cmd("view.refresh", "Refresh Files", "View", shortcutHint("Y", alt = true)) { p.explorer.refreshTree() }
-        cmd("view.commitPanel", if (p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT) "Hide Commit Panel" else "Show Commit Panel", "View", shortcutHint("0")) {
+        cmd("view.refresh", text(Res.string.menu_refresh_files), text(Res.string.menu_view), shortcutHint("Y", alt = true)) { p.explorer.refreshTree() }
+        cmd("view.commitPanel", if (p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT) text(Res.string.cmd_hide_commit_panel) else text(Res.string.menu_show_commit_panel), text(Res.string.menu_view), shortcutHint("0")) {
             p.toggleTool(SidebarTool.COMMIT)
         }
         // Git
-        cmd("git.commit", "Commit…", "Git", shortcutHint("K"), restoresFocus = false) { p.focusCommit() }
-        cmd("git.compare", "Compare Diagram with HEAD", "Git", enabled = canCompareWithHead(p, d?.file)) {
+        cmd("git.commit", text(Res.string.menu_commit), text(Res.string.menu_git), shortcutHint("K"), restoresFocus = false) { p.focusCommit() }
+        cmd("git.compare", text(Res.string.menu_compare_with_head), text(Res.string.menu_git), enabled = canCompareWithHead(p, d?.file)) {
             d?.file?.let { p.deps.windows.compareWithHead(p, it) }
         }
-        cmd("git.rollbackLines", "Rollback Lines", "Git", shortcutHint("Z", alt = true), enabled = d?.let { it.changeAtCaret() } != null) {
+        cmd("git.rollbackLines", text(Res.string.menu_rollback_lines), text(Res.string.menu_git), shortcutHint("Z", alt = true), enabled = d?.let { it.changeAtCaret() } != null) {
             p.revealEditor(); d?.let { it.rollbackAtCaret() }
         }
-        cmd("git.diff", "Show Diff with HEAD", "Git", enabled = hasCommittedChanges(p, d?.file)) {
+        cmd("git.diff", text(Res.string.menu_show_diff_with_head), text(Res.string.menu_git), enabled = hasCommittedChanges(p, d?.file)) {
             d?.file?.let { p.deps.windows.compareWithHead(p, it, textFirst = true) }
         }
-        cmd("git.history", "Show History for Current File", "Git", enabled = p.git.status.head != null && d?.file != null) {
+        cmd("git.history", text(Res.string.menu_show_history), text(Res.string.menu_git), enabled = p.git.status.head != null && d?.file != null) {
             d?.file?.let { p.deps.windows.showHistory(p, it) }
         }
-        cmd("git.undo", "Undo Last Commit", "Git", enabled = (p.git.lastCommit?.parents ?: 0) > 0, restoresFocus = false) {
+        cmd("git.undo", text(Res.string.menu_undo_last_commit), text(Res.string.menu_git), enabled = (p.git.lastCommit?.parents ?: 0) > 0, restoresFocus = false) {
             p.gitFlow.undoLastCommit(showCommitPanel = true)
         }
-        cmd("git.stash", "Stash Changes…", "Git", enabled = p.git.status.head != null, restoresFocus = false) {
+        cmd("git.stash", text(Res.string.menu_stash_changes), text(Res.string.menu_git), enabled = p.git.status.head != null, restoresFocus = false) {
             p.showTool(SidebarTool.COMMIT); p.git.requestStashPopup()
         }
-        if (!p.git.isRepo) cmd("git.init", "Create Git Repository", "Git") {
+        if (!p.git.isRepo) cmd("git.init", text(Res.string.menu_create_git_repo), text(Res.string.menu_git)) {
             p.showTool(SidebarTool.COMMIT)
             p.gitFlow.init()
         }
     }
-    cmd("view.theme", if (p.deps.theme.dark.value) "Switch to Light Theme" else "Switch to Dark Theme", "View") { p.deps.theme.toggle() }
-    cmd("app.settings", "Settings…", "SproutStudio", if (Os.isMac) "⌘," else "Ctrl+,", restoresFocus = false) { p.deps.windows.openSettings() }
+    cmd("view.theme", if (p.deps.theme.dark.value) text(Res.string.cmd_light_theme) else text(Res.string.cmd_dark_theme), text(Res.string.menu_view)) { p.deps.theme.toggle() }
+    cmd("app.settings", text(Res.string.menu_settings), "SproutStudio", if (Os.isMac) "⌘," else "Ctrl+,", restoresFocus = false) { p.deps.windows.openSettings() }
     val editor = p.deps.editor
-    cmd("view.fontBigger", "Increase Editor Font Size", "View", enabled = editor.currentFontSize < EditorSettings.MAX_FONT_SIZE) { editor.changeFontSize(1f) }
-    cmd("view.fontSmaller", "Decrease Editor Font Size", "View", enabled = editor.currentFontSize > EditorSettings.MIN_FONT_SIZE) { editor.changeFontSize(-1f) }
-    cmd("view.fontReset", "Reset Editor Font Size", "View", enabled = !editor.fontSize.isDefault) { editor.fontSize.reset() }
-    cmd("view.diagramDark", if (p.deps.diagram.dark.value) "Light Diagram Preview" else "Dark Diagram Preview", "Preview") { p.deps.diagram.toggle() }
+    cmd("view.fontBigger", text(Res.string.cmd_font_bigger), text(Res.string.menu_view), enabled = editor.currentFontSize < EditorSettings.MAX_FONT_SIZE) { editor.changeFontSize(1f) }
+    cmd("view.fontSmaller", text(Res.string.cmd_font_smaller), text(Res.string.menu_view), enabled = editor.currentFontSize > EditorSettings.MIN_FONT_SIZE) { editor.changeFontSize(-1f) }
+    cmd("view.fontReset", text(Res.string.cmd_font_reset), text(Res.string.menu_view), enabled = !editor.fontSize.isDefault) { editor.fontSize.reset() }
+    cmd("view.diagramDark", if (p.deps.diagram.dark.value) text(Res.string.cmd_light_diagram) else text(Res.string.menu_dark_diagram_preview), text(Res.string.cat_preview)) { p.deps.diagram.toggle() }
 
     // Preview: export goes through the preview pane (it knows which diagram is showing).
-    fun previewCmd(id: String, title: String, a: PreviewAction) = cmd(id, title, "Preview", enabled = has) {
+    fun previewCmd(id: String, title: String, a: PreviewAction) = cmd(id, title, text(Res.string.cat_preview), enabled = has) {
         if (!p.previewVisible) p.changeLayout(EditorLayout.SPLIT)
         d?.requestPreview(a)
     }
-    previewCmd("preview.copy", "Copy Diagram Image", PreviewAction.COPY_IMAGE)
-    previewCmd("preview.svg", "Export Diagram as SVG…", PreviewAction.EXPORT_SVG)
-    previewCmd("preview.png", "Export Diagram as PNG…", PreviewAction.EXPORT_PNG)
-    previewCmd("preview.pdf", "Export Diagram as PDF…", PreviewAction.EXPORT_PDF)
+    previewCmd("preview.copy", text(Res.string.cmd_copy_image), PreviewAction.COPY_IMAGE)
+    previewCmd("preview.svg", text(Res.string.cmd_export_svg), PreviewAction.EXPORT_SVG)
+    previewCmd("preview.png", text(Res.string.cmd_export_png), PreviewAction.EXPORT_PNG)
+    previewCmd("preview.pdf", text(Res.string.cmd_export_pdf), PreviewAction.EXPORT_PDF)
 
     // Insert a template at the caret (whole set, including the blocks).
     Templates.all.forEach { t ->
-        val suffix = if (t.whole) "Template" else "Block"
-        cmd("insert.${t.id}", "Insert ${t.name} $suffix", "Insert", enabled = has) {
+        cmd("insert.${t.id}", text(if (t.whole) Res.string.cmd_insert_template else Res.string.cmd_insert_block, t.name), text(Res.string.cat_insert), enabled = has) {
             d?.let { p.revealEditor(); it.value = EditOps.insertTemplate(it.value, t) }
         }
     }
@@ -171,7 +237,7 @@ internal fun projectCommands(
         ) { p.open(f) }
     }
     p.deps.recents.folders().filter { it.absoluteFile != root?.absoluteFile }.forEach { dir ->
-        out += Command("recent:${dir.path}", dir.name, "Recent Project", searchOnly = true) { p.deps.windows.openFolder(dir) }
+        out += Command("recent:${dir.path}", dir.name, text(Res.string.cat_recent_project), searchOnly = true) { p.deps.windows.openFolder(dir) }
     }
     return out
 }

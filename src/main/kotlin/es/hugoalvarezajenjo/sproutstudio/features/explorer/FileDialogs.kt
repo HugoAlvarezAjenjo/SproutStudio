@@ -1,5 +1,30 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.branch_create
+import es.hugoalvarezajenjo.sproutstudio.resources.dialog_cancel
+import es.hugoalvarezajenjo.sproutstudio.resources.file_change
+import es.hugoalvarezajenjo.sproutstudio.resources.file_choose_template
+import es.hugoalvarezajenjo.sproutstudio.resources.file_clear
+import es.hugoalvarezajenjo.sproutstudio.resources.file_in
+import es.hugoalvarezajenjo.sproutstudio.resources.file_in_puml
+import es.hugoalvarezajenjo.sproutstudio.resources.file_name
+import es.hugoalvarezajenjo.sproutstudio.resources.file_new_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.file_new_name
+import es.hugoalvarezajenjo.sproutstudio.resources.file_no_template
+import es.hugoalvarezajenjo.sproutstudio.resources.file_rename
+import es.hugoalvarezajenjo.sproutstudio.resources.file_rename_file
+import es.hugoalvarezajenjo.sproutstudio.resources.file_rename_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.file_template
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.trash_confirm
+import es.hugoalvarezajenjo.sproutstudio.resources.trash_empty_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.trash_holds
+import es.hugoalvarezajenjo.sproutstudio.resources.trash_restore_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.trash_title
+import es.hugoalvarezajenjo.sproutstudio.resources.trash_unsaved
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
@@ -56,17 +81,17 @@ internal fun FileActionDialog(p: WorkspaceViewModel) {
         is FileAction.NewDiagram -> NewDiagramDialog(p, a.dir)
 
         is FileAction.NewFolder -> NameDialog(
-            title = "New Folder", label = "Name", confirm = "Create",
+            title = tr(Res.string.file_new_folder), creating = true, label = tr(Res.string.file_name), confirm = tr(Res.string.branch_create),
             initial = p.deps.files.freeName(a.dir, "new-folder"),
             state = remember(a) { mutableStateOf(selected(p.deps.files.freeName(a.dir, "new-folder"), false)) },
-            hint = "in ${where(p, a.dir)}",
+            hint = tr(Res.string.file_in, where(p, a.dir)),
             check = { p.deps.files.validate(a.dir, it)?.describe() },
             onDismiss = { p.explorer.dismissFileAction() },
             scope = p.scope,
         ) { p.explorer.newFolderIn(a.dir, it).exceptionOrNull()?.fileError?.describe() }
 
         is FileAction.Rename -> NameDialog(
-            title = if (a.target.isDirectory) "Rename Folder" else "Rename File", label = "New name", confirm = "Rename",
+            title = if (a.target.isDirectory) tr(Res.string.file_rename_folder) else tr(Res.string.file_rename_file), creating = false, label = tr(Res.string.file_new_name), confirm = tr(Res.string.file_rename),
             initial = a.target.name,
             state = remember(a) { mutableStateOf(selected(a.target.name, !a.target.isDirectory)) },
             hint = null,
@@ -99,9 +124,9 @@ private fun NewDiagramDialog(p: WorkspaceViewModel, dir: File) {
         return
     }
     NameDialog(
-        title = "New Diagram", label = "Name", confirm = "Create",
+        title = tr(Res.string.menu_new_diagram), creating = true, label = tr(Res.string.file_name), confirm = tr(Res.string.branch_create),
         state = name, initial = initial,
-        hint = "in ${where(p, dir)} · .puml is added if missing",
+        hint = tr(Res.string.file_in_puml, where(p, dir)),
         check = { n -> (if (n.isBlank()) FileError.EmptyName else p.deps.files.validate(dir, p.deps.files.diagramName(n)))?.describe() },
         onDismiss = { p.explorer.dismissFileAction() },
         scope = p.scope,
@@ -112,15 +137,15 @@ private fun NewDiagramDialog(p: WorkspaceViewModel, dir: File) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Template", color = c.textMuted, fontSize = 12.sp)
+                Text(tr(Res.string.file_template), color = c.textMuted, fontSize = 12.sp)
                 Text(
-                    template?.let { "${it.name} (${it.category})" } ?: "None, empty file",
+                    template?.let { "${it.name} (${it.category})" } ?: tr(Res.string.file_no_template),
                     color = if (template != null) c.text else c.textMuted, fontSize = 13.sp,
                     modifier = Modifier.weight(1f).testTag("new-diagram-template"),
                 )
-                if (template != null) TextButton(onClick = { template = null }) { Text("Clear") }
+                if (template != null) TextButton(onClick = { template = null }) { Text(tr(Res.string.file_clear)) }
                 TextButton(onClick = { picking = true }, modifier = Modifier.testTag("choose-template")) {
-                    Text(if (template == null) "Choose template…" else "Change…")
+                    Text(if (template == null) tr(Res.string.file_choose_template) else tr(Res.string.file_change))
                 }
             }
         },
@@ -142,6 +167,8 @@ private fun where(p: WorkspaceViewModel, dir: File): String {
 @Composable
 private fun NameDialog(
     title: String,
+    /** A new file or folder: an invalid suggested name is flagged before any edit. */
+    creating: Boolean,
     label: String,
     confirm: String,
     initial: String,
@@ -161,7 +188,7 @@ private fun NameDialog(
     var value by state
     var failed by remember { mutableStateOf<String?>(null) }
     val invalid = check(value.text)
-    val error = failed ?: invalid.takeIf { value.text != initial || title.startsWith("New") }
+    val error = failed ?: invalid.takeIf { value.text != initial || creating }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
 
@@ -210,7 +237,7 @@ private fun NameDialog(
         confirmButton = {
             TextButton(onClick = { submit() }, enabled = invalid == null, modifier = Modifier.testTag("file-name-confirm")) { Text(confirm) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr(Res.string.dialog_cancel)) } },
     )
 }
 
@@ -225,18 +252,18 @@ private fun DeleteDialog(p: WorkspaceViewModel, target: File) {
         onDismissRequest = { p.explorer.dismissFileAction() },
         containerColor = c.popup,
         shape = RoundedCornerShape(10.dp),
-        title = { Text("Move “${f.name}” to the Trash?", style = MaterialTheme.typography.titleMedium) },
+        title = { Text(tr(Res.string.trash_title, f.name), style = MaterialTheme.typography.titleMedium) },
         text = {
             Column {
                 Text(
                     buildString {
-                        if (f.isDirectory) append(if (inside == 0) "The folder is empty. " else "It holds $inside file${if (inside == 1) "" else "s"}. ")
-                        append("You can get it back from the Trash in Finder.")
+                        if (f.isDirectory) append(if (inside == 0) tr(Res.string.trash_empty_folder) else tr(Res.plurals.trash_holds, inside, inside)); append(' ')
+                        append(tr(Res.string.trash_restore_hint))
                     },
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 if (unsaved.isNotEmpty()) Text(
-                    "Unsaved changes in ${unsaved.joinToString { it.name }} will be lost.",
+                    tr(Res.string.trash_unsaved, unsaved.joinToString { it.name }),
                     color = c.error, fontSize = 12.sp,
                 )
                 failed?.let { Text(it, color = c.error, fontSize = 12.sp) }
@@ -248,9 +275,9 @@ private fun DeleteDialog(p: WorkspaceViewModel, target: File) {
                     failed = p.explorer.delete(f).exceptionOrNull()?.fileError?.describe()
                     if (failed == null) p.explorer.dismissFileAction()
                 }
-            }, modifier = Modifier.testTag("file-delete-confirm")) { Text("Move to Trash", color = c.error) }
+            }, modifier = Modifier.testTag("file-delete-confirm")) { Text(tr(Res.string.trash_confirm), color = c.error) }
         },
-        dismissButton = { TextButton(onClick = { p.explorer.dismissFileAction() }) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = { p.explorer.dismissFileAction() }) { Text(tr(Res.string.dialog_cancel)) } },
     )
 }
 

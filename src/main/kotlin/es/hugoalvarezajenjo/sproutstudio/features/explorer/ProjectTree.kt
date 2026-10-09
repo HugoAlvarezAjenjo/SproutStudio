@@ -1,5 +1,26 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.git_open
+import es.hugoalvarezajenjo.sproutstudio.resources.git_show_history
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_diff_with_head
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_collapse
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_collapse_all
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_expand
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_hide
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_new_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_no_diagrams
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_open_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_project
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_refresh
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_rename
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_reveal_finder
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_trash
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.ui.geometry.Offset
@@ -98,12 +119,12 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
             Modifier.fillMaxWidth().height(36.dp).padding(start = 12.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Project", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
-            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, "New Diagram…") { targetDir(p)?.let { p.explorer.showFileAction(FileAction.NewDiagram(it)) } }
-            ToolButton(Icons.Outlined.CreateNewFolder, "New Folder…") { targetDir(p)?.let { p.explorer.showFileAction(FileAction.NewFolder(it)) } }
-            ToolButton(Icons.Outlined.UnfoldLess, "Collapse All") { p.explorer.collapseAll() }
-            ToolButton(Icons.Outlined.Refresh, "Refresh (⌥⌘Y)") { p.explorer.refreshTree() }
-            ToolButton(Icons.Outlined.Remove, "Hide (⌘1)") { p.showSidebar(false) }
+            Text(tr(Res.string.tree_project), style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
+            ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, tr(Res.string.tree_new_diagram)) { targetDir(p)?.let { p.explorer.showFileAction(FileAction.NewDiagram(it)) } }
+            ToolButton(Icons.Outlined.CreateNewFolder, tr(Res.string.cmd_new_folder)) { targetDir(p)?.let { p.explorer.showFileAction(FileAction.NewFolder(it)) } }
+            ToolButton(Icons.Outlined.UnfoldLess, tr(Res.string.tree_collapse_all)) { p.explorer.collapseAll() }
+            ToolButton(Icons.Outlined.Refresh, tr(Res.string.tree_refresh)) { p.explorer.refreshTree() }
+            ToolButton(Icons.Outlined.Remove, tr(Res.string.tree_hide)) { p.showSidebar(false) }
         }
         // Root row: a folder like any other, so it collapses too.
         ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
@@ -123,7 +144,7 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
         }
         if (!p.explorer.rootCollapsed) {
             if (p.explorer.tree.isEmpty()) {
-                Text("No diagrams in this folder", fontSize = 12.sp, color = c.textMuted, modifier = Modifier.padding(start = 34.dp, top = 6.dp))
+                Text(tr(Res.string.tree_no_diagrams), fontSize = 12.sp, color = c.textMuted, modifier = Modifier.padding(start = 34.dp, top = 6.dp))
             }
             LazyColumn(Modifier.weight(1f, fill = false).padding(horizontal = 4.dp)) {
                 items(p.explorer.tree, key = { it.file.absolutePath }) { node -> TreeRow(p, node, drag, onDrop) }
@@ -169,15 +190,15 @@ private fun targetDir(p: WorkspaceViewModel): java.io.File? {
 }
 
 private fun folderMenu(p: WorkspaceViewModel, dir: java.io.File, isRoot: Boolean) = buildList {
-    add(ContextMenuItem("New Diagram…") { p.explorer.showFileAction(FileAction.NewDiagram(dir)) })
-    add(ContextMenuItem("New Folder…") { p.explorer.showFileAction(FileAction.NewFolder(dir)) })
+    add(ContextMenuItem(text(Res.string.tree_new_diagram)) { p.explorer.showFileAction(FileAction.NewDiagram(dir)) })
+    add(ContextMenuItem(text(Res.string.cmd_new_folder)) { p.explorer.showFileAction(FileAction.NewFolder(dir)) })
     if (!isRoot) {
-        add(ContextMenuItem("Rename…") { p.explorer.showFileAction(FileAction.Rename(dir)) })
-        add(ContextMenuItem("Move to Trash…") { p.explorer.showFileAction(FileAction.Delete(dir)) })
+        add(ContextMenuItem(text(Res.string.tree_rename)) { p.explorer.showFileAction(FileAction.Rename(dir)) })
+        add(ContextMenuItem(text(Res.string.tree_trash)) { p.explorer.showFileAction(FileAction.Delete(dir)) })
     } else {
-        add(ContextMenuItem(if (p.explorer.rootCollapsed) "Expand" else "Collapse") { p.explorer.toggleRootCollapsed() })
+        add(ContextMenuItem(if (p.explorer.rootCollapsed) text(Res.string.tree_expand) else text(Res.string.tree_collapse)) { p.explorer.toggleRootCollapsed() })
     }
-    add(ContextMenuItem(if (Os.isMac) "Reveal in Finder" else "Open Containing Folder") { p.deps.platform.reveal(dir) })
+    add(ContextMenuItem(if (Os.isMac) text(Res.string.tree_reveal_finder) else text(Res.string.tree_open_folder)) { p.deps.platform.reveal(dir) })
 }
 
 @Composable
@@ -187,16 +208,16 @@ private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDro
     ContextMenuArea(items = {
         if (node.isDir) folderMenu(p, f, isRoot = false) else buildList {
             val dir = f.absoluteFile.parentFile
-            add(ContextMenuItem("Open") { p.open(f) })
-            add(ContextMenuItem("New Diagram…") { p.explorer.showFileAction(FileAction.NewDiagram(dir)) })
-            add(ContextMenuItem("New Folder…") { p.explorer.showFileAction(FileAction.NewFolder(dir)) })
-            add(ContextMenuItem("Rename…") { p.explorer.showFileAction(FileAction.Rename(f)) })
-            add(ContextMenuItem("Move to Trash…") { p.explorer.showFileAction(FileAction.Delete(f)) })
-            add(ContextMenuItem(if (Os.isMac) "Reveal in Finder" else "Open Containing Folder") { p.deps.platform.reveal(f) })
+            add(ContextMenuItem(text(Res.string.git_open)) { p.open(f) })
+            add(ContextMenuItem(text(Res.string.tree_new_diagram)) { p.explorer.showFileAction(FileAction.NewDiagram(dir)) })
+            add(ContextMenuItem(text(Res.string.cmd_new_folder)) { p.explorer.showFileAction(FileAction.NewFolder(dir)) })
+            add(ContextMenuItem(text(Res.string.tree_rename)) { p.explorer.showFileAction(FileAction.Rename(f)) })
+            add(ContextMenuItem(text(Res.string.tree_trash)) { p.explorer.showFileAction(FileAction.Delete(f)) })
+            add(ContextMenuItem(if (Os.isMac) text(Res.string.tree_reveal_finder) else text(Res.string.tree_open_folder)) { p.deps.platform.reveal(f) })
             if (p.git.status.head != null) {
-                if (canCompareWithHead(p, f)) add(ContextMenuItem("Compare Diagram with HEAD") { p.deps.windows.compareWithHead(p, f) })
-                if (hasCommittedChanges(p, f)) add(ContextMenuItem("Show Diff with HEAD") { p.deps.windows.compareWithHead(p, f, textFirst = true) })
-                add(ContextMenuItem("Show History") { p.deps.windows.showHistory(p, f) })
+                if (canCompareWithHead(p, f)) add(ContextMenuItem(text(Res.string.menu_compare_with_head)) { p.deps.windows.compareWithHead(p, f) })
+                if (hasCommittedChanges(p, f)) add(ContextMenuItem(text(Res.string.menu_show_diff_with_head)) { p.deps.windows.compareWithHead(p, f, textFirst = true) })
+                add(ContextMenuItem(text(Res.string.git_show_history)) { p.deps.windows.showHistory(p, f) })
             }
         }
     }) { TreeRowContent(p, node, drag, onDrop) }

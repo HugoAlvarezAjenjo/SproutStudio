@@ -12,6 +12,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.settings.SettingsWindow
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectWindow
 import es.hugoalvarezajenjo.sproutstudio.services.render.PlantUmlEngine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.AppIcon
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ProvideLanguage
 import kotlinx.coroutines.delay
 import java.awt.Desktop
 import java.io.File
@@ -78,15 +79,18 @@ fun main(args: Array<String>) {
             else if (sawWindow.value) exitApplication()
         }
 
-        for (w in windows.windows) {
-            key(w.id) {
-                val close = { windows.close(w) }
-                when (w) {
-                    is AppWindow.QuickPreview -> QuickPreviewWindow(w.file, graph.deps, onClose = close)
-                    is AppWindow.Project -> ProjectWindow(w.state, w.revealed, onClose = close)
-                    is AppWindow.DiagramDiff -> DiagramDiffWindow(w.project, w.file, w.left, w.right, w.textFirst, onClose = close)
-                    is AppWindow.History -> HistoryWindow(w.project, w.file, onClose = close)
-                    is AppWindow.Settings -> SettingsWindow(graph.deps, onClose = close)
+        // Every window, title and menu in the language picked in Settings, switching live.
+        ProvideLanguage(graph.language.resolved) {
+            for (w in windows.windows) {
+                key(w.id) {
+                    val close = { windows.close(w) }
+                    when (w) {
+                        is AppWindow.QuickPreview -> QuickPreviewWindow(w.file, graph.deps, onClose = close)
+                        is AppWindow.Project -> ProjectWindow(w.state, w.revealed, onClose = close)
+                        is AppWindow.DiagramDiff -> DiagramDiffWindow(w.project, w.file, w.left, w.right, w.textFirst, onClose = close)
+                        is AppWindow.History -> HistoryWindow(w.project, w.file, onClose = close)
+                        is AppWindow.Settings -> SettingsWindow(graph.deps, onClose = close)
+                    }
                 }
             }
         }

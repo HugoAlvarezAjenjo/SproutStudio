@@ -13,6 +13,7 @@ import es.hugoalvarezajenjo.sproutstudio.services.git.GitService
 import es.hugoalvarezajenjo.sproutstudio.services.persistence.DocumentStore
 import es.hugoalvarezajenjo.sproutstudio.services.render.RenderService
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ThemeSettings
+import es.hugoalvarezajenjo.sproutstudio.core.i18n.LanguageSettings
 
 /**
  * What a window needs from the rest of the app, handed in by the app's graph. Screens reach
@@ -29,6 +30,7 @@ class WorkspaceDeps(
     val theme: ThemeSettings,
     val diagram: DiagramSettings,
     val editor: EditorSettings,
+    val language: LanguageSettings,
     val layout: LayoutSettings,
     val recents: RecentProjects,
     val paletteHistory: PaletteHistory,

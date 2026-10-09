@@ -27,6 +27,8 @@ dependencies {
     implementation("org.jetbrains.compose.material3:material3:1.9.0")
     // Vector icons (compiled into the app, no runtime download).
     implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
+    // Translated texts: src/main/composeResources/values[-es]/strings.xml -> generated Res.string.*
+    implementation(compose.components.resources)
 
     // PlantUML engine, MIT-licensed build. Includes the Smetana layout engine,
     // so no Graphviz / dot binary is needed. Rendering is 100% in-process.
@@ -54,6 +56,9 @@ tasks.test {
     useJUnitPlatform()
     // Tests never read or write the user's real preferences (window layout, recents...).
     systemProperty("sproutstudio.settings", "memory")
+    // Tests assert English texts, whatever language the machine running them uses.
+    systemProperty("user.language", "en")
+    systemProperty("user.country", "US")
 }
 
 // Finder litter in src/main/resources must not end up inside the app jar.
@@ -95,6 +100,11 @@ val generateMacIcon by tasks.registering {
 // Every native packaging task needs the .icns first.
 tasks.matching { it.name.startsWith("createDistributable") || it.name.startsWith("package") }
     .configureEach { dependsOn(generateMacIcon) }
+
+compose.resources {
+    packageOfResClass = "es.hugoalvarezajenjo.sproutstudio.resources"
+    publicResClass = false
+}
 
 compose.desktop {
     application {

@@ -1,5 +1,16 @@
 package es.hugoalvarezajenjo.sproutstudio.features.problems
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.problems_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.problems_diagram_n
+import es.hugoalvarezajenjo.sproutstudio.resources.problems_hide
+import es.hugoalvarezajenjo.sproutstudio.resources.problems_line_n
+import es.hugoalvarezajenjo.sproutstudio.resources.problems_none
+import es.hugoalvarezajenjo.sproutstudio.resources.problems_show
+import es.hugoalvarezajenjo.sproutstudio.resources.problems_title
+import es.hugoalvarezajenjo.sproutstudio.resources.problems_valid
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -70,7 +81,7 @@ fun ProblemsPanel(
             HLine()
             if (problems.isEmpty()) {
                 Box(Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) {
-                    EmptyState(Icons.Outlined.CheckCircle, "No problems", "Your diagram is valid")
+                    EmptyState(Icons.Outlined.CheckCircle, tr(Res.string.problems_none), tr(Res.string.problems_valid))
                 }
             } else {
                 LazyColumn(Modifier.fillMaxSize().padding(horizontal = 4.dp)) {
@@ -102,10 +113,10 @@ private fun ProblemsHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) 
     ) {
         if (count == 0) {
             Icon(Icons.Outlined.CheckCircle, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
-            Text("No problems", style = MaterialTheme.typography.labelLarge, color = c.textMuted)
+            Text(tr(Res.string.problems_none), style = MaterialTheme.typography.labelLarge, color = c.textMuted)
         } else {
             Icon(Icons.Outlined.ErrorOutline, null, tint = c.error, modifier = Modifier.size(14.dp))
-            Text("Problems", style = MaterialTheme.typography.labelLarge, color = c.text)
+            Text(tr(Res.string.problems_title), style = MaterialTheme.typography.labelLarge, color = c.text)
             CountBadge(count)
         }
         Box(Modifier.width(0.dp))
@@ -113,7 +124,7 @@ private fun ProblemsHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) 
         // The toggle affordance: the whole bar is clickable, this just signals the state.
         Icon(
             if (expanded) Icons.Outlined.Close else Icons.Outlined.ErrorOutline,
-            if (expanded) "Hide problems" else "Show problems",
+            if (expanded) tr(Res.string.problems_hide) else tr(Res.string.problems_show),
             tint = c.textMuted,
             modifier = Modifier.size(14.dp),
         )
@@ -163,8 +174,9 @@ private fun ProblemRow(p: Problem, multiBlock: Boolean, modifier: Modifier = Mod
 }
 
 /** "Diagram 2 · line 7", or just "line 7", or "diagram" when the line is unknown. */
+@Composable
 private fun location(p: Problem, multiBlock: Boolean): String {
-    val block = if (multiBlock) "Diagram ${p.diagramIndex + 1}" else null
-    val line = p.line?.let { "line $it" }
-    return listOfNotNull(block, line).joinToString(" · ").ifEmpty { "diagram" }
+    val block = if (multiBlock) tr(Res.string.problems_diagram_n, p.diagramIndex + 1) else null
+    val line = p.line?.let { tr(Res.string.problems_line_n, it) }
+    return listOfNotNull(block, line).joinToString(" · ").ifEmpty { tr(Res.string.problems_diagram) }
 }

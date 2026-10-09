@@ -1,5 +1,17 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.cat_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_project
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_templates
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_show_project
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_templates
+import es.hugoalvarezajenjo.sproutstudio.resources.workspace_no_file
+import es.hugoalvarezajenjo.sproutstudio.resources.workspace_no_file_hint
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewViewModel
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -86,7 +98,7 @@ internal fun Workspace(p: WorkspaceViewModel, onSave: (Document) -> Unit, onClos
                 val doc = p.active
                 if (doc == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        EmptyState(Icons.Outlined.Schema, "No file open", "Pick a diagram on the left, or press ⌘N")
+                        EmptyState(Icons.Outlined.Schema, tr(Res.string.workspace_no_file), tr(Res.string.workspace_no_file_hint))
                     }
                 } else {
                     key(doc) {
@@ -165,7 +177,7 @@ private fun EditorAndPreview(p: WorkspaceViewModel, doc: Document, preview: Prev
                     onJumpToLine = { p.revealEditor(); doc.jumpTo(it) },
                     requests = doc.previewCommandFlow,
                     leadingTools = {
-                        Text("Preview", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.padding(start = 6.dp, end = 4.dp))
+                        Text(tr(Res.string.cat_preview), style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.padding(start = 6.dp, end = 4.dp))
                     },
                 )
             }
@@ -187,18 +199,18 @@ private fun ToolStripe(p: WorkspaceViewModel) {
         val commit = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT
         ToolButton(
             Icons.Outlined.Folder,
-            if (project) "Hide Project (${shortcutHint("1")})" else "Show Project (${shortcutHint("1")})",
+            if (project) tr(Res.string.tool_hide_project, shortcutHint("1")) else tr(Res.string.tool_show_project, shortcutHint("1")),
             selected = project,
         ) { p.toggleTool(SidebarTool.PROJECT) }
         ToolButton(
             Icons.Outlined.Commit,
-            if (commit) "Hide Commit (${shortcutHint("0")})" else "Commit (${shortcutHint("0")})",
+            if (commit) tr(Res.string.tool_hide_commit, shortcutHint("0")) else tr(Res.string.tool_commit, shortcutHint("0")),
             selected = commit,
         ) { p.toggleTool(SidebarTool.COMMIT) }
         val templates = p.sidebarVisible && p.sidebarTool == SidebarTool.TEMPLATES
         ToolButton(
             Icons.Outlined.Dashboard,
-            if (templates) "Hide Templates" else "Templates",
+            if (templates) tr(Res.string.tool_hide_templates) else tr(Res.string.tool_templates),
             selected = templates,
         ) { p.toggleTool(SidebarTool.TEMPLATES) }
     }

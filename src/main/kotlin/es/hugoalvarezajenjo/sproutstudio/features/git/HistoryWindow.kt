@@ -1,5 +1,25 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.common_close
+import es.hugoalvarezajenjo.sproutstudio.resources.history_changes_in
+import es.hugoalvarezajenjo.sproutstudio.resources.history_commits
+import es.hugoalvarezajenjo.sproutstudio.resources.history_none
+import es.hugoalvarezajenjo.sproutstudio.resources.history_none_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.history_title
+import es.hugoalvarezajenjo.sproutstudio.resources.history_vs_now
+import es.hugoalvarezajenjo.sproutstudio.resources.history_window_title
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_view
+import es.hugoalvarezajenjo.sproutstudio.resources.time_days_ago
+import es.hugoalvarezajenjo.sproutstudio.resources.time_hours_ago
+import es.hugoalvarezajenjo.sproutstudio.resources.time_just_now
+import es.hugoalvarezajenjo.sproutstudio.resources.time_minutes_ago
+import es.hugoalvarezajenjo.sproutstudio.resources.time_yesterday
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 
 import androidx.compose.foundation.background
@@ -59,16 +79,16 @@ fun HistoryWindow(project: WorkspaceViewModel, file: File, onClose: () -> Unit) 
     val deps = project.deps
     Window(
         onCloseRequest = onClose,
-        title = "History: ${file.name} — SproutStudio",
+        title = tr(Res.string.history_window_title, file.name),
         icon = AppIcon.painter,
         state = rememberWindowState(size = DpSize(1440.dp, 840.dp)),
     ) {
         MenuBar {
-            Menu("File") {
-                Item("Close", shortcut = KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
+            Menu(tr(Res.string.menu_file)) {
+                Item(tr(Res.string.common_close), shortcut = KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
             }
-            Menu("View") {
-                CheckboxItem("Dark Diagram Preview", checked = deps.diagram.dark.value) { deps.diagram.toggle() }
+            Menu(tr(Res.string.menu_view)) {
+                CheckboxItem(tr(Res.string.menu_dark_diagram_preview), checked = deps.diagram.dark.value) { deps.diagram.toggle() }
             }
         }
         PumlTheme(dark = deps.theme.dark.value) { Surface(Modifier.fillMaxSize(), color = ide.panel) { HistoryView(project, file) } }
@@ -93,14 +113,14 @@ internal fun HistoryView(p: WorkspaceViewModel, file: File) {
     Row(Modifier.fillMaxSize().testTag("history")) {
         Column(Modifier.width(340.dp).fillMaxHeight().background(c.panel)) {
             Row(Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("History", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
-                commits?.let { Text("${it.size} commit${if (it.size == 1) "" else "s"}", fontSize = 12.sp, color = c.textMuted) }
+                Text(tr(Res.string.history_title), style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
+                commits?.let { Text(tr(Res.plurals.history_commits, it.size, it.size), fontSize = 12.sp, color = c.textMuted) }
             }
             HLine()
             val list = commits
             when {
                 list == null -> Unit
-                list.isEmpty() -> EmptyState(Icons.Outlined.History, "No history yet", "This file hasn't been committed")
+                list.isEmpty() -> EmptyState(Icons.Outlined.History, tr(Res.string.history_none), tr(Res.string.history_none_hint))
                 else -> LazyColumn(Modifier.fillMaxSize().padding(4.dp)) {
                     items(list, key = { it.id }) { ci -> CommitRow(ci, ci.id == selected?.id) { selected = ci } }
                 }
@@ -115,8 +135,8 @@ internal fun HistoryView(p: WorkspaceViewModel, file: File) {
                 val right = if (vsNow) DiffSide.WorkingCopy else DiffSide.At(s.id)
                 androidx.compose.runtime.key(s.id, vsNow) {
                     DiffView(p, file, left, right, leadingTools = {
-                        ToolButton(null, label = "Changes in ${s.short}", selected = !vsNow) { vsNow = false }
-                        ToolButton(null, label = "${s.short} vs now", selected = vsNow) { vsNow = true }
+                        ToolButton(null, label = tr(Res.string.history_changes_in, s.short), selected = !vsNow) { vsNow = false }
+                        ToolButton(null, label = tr(Res.string.history_vs_now, s.short), selected = vsNow) { vsNow = true }
                     })
                 }
             }
@@ -143,11 +163,11 @@ private fun CommitRow(ci: CommitInfo, selected: Boolean, onClick: () -> Unit) {
 internal fun relativeTime(millis: Long, now: Long = System.currentTimeMillis()): String {
     val s = (now - millis) / 1000
     return when {
-        s < 60 -> "just now"
-        s < 3600 -> "${s / 60} min ago"
-        s < 86_400 -> "${s / 3600} h ago"
-        s < 2 * 86_400 -> "yesterday"
-        s < 7 * 86_400 -> "${s / 86_400} days ago"
+        s < 60 -> text(Res.string.time_just_now)
+        s < 3600 -> text(Res.string.time_minutes_ago, (s / 60).toInt())
+        s < 86_400 -> text(Res.string.time_hours_ago, (s / 3600).toInt())
+        s < 2 * 86_400 -> text(Res.string.time_yesterday)
+        s < 7 * 86_400 -> text(Res.string.time_days_ago, (s / 86_400).toInt())
         else -> java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString()
     }
 }

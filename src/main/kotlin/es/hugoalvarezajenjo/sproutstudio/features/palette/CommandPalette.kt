@@ -1,5 +1,13 @@
 package es.hugoalvarezajenjo.sproutstudio.features.palette
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.palette_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.palette_hint_recent
+import es.hugoalvarezajenjo.sproutstudio.resources.palette_label
+import es.hugoalvarezajenjo.sproutstudio.resources.palette_nothing_matches
+import es.hugoalvarezajenjo.sproutstudio.resources.palette_placeholder
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.ui.text.TextRange
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -80,6 +88,7 @@ fun CommandPalette(
     initialQuery: String = "",
 ) {
     val c = ide
+    val paletteLabel = tr(Res.string.palette_label)
     var query by remember { mutableStateOf(TextFieldValue(initialQuery, TextRange(initialQuery.length))) }
     var selected by remember { mutableStateOf(0) }
     val hits = remember(query.text, commands) { CommandSearch.search(query.text, commands, recentIds) }
@@ -122,7 +131,7 @@ fun CommandPalette(
                 .border(1.dp, c.popupBorder, RoundedCornerShape(10.dp))
                 // Swallow clicks so they don't reach the scrim.
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
-                .semantics { contentDescription = "Command palette" },
+                .semantics { contentDescription = paletteLabel },
         ) {
             // ── search box ──
             Row(
@@ -133,7 +142,7 @@ fun CommandPalette(
                 Icon(Icons.Outlined.Search, null, tint = c.textMuted, modifier = Modifier.size(18.dp))
                 Box(Modifier.weight(1f)) {
                     if (query.text.isEmpty()) {
-                        Text("Type an action, a file or a template…", color = c.textDisabled, fontSize = 14.sp)
+                        Text(tr(Res.string.palette_placeholder), color = c.textDisabled, fontSize = 14.sp)
                     }
                     BasicTextField(
                         value = query,
@@ -160,7 +169,7 @@ fun CommandPalette(
             // ── results ──
             if (hits.isEmpty()) {
                 Text(
-                    "Nothing matches “${query.text.trim()}”",
+                    tr(Res.string.palette_nothing_matches, query.text.trim()),
                     color = c.textMuted, fontSize = 13.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                 )
@@ -173,8 +182,8 @@ fun CommandPalette(
             }
             HLine()
             Text(
-                if (query.text.isEmpty() && recentIds.isNotEmpty()) "Recently used first  ·  ↑↓ move  ·  ⏎ run  ·  Esc close"
-                else "↑↓ move  ·  ⏎ run  ·  Esc close  ·  type a file name to open it",
+                if (query.text.isEmpty() && recentIds.isNotEmpty()) tr(Res.string.palette_hint_recent)
+                else tr(Res.string.palette_hint),
                 color = c.textMuted, fontSize = 11.sp,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
             )

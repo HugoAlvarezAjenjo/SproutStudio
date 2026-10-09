@@ -97,6 +97,15 @@ class ArchitectureTest {
         assertTrue(readers.isEmpty(), "AppGraph.default read in: " + readers.joinToString { it.file.name })
     }
 
+    @Test
+    fun textsGoThroughTr() {
+        // stringResource alone doesn't follow a live language change; tr does (see Strings.kt).
+        val direct = sources.filter { s ->
+            s.file.name != "Strings.kt" && Regex("""\b(plural)?[sS]tringResource\(""").containsMatchIn(s.text)
+        }
+        assertTrue(direct.isEmpty(), "use tr(Res.string.x) instead of stringResource in: " + direct.joinToString { it.file.name })
+    }
+
     // ── One class per file ────────────────────────────────────────────────────────────────
 
     private val typeDecl = Regex(

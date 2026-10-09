@@ -1,5 +1,9 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.common_close
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.runtime.getValue
 
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
@@ -78,7 +82,7 @@ internal fun TabsBar(p: WorkspaceViewModel, onCloseTab: (Document) -> Unit) {
                         ) {
                             when {
                                 d.dirty && !hovered -> Dot(c.accent, 6)
-                                hovered || active -> Icon(Icons.Outlined.Close, "Close", tint = c.textMuted, modifier = Modifier.size(13.dp))
+                                hovered || active -> Icon(Icons.Outlined.Close, tr(Res.string.common_close), tint = c.textMuted, modifier = Modifier.size(13.dp))
                             }
                         }
                     }
@@ -99,7 +103,7 @@ internal fun TabsBar(p: WorkspaceViewModel, onCloseTab: (Document) -> Unit) {
 private fun LayoutSwitcher(p: WorkspaceViewModel) {
     Row(Modifier.padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         LAYOUT_BUTTONS.forEach { (l, icon) ->
-            ToolButton(icon, "${l.label} (${l.shortcutHint})", selected = p.layout == l) { p.changeLayout(l) }
+            ToolButton(icon, "${tr(l.label)} (${l.shortcutHint})", selected = p.layout == l) { p.changeLayout(l) }
         }
     }
 }

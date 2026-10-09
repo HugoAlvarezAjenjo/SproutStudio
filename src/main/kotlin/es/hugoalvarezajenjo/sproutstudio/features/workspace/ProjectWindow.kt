@@ -1,5 +1,55 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.dialog_cancel
+import es.hugoalvarezajenjo.sproutstudio.resources.dialog_dont_save
+import es.hugoalvarezajenjo.sproutstudio.resources.dialog_save_changes
+import es.hugoalvarezajenjo.sproutstudio.resources.dialog_unsaved_changes
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_close_project
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_close_tab
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_code
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_theme
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_edit
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_action
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_next
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_previous
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_all
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_block
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_git
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_help
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_from_template
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_window
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_open_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_open_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_refresh_files
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_refresh_git_status
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_replace
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_rollback_lines
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_save
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_save_as
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_save_automatically
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_settings
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_commit_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_diff_with_head
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_history
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_problems
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_project_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_templates_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_stash_changes
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_undo_last_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_unfold_all
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_unfold_block
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_view
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -116,87 +166,87 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
             onDispose { window.removeWindowFocusListener(l) }
         }
         MenuBar {
-            Menu("File") {
-                Item("New Diagram", shortcut = shortcut(Key.N)) { p.newDocument() }
-                Item("New from Template…", shortcut = shortcut(Key.N, shift = true)) { galleryOpen = true }
-                Item("Open Diagram…", shortcut = shortcut(Key.O, shift = true)) { p.openDiagramDialog() }
-                Item("Open Folder…", shortcut = shortcut(Key.O)) { p.chooseFolder()?.let { p.openRoot(it) } }
-                Item("New Window") { p.deps.windows.newProjectWindow() }
+            Menu(tr(Res.string.menu_file)) {
+                Item(tr(Res.string.menu_new_diagram), shortcut = shortcut(Key.N)) { p.newDocument() }
+                Item(tr(Res.string.menu_new_from_template), shortcut = shortcut(Key.N, shift = true)) { galleryOpen = true }
+                Item(tr(Res.string.menu_open_diagram), shortcut = shortcut(Key.O, shift = true)) { p.openDiagramDialog() }
+                Item(tr(Res.string.menu_open_folder), shortcut = shortcut(Key.O)) { p.chooseFolder()?.let { p.openRoot(it) } }
+                Item(tr(Res.string.menu_new_window)) { p.deps.windows.newProjectWindow() }
                 Separator()
-                Item("Save", shortcut = shortcut(Key.S), enabled = p.active != null) { p.save(p.active) }
-                CheckboxItem("Save Automatically", checked = p.deps.autoSaver.enabled) { p.setAutoSave(it) }
-                Item("Save As…", shortcut = shortcut(Key.S, shift = true), enabled = p.active != null) {
+                Item(tr(Res.string.menu_save), shortcut = shortcut(Key.S), enabled = p.active != null) { p.save(p.active) }
+                CheckboxItem(tr(Res.string.menu_save_automatically), checked = p.deps.autoSaver.enabled) { p.setAutoSave(it) }
+                Item(tr(Res.string.menu_save_as), shortcut = shortcut(Key.S, shift = true), enabled = p.active != null) {
                     p.active?.let { p.saveAs(it) }
                 }
-                Item("Close Tab", shortcut = shortcut(Key.W), enabled = p.active != null) {
+                Item(tr(Res.string.menu_close_tab), shortcut = shortcut(Key.W), enabled = p.active != null) {
                     p.active?.let { p.requestCloseTab(it) }
                 }
                 Separator()
                 // On macOS Settings… (⌘,) lives in the app menu (see Main); elsewhere it goes here.
-                Item("Settings…", shortcut = if (Os.isMac) null else shortcut(Key.Comma)) { p.deps.windows.openSettings() }
-                Item("Close Project", enabled = p.root != null || p.docs.isNotEmpty()) { p.requestCloseProject() }
+                Item(tr(Res.string.menu_settings), shortcut = if (Os.isMac) null else shortcut(Key.Comma)) { p.deps.windows.openSettings() }
+                Item(tr(Res.string.menu_close_project), enabled = p.root != null || p.docs.isNotEmpty()) { p.requestCloseProject() }
             }
-            Menu("Edit") {
+            Menu(tr(Res.string.menu_edit)) {
                 val d = p.active
-                Item("Find…", shortcut = shortcut(Key.F), enabled = d != null) { d?.let { p.revealEditor(); it.find.open(replace = false, seed = it.selectedText()) } }
-                Item("Replace…", shortcut = shortcut(Key.R), enabled = d != null) { d?.let { p.revealEditor(); it.find.open(replace = true, seed = it.selectedText()) } }
-                Item("Find Next", shortcut = shortcut(Key.G), enabled = d != null) { p.revealEditor(); d?.findNext(true) }
-                Item("Find Previous", shortcut = shortcut(Key.G, shift = true), enabled = d != null) { p.revealEditor(); d?.findNext(false) }
+                Item(tr(Res.string.menu_find), shortcut = shortcut(Key.F), enabled = d != null) { d?.let { p.revealEditor(); it.find.open(replace = false, seed = it.selectedText()) } }
+                Item(tr(Res.string.menu_replace), shortcut = shortcut(Key.R), enabled = d != null) { d?.let { p.revealEditor(); it.find.open(replace = true, seed = it.selectedText()) } }
+                Item(tr(Res.string.menu_find_next), shortcut = shortcut(Key.G), enabled = d != null) { p.revealEditor(); d?.findNext(true) }
+                Item(tr(Res.string.menu_find_previous), shortcut = shortcut(Key.G, shift = true), enabled = d != null) { p.revealEditor(); d?.findNext(false) }
             }
-            Menu("Code") {
+            Menu(tr(Res.string.menu_code)) {
                 val d = p.active
-                Item("Fold Block", shortcut = shortcut(Key.Minus), enabled = d != null) { p.revealEditor(); d?.foldAtCaret() }
-                Item("Unfold Block", shortcut = shortcut(Key.Equals), enabled = d != null) { p.revealEditor(); d?.unfoldAtCaret() }
-                Item("Fold All", shortcut = shortcut(Key.Minus, shift = true), enabled = d != null) { p.revealEditor(); d?.foldAll() }
-                Item("Unfold All", shortcut = shortcut(Key.Equals, shift = true), enabled = d != null) { p.revealEditor(); d?.unfoldAll() }
+                Item(tr(Res.string.menu_fold_block), shortcut = shortcut(Key.Minus), enabled = d != null) { p.revealEditor(); d?.foldAtCaret() }
+                Item(tr(Res.string.menu_unfold_block), shortcut = shortcut(Key.Equals), enabled = d != null) { p.revealEditor(); d?.unfoldAtCaret() }
+                Item(tr(Res.string.menu_fold_all), shortcut = shortcut(Key.Minus, shift = true), enabled = d != null) { p.revealEditor(); d?.foldAll() }
+                Item(tr(Res.string.menu_unfold_all), shortcut = shortcut(Key.Equals, shift = true), enabled = d != null) { p.revealEditor(); d?.unfoldAll() }
             }
-            Menu("View") {
+            Menu(tr(Res.string.menu_view)) {
                 EditorLayout.entries.forEach { l ->
                     RadioButtonItem(
-                        l.label,
+                        tr(l.label),
                         selected = p.layout == l,
                         shortcut = KeyShortcut(l.shortcutKey, meta = Os.isMac, ctrl = !Os.isMac, alt = true),
                     ) { p.changeLayout(l) }
                 }
-                CheckboxItem("Show Preview", checked = p.previewVisible, shortcut = shortcut(Key.P)) { p.togglePreview() }
+                CheckboxItem(tr(Res.string.menu_show_preview), checked = p.previewVisible, shortcut = shortcut(Key.P)) { p.togglePreview() }
                 Separator()
-                CheckboxItem("Show Project Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.PROJECT, shortcut = shortcut(Key.One)) { p.toggleTool(SidebarTool.PROJECT) }
-                CheckboxItem("Show Commit Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT, shortcut = shortcut(Key.Zero)) { p.toggleTool(SidebarTool.COMMIT) }
-                CheckboxItem("Show Templates Panel", checked = p.sidebarVisible && p.sidebarTool == SidebarTool.TEMPLATES) { p.toggleTool(SidebarTool.TEMPLATES) }
-                CheckboxItem("Show Problems", checked = p.problemsExpanded, shortcut = shortcut(Key.Six)) { p.toggleProblems() }
-                CheckboxItem("Dark Theme", checked = p.deps.theme.dark.value) { p.deps.theme.toggle() }
-                CheckboxItem("Dark Diagram Preview", checked = p.deps.diagram.dark.value) { p.deps.diagram.toggle() }
+                CheckboxItem(tr(Res.string.menu_show_project_panel), checked = p.sidebarVisible && p.sidebarTool == SidebarTool.PROJECT, shortcut = shortcut(Key.One)) { p.toggleTool(SidebarTool.PROJECT) }
+                CheckboxItem(tr(Res.string.menu_show_commit_panel), checked = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT, shortcut = shortcut(Key.Zero)) { p.toggleTool(SidebarTool.COMMIT) }
+                CheckboxItem(tr(Res.string.menu_show_templates_panel), checked = p.sidebarVisible && p.sidebarTool == SidebarTool.TEMPLATES) { p.toggleTool(SidebarTool.TEMPLATES) }
+                CheckboxItem(tr(Res.string.menu_show_problems), checked = p.problemsExpanded, shortcut = shortcut(Key.Six)) { p.toggleProblems() }
+                CheckboxItem(tr(Res.string.menu_dark_theme), checked = p.deps.theme.dark.value) { p.deps.theme.toggle() }
+                CheckboxItem(tr(Res.string.menu_dark_diagram_preview), checked = p.deps.diagram.dark.value) { p.deps.diagram.toggle() }
                 Separator()
-                Item("Refresh Files", shortcut = KeyShortcut(Key.Y, meta = Os.isMac, ctrl = !Os.isMac, alt = true)) { p.explorer.refreshTree() }
+                Item(tr(Res.string.menu_refresh_files), shortcut = KeyShortcut(Key.Y, meta = Os.isMac, ctrl = !Os.isMac, alt = true)) { p.explorer.refreshTree() }
             }
-            Menu("Git") {
+            Menu(tr(Res.string.menu_git)) {
                 val g = p.git
-                Item("Commit…", shortcut = shortcut(Key.K), enabled = p.root != null) { p.focusCommit() }
-                Item("Compare Diagram with HEAD", enabled = canCompareWithHead(p, p.active?.file)) {
+                Item(tr(Res.string.menu_commit), shortcut = shortcut(Key.K), enabled = p.root != null) { p.focusCommit() }
+                Item(tr(Res.string.menu_compare_with_head), enabled = canCompareWithHead(p, p.active?.file)) {
                     p.active?.file?.let { p.deps.windows.compareWithHead(p, it) }
                 }
                 Item(
-                    "Rollback Lines",
+                    tr(Res.string.menu_rollback_lines),
                     shortcut = KeyShortcut(Key.Z, meta = Os.isMac, ctrl = !Os.isMac, alt = true),
                     enabled = p.active?.changeAtCaret() != null,
                 ) { p.revealEditor(); p.active?.rollbackAtCaret() }
-                Item("Show Diff with HEAD", enabled = hasCommittedChanges(p, p.active?.file)) {
+                Item(tr(Res.string.menu_show_diff_with_head), enabled = hasCommittedChanges(p, p.active?.file)) {
                     p.active?.file?.let { p.deps.windows.compareWithHead(p, it, textFirst = true) }
                 }
-                Item("Show History for Current File", enabled = g.status.head != null && p.active?.file != null) {
+                Item(tr(Res.string.menu_show_history), enabled = g.status.head != null && p.active?.file != null) {
                     p.active?.file?.let { p.deps.windows.showHistory(p, it) }
                 }
                 Separator()
-                Item("Undo Last Commit", enabled = (g.lastCommit?.parents ?: 0) > 0) {
+                Item(tr(Res.string.menu_undo_last_commit), enabled = (g.lastCommit?.parents ?: 0) > 0) {
                     p.gitFlow.undoLastCommit(showCommitPanel = true)
                 }
-                Item("Stash Changes…", enabled = g.status.head != null) { p.showTool(SidebarTool.COMMIT); g.requestStashPopup() }
+                Item(tr(Res.string.menu_stash_changes), enabled = g.status.head != null) { p.showTool(SidebarTool.COMMIT); g.requestStashPopup() }
                 Separator()
-                if (!g.isRepo) Item("Create Git Repository", enabled = p.root != null) { p.gitFlow.init() }
-                Item("Refresh Git Status", enabled = g.isRepo) { g.requestRefresh() }
+                if (!g.isRepo) Item(tr(Res.string.menu_create_git_repo), enabled = p.root != null) { p.gitFlow.init() }
+                Item(tr(Res.string.menu_refresh_git_status), enabled = g.isRepo) { g.requestRefresh() }
             }
-            Menu("Help") {
-                Item("Find Action…", shortcut = shortcut(Key.P, shift = true)) { paletteOpen = true }
+            Menu(tr(Res.string.menu_help)) {
+                Item(tr(Res.string.menu_find_action), shortcut = shortcut(Key.P, shift = true)) { paletteOpen = true }
             }
         }
 
@@ -243,15 +293,15 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                     onDismissRequest = { p.cancelClose() },
                     containerColor = ide.popup,
                     shape = RoundedCornerShape(10.dp),
-                    title = { Text("Save changes?", style = MaterialTheme.typography.titleMedium) },
-                    text = { Text("${pc.docs.joinToString { it.name }} has unsaved changes.", style = MaterialTheme.typography.bodyMedium) },
+                    title = { Text(tr(Res.string.dialog_save_changes), style = MaterialTheme.typography.titleMedium) },
+                    text = { Text(tr(Res.string.dialog_unsaved_changes, pc.docs.joinToString { it.name }), style = MaterialTheme.typography.bodyMedium) },
                     confirmButton = {
-                        TextButton(onClick = { p.saveAndClose() }) { Text("Save") }
+                        TextButton(onClick = { p.saveAndClose() }) { Text(tr(Res.string.menu_save)) }
                     },
                     dismissButton = {
                         Row {
-                            TextButton(onClick = { p.cancelClose() }) { Text("Cancel") }
-                            TextButton(onClick = { p.discardAndClose() }) { Text("Don't Save", color = ide.error) }
+                            TextButton(onClick = { p.cancelClose() }) { Text(tr(Res.string.dialog_cancel)) }
+                            TextButton(onClick = { p.discardAndClose() }) { Text(tr(Res.string.dialog_dont_save), color = ide.error) }
                         }
                     },
                 )

@@ -1,5 +1,18 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.resources.change_added
+import es.hugoalvarezajenjo.sproutstudio.resources.change_deleted
+import es.hugoalvarezajenjo.sproutstudio.resources.change_modified
+import es.hugoalvarezajenjo.sproutstudio.resources.editor_completion_hint
+
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.common_close_esc
+import es.hugoalvarezajenjo.sproutstudio.resources.editor_rollback
+import es.hugoalvarezajenjo.sproutstudio.resources.editor_rollback_tooltip
+import es.hugoalvarezajenjo.sproutstudio.resources.editor_rolled_back
+import es.hugoalvarezajenjo.sproutstudio.resources.editor_undo
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.SideEffect
@@ -362,8 +375,8 @@ fun CodeEditor(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).border(1.dp, c.popupBorder, RoundedCornerShape(8.dp)),
             ) {
                 Row(Modifier.padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Lines rolled back", fontSize = 12.sp, color = c.text)
-                    ToolButton(null, label = "Undo") { doc.undoRollback(); runCatching { focus.requestFocus() } }
+                    Text(tr(Res.string.editor_rolled_back), fontSize = 12.sp, color = c.text)
+                    ToolButton(null, label = tr(Res.string.editor_undo)) { doc.undoRollback(); runCatching { focus.requestFocus() } }
                 }
             }
         }
@@ -583,7 +596,7 @@ private fun CompletionPopup(req: CompletionRequest, selected: Int, onPick: (Comp
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(c.popupBorder))
             Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp)) {
-                Text("⏎ / ⇥ to insert   ·   esc to close", fontSize = 11.sp, color = c.textMuted)
+                Text(tr(Res.string.editor_completion_hint), fontSize = 11.sp, color = c.textMuted)
                 Spacer(Modifier.weight(1f))
             }
         }
@@ -620,9 +633,9 @@ private fun ChangePopup(
     val c = ide
     val n = change.end - change.start
     val title = when (change.type) {
-        LineChange.Type.ADDED -> if (n == 1) "1 line added" else "$n lines added"
-        LineChange.Type.DELETED -> (change.baseEnd - change.baseStart).let { if (it == 1) "1 line deleted" else "$it lines deleted" }
-        LineChange.Type.MODIFIED -> if (n == 1) "1 line changed" else "$n lines changed"
+        LineChange.Type.ADDED -> tr(Res.plurals.change_added, n, n)
+        LineChange.Type.DELETED -> (change.baseEnd - change.baseStart).let { tr(Res.plurals.change_deleted, it, it) }
+        LineChange.Type.MODIFIED -> tr(Res.plurals.change_modified, n, n)
     }
     val addedBg = c.gutterAdded.copy(alpha = if (c.isDark) 0.22f else 0.30f)
     val addedHi = c.gutterAdded.copy(alpha = if (c.isDark) 0.50f else 0.65f)
@@ -643,10 +656,10 @@ private fun ChangePopup(
                 Text(title, fontSize = 12.sp, color = c.textMuted, modifier = Modifier.weight(1f).padding(end = 12.dp))
                 ToolButton(
                     Icons.AutoMirrored.Outlined.Undo,
-                    tooltip = "Rollback Lines (${es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint("Z", alt = true)})",
-                    label = "Rollback",
+                    tooltip = tr(Res.string.editor_rollback_tooltip, es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint("Z", alt = true)),
+                    label = tr(Res.string.editor_rollback),
                 ) { onRollback() }
-                ToolButton(Icons.Outlined.Close, "Close (esc)") { onClose() }
+                ToolButton(Icons.Outlined.Close, tr(Res.string.common_close_esc)) { onClose() }
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(c.popupBorder))
             Column(

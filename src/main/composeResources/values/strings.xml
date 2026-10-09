@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English texts (the default). Every name here needs its Spanish twin in values-es/strings.xml. -->
+<resources>
+    <!-- Settings -->
+    <string name="settings_window_title">Settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_editor">Editor</string>
+    <string name="settings_general">General</string>
+    <string name="settings_restore_defaults">Restore defaults</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_hint">The colours of the whole app. The macOS title bar follows it after a restart.</string>
+    <string name="settings_dark">Dark</string>
+    <string name="settings_light">Light</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_hint">The language of menus and messages. Changes apply at once in every window.</string>
+    <string name="settings_language_system">System (%1$s)</string>
+    <string name="settings_diagram_preview">Diagram preview</string>
+    <string name="settings_diagram_preview_hint">Recolour diagrams dark in the preview. Exports keep the original colours.</string>
+    <string name="settings_font_size">Font size</string>
+    <string name="settings_font_size_hint">Text size in the code editor.</string>
+    <string name="settings_smaller">Smaller</string>
+    <string name="settings_larger">Larger</string>
+    <string name="settings_points">%1$d pt</string>
+    <string name="settings_save_automatically">Save automatically</string>
+    <string name="settings_save_automatically_hint">Save diagrams a second after you stop typing, and when you switch tab or app.</string>
+    <string name="settings_recent_projects">Recent projects</string>
+    <string name="settings_recent_none">No recent projects.</string>
+    <plurals name="settings_recent_count">
+        <item quantity="one">%1$d folder on the welcome screen.</item>
+        <item quantity="other">%1$d folders on the welcome screen.</item>
+    </plurals>
+    <string name="settings_clear_list">Clear list</string>
+    <!-- features/workspace/Welcome.kt -->
+    <string name="welcome_tagline">PlantUML, offline · v0.1</string>
+    <string name="welcome_open_folder">Open folder</string>
+    <string name="welcome_open_folder_hint">Open a project directory</string>
+    <string name="welcome_open_file">Open file</string>
+    <string name="welcome_open_file_hint">Open a single .puml diagram</string>
+    <string name="welcome_new_diagram">New diagram</string>
+    <string name="welcome_new_diagram_hint">Start from a blank diagram</string>
+    <string name="welcome_tip">Tip: double-click any .puml file in Finder for an instant preview.</string>
+    <string name="welcome_settings">Settings</string>
+    <string name="welcome_recent_projects">RECENT PROJECTS</string>
+    <string name="welcome_no_recents">No recent projects</string>
+    <string name="welcome_no_recents_hint">Folders you open will show up here.</string>
+    <string name="welcome_remove_recent">Remove from recents</string>
+    <!-- features/workspace/ProjectWindow.kt -->
+    <string name="menu_file">File</string>
+    <string name="menu_new_diagram">New Diagram</string>
+    <string name="menu_new_from_template">New from Template…</string>
+    <string name="menu_open_diagram">Open Diagram…</string>
+    <string name="menu_open_folder">Open Folder…</string>
+    <string name="menu_new_window">New Window</string>
+    <string name="menu_save">Save</string>
+    <string name="menu_save_automatically">Save Automatically</string>
+    <string name="menu_save_as">Save As…</string>
+    <string name="menu_close_tab">Close Tab</string>
+    <string name="menu_settings">Settings…</string>
+    <string name="menu_close_project">Close Project</string>
+    <string name="menu_edit">Edit</string>
+    <string name="menu_find">Find…</string>
+    <string name="menu_replace">Replace…</string>
+    <string name="menu_find_next">Find Next</string>
+    <string name="menu_find_previous">Find Previous</string>
+    <string name="menu_code">Code</string>
+    <string name="menu_fold_block">Fold Block</string>
+    <string name="menu_unfold_block">Unfold Block</string>
+    <string name="menu_fold_all">Fold All</string>
+    <string name="menu_unfold_all">Unfold All</string>
+    <string name="menu_view">View</string>
+    <string name="menu_show_preview">Show Preview</string>
+    <string name="menu_show_project_panel">Show Project Panel</string>
+    <string name="menu_show_commit_panel">Show Commit Panel</string>
+    <string name="menu_show_templates_panel">Show Templates Panel</string>
+    <string name="menu_show_problems">Show Problems</string>
+    <string name="menu_dark_theme">Dark Theme</string>
+    <string name="menu_dark_diagram_preview">Dark Diagram Preview</string>
+    <string name="menu_refresh_files">Refresh Files</string>
+    <string name="menu_git">Git</string>
+    <string name="menu_commit">Commit…</string>
+    <string name="menu_compare_with_head">Compare Diagram with HEAD</string>
+    <string name="menu_rollback_lines">Rollback Lines</string>
+    <string name="menu_show_diff_with_head">Show Diff with HEAD</string>
+    <string name="menu_show_history">Show History for Current File</string>
+    <string name="menu_undo_last_commit">Undo Last Commit</string>
+    <string name="menu_stash_changes">Stash Changes…</string>
+    <string name="menu_create_git_repo">Create Git Repository</string>
+    <string name="menu_refresh_git_status">Refresh Git Status</string>
+    <string name="menu_help">Help</string>
+    <string name="menu_find_action">Find Action…</string>
+    <string name="dialog_save_changes">Save changes?</string>
+    <string name="dialog_unsaved_changes">%1$s has unsaved changes.</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_dont_save">Don't Save</string>
+    <!-- features/workspace/EditorLayout.kt -->
+    <string name="layout_editor_only">Editor Only</string>
+    <string name="layout_split">Editor and Preview</string>
+    <string name="layout_preview_only">Preview Only</string>
+    <!-- features/workspace/ProjectWindow.kt -->
+    <!-- features/workspace/TabsBar.kt -->
+    <string name="common_close">Close</string>
+    <!-- features/palette/ProjectCommands.kt -->
+    <string name="cat_preview">Preview</string>
+    <string name="cat_recent_project">Recent Project</string>
+    <string name="cmd_new_diagram_in_folder">New Diagram in Folder…</string>
+    <string name="cmd_new_folder">New Folder…</string>
+    <string name="cmd_rename_file">Rename File…</string>
+    <string name="cmd_trash_file">Move File to Trash…</string>
+    <string name="cmd_autosave_off">Turn Off Save Automatically</string>
+    <string name="cmd_autosave_on">Turn On Save Automatically</string>
+    <string name="cmd_toggle_comment">Comment / Uncomment Lines</string>
+    <string name="cmd_duplicate_line">Duplicate Line</string>
+    <string name="cmd_hide_preview">Hide Preview</string>
+    <string name="cmd_hide_problems">Hide Problems</string>
+    <string name="cmd_hide_project_panel">Hide Project Panel</string>
+    <string name="cmd_hide_commit_panel">Hide Commit Panel</string>
+    <string name="cmd_light_theme">Switch to Light Theme</string>
+    <string name="cmd_dark_theme">Switch to Dark Theme</string>
+    <string name="cmd_font_bigger">Increase Editor Font Size</string>
+    <string name="cmd_font_smaller">Decrease Editor Font Size</string>
+    <string name="cmd_font_reset">Reset Editor Font Size</string>
+    <string name="cmd_light_diagram">Light Diagram Preview</string>
+    <string name="cmd_copy_image">Copy Diagram Image</string>
+    <string name="cmd_export_svg">Export Diagram as SVG…</string>
+    <string name="cmd_export_png">Export Diagram as PNG…</string>
+    <string name="cmd_export_pdf">Export Diagram as PDF…</string>
+    <string name="cmd_insert_template">Insert %1$s Template</string>
+    <string name="cmd_insert_block">Insert %1$s Block</string>
+    <string name="cat_insert">Insert</string>
+    <!-- features/palette/CommandPalette.kt -->
+    <string name="palette_label">Command palette</string>
+    <string name="palette_placeholder">Type an action, a file or a template…</string>
+    <string name="palette_nothing_matches">Nothing matches “%1$s”</string>
+    <string name="palette_hint_recent">Recently used first  ·  ↑↓ move  ·  ⏎ run  ·  Esc close</string>
+    <string name="palette_hint">↑↓ move  ·  ⏎ run  ·  Esc close  ·  type a file name to open it</string>
+    <!-- features/workspace/StatusBar.kt -->
+    <string name="problems_none">No problems</string>
+    <plurals name="status_problems">
+        <item quantity="one">%1$d problem</item>
+        <item quantity="other">%1$d problems</item>
+    </plurals>
+    <string name="status_kind_diagrams">%1$s · %2$d diagrams</string>
+    <string name="status_save_failed">Save failed: %1$s</string>
+    <string name="status_not_saved">Not saved yet</string>
+    <string name="status_modified">Modified</string>
+    <string name="status_saved_auto">Saved automatically</string>
+    <string name="status_saved">Saved</string>
+    <string name="status_offline">Offline</string>
+    <!-- features/workspace/Workspace.kt -->
+    <string name="workspace_no_file">No file open</string>
+    <string name="workspace_no_file_hint">Pick a diagram on the left, or press ⌘N</string>
+    <string name="tool_hide_project">Hide Project (%1$s)</string>
+    <string name="tool_show_project">Show Project (%1$s)</string>
+    <string name="tool_hide_commit">Hide Commit (%1$s)</string>
+    <string name="tool_commit">Commit (%1$s)</string>
+    <string name="tool_hide_templates">Hide Templates</string>
+    <string name="tool_templates">Templates</string>
+    <!-- features/workspace/WorkspaceDialogs.kt -->
+    <string name="dialog_open_diagram">Open a diagram</string>
+    <string name="dialog_open_folder">Open a project folder</string>
+    <string name="dialog_save_diagram">Save diagram</string>
+    <!-- features/editor/FindBar.kt -->
+    <string name="find_hide_replace">Hide Replace</string>
+    <string name="find_show_replace">Replace (⌘R)</string>
+    <string name="find_placeholder">Find</string>
+    <string name="find_match_case">Match Case</string>
+    <string name="find_words">Words</string>
+    <string name="find_regex">Regex</string>
+    <string name="find_bad_regex">Bad regex</string>
+    <string name="find_replaced">%1$d replaced</string>
+    <string name="find_no_results">0 results</string>
+    <plurals name="find_results">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
+    </plurals>
+    <string name="find_previous">Previous (⇧Enter)</string>
+    <string name="find_next">Next (Enter)</string>
+    <string name="common_close_esc">Close (Esc)</string>
+    <string name="find_replace_regex">Replace ($1 for groups)</string>
+    <string name="find_replace">Replace</string>
+    <string name="find_replace_all">Replace All</string>
+    <!-- features/editor/CodeEditor.kt -->
+    <string name="editor_rolled_back">Lines rolled back</string>
+    <string name="editor_undo">Undo</string>
+    <string name="editor_rollback_tooltip">Rollback Lines (%1$s)</string>
+    <string name="editor_rollback">Rollback</string>
+    <!-- features/problems/ProblemsPanel.kt -->
+    <string name="problems_valid">Your diagram is valid</string>
+    <string name="problems_title">Problems</string>
+    <string name="problems_hide">Hide problems</string>
+    <string name="problems_show">Show problems</string>
+    <string name="problems_diagram_n">Diagram %1$d</string>
+    <string name="problems_line_n">line %1$d</string>
+    <string name="problems_diagram">diagram</string>
+    <!-- features/templates/TemplateGallery.kt -->
+    <string name="gallery_title">New from template</string>
+    <string name="gallery_filter">Filter templates…</string>
+    <!-- features/templates/TemplateSidebar.kt -->
+    <!-- features/git/GitText.kt -->
+    <string name="gerr_empty_message">Empty commit message</string>
+    <string name="gerr_no_files">No files selected</string>
+    <string name="gerr_no_commit_yet">Make the first commit first</string>
+    <string name="gerr_nothing_to_undo">There is no commit to undo</string>
+    <string name="gerr_first_commit">The first commit can't be undone</string>
+    <string name="gerr_nothing_to_stash">No local changes to stash</string>
+    <string name="gerr_stash_clashes">The stash clashes with your current changes; commit or roll them back first</string>
+    <string name="gerr_invalid_branch">"%1$s" isn't a valid branch name</string>
+    <string name="gerr_branch_exists">Branch "%1$s" already exists</string>
+    <string name="gerr_delete_current">Can't delete the branch you are on</string>
+    <string name="gerr_not_merged">"%1$s" has commits that aren't merged into %2$s, so it was kept</string>
+    <string name="gerr_this_branch">this branch</string>
+    <string name="gerr_checkout_conflict">Your uncommitted changes would be overwritten: %1$s</string>
+    <plurals name="git_files">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <string name="gnote_committed">Committed %1$s (%2$s)</string>
+    <string name="gnote_amended">Amended the last commit with %1$s (%2$s)</string>
+    <string name="gnote_reworded">Reworded the last commit (%1$s)</string>
+    <string name="gnote_undid">Undid %1$s: its changes are back in the list</string>
+    <!-- features/git/CommitPanel.kt -->
+    <string name="git_amend_tooltip">Amend (%1$s)</string>
+    <string name="git_commit_tooltip">Commit (%1$s)</string>
+    <plurals name="git_n_of_files">
+        <item quantity="one">%1$d of %2$d file</item>
+        <item quantity="other">%1$d of %2$d files</item>
+    </plurals>
+    <string name="git_commit">Commit</string>
+    <string name="git_amend_commit">Amend Commit</string>
+    <string name="git_amend">Amend</string>
+    <string name="git_stash_changes">Stash changes</string>
+    <string name="git_stash_count">Stash (%1$d saved)</string>
+    <string name="git_refresh">Refresh</string>
+    <string name="git_hide_panel">Hide (%1$s)</string>
+    <string name="git_no_repo">No Git repository</string>
+    <string name="git_no_repo_hint">Keep a history of your diagrams: every commit is a snapshot you can go back to.</string>
+    <string name="git_add_gitignore">Add a .gitignore</string>
+    <string name="git_add_gitignore_hint">Add a .gitignore (.DS_Store, temp files)</string>
+    <string name="git_no_files_yet">No files yet</string>
+    <string name="git_no_changes">No changes since the last commit</string>
+    <string name="git_changes">Changes</string>
+    <string name="git_unversioned">Unversioned Files</string>
+    <string name="git_commit_message">Commit message</string>
+    <string name="git_last_commit">Last: %1$s</string>
+    <string name="git_undo_last_hint">Undo last commit (keeps its changes)</string>
+    <string name="git_rollback_title">Rollback %1$s?</string>
+    <string name="git_rollback_added">It goes back to unversioned. The file stays on disk.</string>
+    <string name="git_rollback_modified">Your changes since the last commit are lost. This can't be undone.</string>
+    <string name="git_include_all">Include all %1$s</string>
+    <string name="git_open">Open</string>
+    <string name="git_show_diff">Show Diff</string>
+    <string name="git_show_history">Show History</string>
+    <string name="git_rollback_menu">Rollback…</string>
+    <string name="git_include_file">Include %1$s</string>
+    <string name="git_no_user">No git user set: commits as %1$s</string>
+    <string name="git_stash_title">Stash Changes</string>
+    <string name="git_stash_hint">Puts your uncommitted edits aside and leaves the files as in the last commit.</string>
+    <string name="git_stash_description">Description (optional)</string>
+    <string name="git_stash">Stash</string>
+    <string name="git_stash_saved">Saved</string>
+    <string name="git_pop_hint">Apply and remove from the list</string>
+    <string name="git_pop">Pop</string>
+    <string name="git_drop_hint">Delete without applying</string>
+    <string name="git_drop">Drop</string>
+    <string name="git_drop_title">Drop this stash?</string>
+    <string name="git_drop_text">Its changes are deleted without being applied. This can't be undone.</string>
+    <!-- features/git/BranchMenu.kt -->
+    <string name="branch_new">New Branch…</string>
+    <string name="branch_need_commit">Make the first commit to create branches</string>
+    <string name="branch_local">Local Branches</string>
+    <string name="branch_stash_and_switch">Stash changes and switch to %1$s</string>
+    <string name="branch_delete_title">Delete branch "%1$s"?</string>
+    <string name="branch_delete_text">Only if its commits are already merged into %1$s; otherwise it is kept.</string>
+    <string name="branch_delete">Delete</string>
+    <string name="branch_new_hint">New branch from the current commit</string>
+    <string name="branch_create">Create</string>
+    <string name="branch_current_desc">Current branch</string>
+    <string name="branch_current">current</string>
+    <string name="branch_delete_named">Delete %1$s</string>
+    <!-- features/git/DiagramDiffWindow.kt -->
+    <string name="diff_working_copy">Working copy</string>
+    <string name="diff_before">Before %1$s</string>
+    <string name="diff_last_commit">last commit · %1$s</string>
+    <string name="diff_commit">commit</string>
+    <string name="diff_parent">parent</string>
+    <string name="diff_diagram">Diagram</string>
+    <string name="diff_text">Text</string>
+    <string name="diff_unsaved">unsaved edits</string>
+    <string name="preview_previous_diagram">Previous diagram</string>
+    <string name="preview_n_of_m">%1$d of %2$d</string>
+    <string name="preview_next_diagram">Next diagram</string>
+    <string name="preview_zoom_out">Zoom out (mouse wheel)</string>
+    <string name="preview_zoom_in">Zoom in (mouse wheel)</string>
+    <string name="diff_fit_both">Fit both (double-click)</string>
+    <string name="diff_not_in_version">Not in this version</string>
+    <string name="diff_didnt_exist">The file didn't exist here</string>
+    <string name="preview_rendering">Rendering…</string>
+    <string name="preview_cant_render">Can't render</string>
+    <string name="preview_no_diagram">No diagram found</string>
+    <string name="diff_new_file">new file</string>
+    <string name="diff_deleted">deleted</string>
+    <string name="diff_no_differences">No differences</string>
+    <!-- features/git/HistoryWindow.kt -->
+    <string name="history_window_title">History: %1$s — SproutStudio</string>
+    <string name="history_title">History</string>
+    <plurals name="history_commits">
+        <item quantity="one">%1$d commit</item>
+        <item quantity="other">%1$d commits</item>
+    </plurals>
+    <string name="history_none">No history yet</string>
+    <string name="history_none_hint">This file hasn't been committed</string>
+    <string name="history_changes_in">Changes in %1$s</string>
+    <string name="history_vs_now">%1$s vs now</string>
+    <string name="time_just_now">just now</string>
+    <string name="time_minutes_ago">%1$d min ago</string>
+    <string name="time_hours_ago">%1$d h ago</string>
+    <string name="time_yesterday">yesterday</string>
+    <string name="time_days_ago">%1$d days ago</string>
+    <!-- features/explorer/FileErrorText.kt -->
+    <string name="ferr_empty">Enter a name</string>
+    <string name="ferr_reserved">That name is reserved</string>
+    <string name="ferr_bad_chars">A name can't contain / \ or :</string>
+    <string name="ferr_exists">“%1$s” already exists here</string>
+    <string name="ferr_exists_in">“%1$s” already exists in %2$s</string>
+    <string name="ferr_not_folder">“%1$s” is not a folder</string>
+    <string name="ferr_into_itself">A folder can't be moved into itself</string>
+    <string name="ferr_project_folder">The project folder itself can't be changed here</string>
+    <string name="ferr_trash_failed">Couldn't move “%1$s” to the Trash</string>
+    <!-- features/explorer/ProjectTree.kt -->
+    <string name="tree_project">Project</string>
+    <string name="tree_new_diagram">New Diagram…</string>
+    <string name="tree_collapse_all">Collapse All</string>
+    <string name="tree_refresh">Refresh (⌥⌘Y)</string>
+    <string name="tree_hide">Hide (⌘1)</string>
+    <string name="tree_no_diagrams">No diagrams in this folder</string>
+    <string name="tree_rename">Rename…</string>
+    <string name="tree_trash">Move to Trash…</string>
+    <string name="tree_expand">Expand</string>
+    <string name="tree_collapse">Collapse</string>
+    <string name="tree_reveal_finder">Reveal in Finder</string>
+    <string name="tree_open_folder">Open Containing Folder</string>
+    <!-- features/explorer/FileDialogs.kt -->
+    <string name="file_new_folder">New Folder</string>
+    <string name="file_name">Name</string>
+    <string name="file_in">in %1$s</string>
+    <string name="file_rename_folder">Rename Folder</string>
+    <string name="file_rename_file">Rename File</string>
+    <string name="file_new_name">New name</string>
+    <string name="file_rename">Rename</string>
+    <string name="file_in_puml">in %1$s · .puml is added if missing</string>
+    <string name="file_template">Template</string>
+    <string name="file_no_template">None, empty file</string>
+    <string name="file_clear">Clear</string>
+    <string name="file_choose_template">Choose template…</string>
+    <string name="file_change">Change…</string>
+    <string name="trash_title">Move “%1$s” to the Trash?</string>
+    <string name="trash_empty_folder">The folder is empty.</string>
+    <plurals name="trash_holds">
+        <item quantity="one">It holds %1$d file.</item>
+        <item quantity="other">It holds %1$d files.</item>
+    </plurals>
+    <string name="trash_restore_hint">You can get it back from the Trash in Finder.</string>
+    <string name="trash_unsaved">Unsaved changes in %1$s will be lost.</string>
+    <string name="trash_confirm">Move to Trash</string>
+    <!-- features/preview/RenderErrorText.kt -->
+    <string name="render_offline">SproutStudio works fully offline: remote includes are not allowed. Save the file locally and use !include with a local path.</string>
+    <string name="render_syntax_error">Syntax error</string>
+    <string name="render_no_diagram">No diagram found yet. Start with @startuml and end with @enduml.</string>
+    <string name="render_failed">Couldn't draw the diagram</string>
+    <string name="export_svg">SVG (vector)</string>
+    <string name="export_png">PNG (image)</string>
+    <string name="export_pdf">PDF (vector)</string>
+    <!-- features/preview/PreviewPane.kt -->
+    <string name="preview_fit">Fit to window (double-click)</string>
+    <string name="preview_actual_size">Actual size</string>
+    <string name="preview_dark_hint">Dark diagram (exports keep original colours) — click for light</string>
+    <string name="preview_light_hint">Light diagram — click for dark</string>
+    <string name="preview_copy">Copy image to clipboard</string>
+    <string name="preview_export">Export…</string>
+    <string name="preview_on_its_way">Your diagram is on its way</string>
+    <string name="preview_cant_render_yet">Can't render yet</string>
+    <string name="preview_fix_error">Fix the error above to see the diagram</string>
+    <string name="preview_nothing">Nothing to render</string>
+    <string name="preview_type_start">Type @startuml to begin</string>
+    <string name="preview_wrap">Wrap your diagram in @startuml … @enduml</string>
+    <string name="preview_export_title">Export diagram as %1$s</string>
+    <string name="preview_copied">Image copied to clipboard</string>
+    <string name="preview_copy_failed">Couldn't copy: %1$s</string>
+    <string name="preview_saved">Saved %1$s</string>
+    <string name="preview_export_failed">Export failed: %1$s</string>
+    <string name="preview_nothing_to_export">Nothing to export: fix the diagram first</string>
+    <string name="preview_remote_include">line %1$d has a remote include, and SproutStudio works offline</string>
+    <string name="preview_line_prefix">Line %1$d:</string>
+    <string name="preview_syntax_prefix">Syntax error:</string>
+    <string name="preview_go_to_line">Go to line</string>
+    <!-- features/quickpreview/QuickPreviewWindow.kt -->
+    <string name="quick_edit_diagram">Edit This Diagram</string>
+    <string name="quick_not_found">File not found</string>
+    <string name="quick_open_editor">Open in the editor (⌘E)</string>
+    <string name="quick_edit">Edit</string>
+    <!-- features/editor/CodeEditor.kt -->
+    <string name="editor_completion_hint">⏎ / ⇥ to insert   ·   esc to close</string>
+    <plurals name="change_added">
+        <item quantity="one">%1$d line added</item>
+        <item quantity="other">%1$d lines added</item>
+    </plurals>
+    <plurals name="change_deleted">
+        <item quantity="one">%1$d line deleted</item>
+        <item quantity="other">%1$d lines deleted</item>
+    </plurals>
+    <plurals name="change_modified">
+        <item quantity="one">%1$d line changed</item>
+        <item quantity="other">%1$d lines changed</item>
+    </plurals>
+</resources>

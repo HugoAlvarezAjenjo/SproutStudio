@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.settings
 
+import es.hugoalvarezajenjo.sproutstudio.core.i18n.Language
+import es.hugoalvarezajenjo.sproutstudio.core.i18n.LanguageChoice
 import es.hugoalvarezajenjo.sproutstudio.features.editor.EditorSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
 
@@ -10,6 +12,11 @@ import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
 class SettingsViewModel(private val deps: WorkspaceDeps) {
     val darkTheme: Boolean get() = deps.theme.dark.value
     fun setDarkTheme(on: Boolean) { deps.theme.dark.value = on }
+
+    val language: LanguageChoice get() = deps.language.choice.value
+    fun setLanguage(choice: LanguageChoice) { deps.language.choice.value = choice }
+    /** What "System" means on this machine. */
+    val systemLanguage: Language get() = deps.language.system
 
     val darkDiagram: Boolean get() = deps.diagram.dark.value
     fun setDarkDiagram(on: Boolean) { deps.diagram.dark.value = on }
@@ -28,11 +35,12 @@ class SettingsViewModel(private val deps: WorkspaceDeps) {
 
     /** Appearance and editor settings all at their defaults (recents and window layout don't count). */
     val allDefaults: Boolean
-        get() = deps.theme.dark.isDefault && deps.diagram.dark.isDefault &&
+        get() = deps.theme.dark.isDefault && deps.language.choice.isDefault && deps.diagram.dark.isDefault &&
             deps.editor.fontSize.isDefault && deps.autoSaver.isDefault
 
     fun resetToDefaults() {
         deps.theme.dark.reset()
+        deps.language.choice.reset()
         deps.diagram.dark.reset()
         deps.editor.fontSize.reset()
         deps.autoSaver.resetToDefault()

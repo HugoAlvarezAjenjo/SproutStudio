@@ -1,5 +1,24 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.common_close_esc
+import es.hugoalvarezajenjo.sproutstudio.resources.find_bad_regex
+import es.hugoalvarezajenjo.sproutstudio.resources.find_hide_replace
+import es.hugoalvarezajenjo.sproutstudio.resources.find_match_case
+import es.hugoalvarezajenjo.sproutstudio.resources.find_next
+import es.hugoalvarezajenjo.sproutstudio.resources.find_no_results
+import es.hugoalvarezajenjo.sproutstudio.resources.find_placeholder
+import es.hugoalvarezajenjo.sproutstudio.resources.find_previous
+import es.hugoalvarezajenjo.sproutstudio.resources.find_regex
+import es.hugoalvarezajenjo.sproutstudio.resources.find_replace
+import es.hugoalvarezajenjo.sproutstudio.resources.find_replace_all
+import es.hugoalvarezajenjo.sproutstudio.resources.find_replace_regex
+import es.hugoalvarezajenjo.sproutstudio.resources.find_replaced
+import es.hugoalvarezajenjo.sproutstudio.resources.find_results
+import es.hugoalvarezajenjo.sproutstudio.resources.find_show_replace
+import es.hugoalvarezajenjo.sproutstudio.resources.find_words
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import es.hugoalvarezajenjo.sproutstudio.domain.text.FindResult
 
 import androidx.compose.foundation.background
@@ -85,7 +104,7 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ToolButton(
                 Icons.Outlined.SwapHoriz,
-                tooltip = if (f.replaceVisible) "Hide Replace" else "Replace (⌘R)",
+                tooltip = if (f.replaceVisible) tr(Res.string.find_hide_replace) else tr(Res.string.find_show_replace),
                 selected = f.replaceVisible,
             ) { f.replaceVisible = !f.replaceVisible }
             Field(
@@ -94,28 +113,28 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
                     findValue = it
                     if (it.text != f.query.text) { f.query = f.query.copy(text = it.text); f.clearReplaced() }
                 },
-                placeholder = "Find",
+                placeholder = tr(Res.string.find_placeholder),
                 icon = true,
                 error = result.error != null || (f.query.text.isNotEmpty() && result.matches.isEmpty()),
                 modifier = Modifier.weight(1f).widthIn(max = 420.dp).then(keys { shift -> doc.findNext(forward = !shift) }).focusRequester(findFocus).testTag("find-field"),
             )
-            Toggle("Cc", "Match Case", f.query.matchCase) { f.query = f.query.copy(matchCase = it) }
-            Toggle("W", "Words", f.query.wholeWords) { f.query = f.query.copy(wholeWords = it) }
-            Toggle(".*", "Regex", f.query.regex) { f.query = f.query.copy(regex = it) }
+            Toggle("Cc", tr(Res.string.find_match_case), f.query.matchCase) { f.query = f.query.copy(matchCase = it) }
+            Toggle("W", tr(Res.string.find_words), f.query.wholeWords) { f.query = f.query.copy(wholeWords = it) }
+            Toggle(".*", tr(Res.string.find_regex), f.query.regex) { f.query = f.query.copy(regex = it) }
             Box(Modifier.widthIn(min = 56.dp).padding(horizontal = 4.dp)) {
                 val (label, bad) = when {
-                    result.error != null -> "Bad regex" to true
-                    f.replacedCount != null -> "${f.replacedCount} replaced" to false
+                    result.error != null -> tr(Res.string.find_bad_regex) to true
+                    f.replacedCount != null -> tr(Res.string.find_replaced, f.replacedCount ?: 0) to false
                     f.query.text.isEmpty() -> "" to false
-                    result.matches.isEmpty() -> "0 results" to true
+                    result.matches.isEmpty() -> tr(Res.string.find_no_results) to true
                     current >= 0 -> "${current + 1}/${result.matches.size}" to false
-                    else -> "${result.matches.size} results" to false
+                    else -> tr(Res.plurals.find_results, result.matches.size, result.matches.size) to false
                 }
                 Text(label, fontSize = 12.sp, color = if (bad) c.error else c.textMuted, maxLines = 1, modifier = Modifier.testTag("find-count"))
             }
-            ToolButton(Icons.Outlined.KeyboardArrowUp, tooltip = "Previous (⇧Enter)", enabled = result.matches.isNotEmpty()) { doc.findNext(false) }
-            ToolButton(Icons.Outlined.KeyboardArrowDown, tooltip = "Next (Enter)", enabled = result.matches.isNotEmpty()) { doc.findNext(true) }
-            ToolButton(Icons.Outlined.Close, tooltip = "Close (Esc)", onClick = onClose)
+            ToolButton(Icons.Outlined.KeyboardArrowUp, tooltip = tr(Res.string.find_previous), enabled = result.matches.isNotEmpty()) { doc.findNext(false) }
+            ToolButton(Icons.Outlined.KeyboardArrowDown, tooltip = tr(Res.string.find_next), enabled = result.matches.isNotEmpty()) { doc.findNext(true) }
+            ToolButton(Icons.Outlined.Close, tooltip = tr(Res.string.common_close_esc), onClick = onClose)
         }
         if (f.replaceVisible) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -124,14 +143,14 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
                 Field(
                     value = replValue,
                     onChange = { replValue = it; f.replacement = it.text },
-                    placeholder = if (f.query.regex) "Replace ($1 for groups)" else "Replace",
+                    placeholder = if (f.query.regex) tr(Res.string.find_replace_regex) else tr(Res.string.find_replace),
                     icon = false,
                     error = false,
                     modifier = Modifier.weight(1f).widthIn(max = 420.dp).then(keys { doc.replaceNext() }).testTag("replace-field"),
                 )
                 val any = result.matches.isNotEmpty()
-                ToolButton(null, label = "Replace", enabled = any) { doc.replaceNext() }
-                ToolButton(null, label = "Replace All", enabled = any) { doc.replaceAll() }
+                ToolButton(null, label = tr(Res.string.find_replace), enabled = any) { doc.replaceNext() }
+                ToolButton(null, label = tr(Res.string.find_replace_all), enabled = any) { doc.replaceAll() }
             }
         }
     }

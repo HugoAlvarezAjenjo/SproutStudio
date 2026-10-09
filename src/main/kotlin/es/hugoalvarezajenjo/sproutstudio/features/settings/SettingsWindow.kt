@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Remove
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
+import es.hugoalvarezajenjo.sproutstudio.core.i18n.LanguageChoice
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Templates
 import es.hugoalvarezajenjo.sproutstudio.features.editor.Highlighter
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
@@ -70,14 +72,16 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.LocalEditorTextStyle
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+import es.hugoalvarezajenjo.sproutstudio.resources.*
 
-/** The app's Settings window: theme, diagram preview, editor font, saving and recents. */
+/** The app's Settings window: theme, language, diagram preview, editor font, saving and recents. */
 @Composable
 fun SettingsWindow(deps: WorkspaceDeps, onClose: () -> Unit) {
     val vm = remember(deps) { SettingsViewModel(deps) }
     Window(
         onCloseRequest = onClose,
-        title = "Settings",
+        title = tr(Res.string.settings_window_title),
         icon = AppIcon.painter,
         resizable = true,
         state = rememberWindowState(size = DpSize(760.dp, 540.dp)),
@@ -89,10 +93,19 @@ fun SettingsWindow(deps: WorkspaceDeps, onClose: () -> Unit) {
     }
 }
 
-internal enum class Section(val title: String, val icon: ImageVector) {
-    APPEARANCE("Appearance", Icons.Outlined.Palette),
-    EDITOR("Editor", Icons.Outlined.Code),
-    GENERAL("General", Icons.Outlined.Tune),
+internal enum class Section(val icon: ImageVector) {
+    APPEARANCE(Icons.Outlined.Palette),
+    EDITOR(Icons.Outlined.Code),
+    GENERAL(Icons.Outlined.Tune);
+
+    val title: String
+        @Composable get() = tr(
+            when (this) {
+                APPEARANCE -> Res.string.settings_appearance
+                EDITOR -> Res.string.settings_editor
+                GENERAL -> Res.string.settings_general
+            },
+        )
 }
 
 @Composable
@@ -107,7 +120,7 @@ internal fun SettingsContent(vm: SettingsViewModel, initial: Section = Section.A
         ) {
             Section.entries.forEach { s -> SectionRow(s, selected = s == section) { section = s } }
             Spacer(Modifier.weight(1f))
-            ToolButton(null, label = "Restore defaults", enabled = !vm.allDefaults) { vm.resetToDefaults() }
+            ToolButton(null, label = tr(Res.string.settings_restore_defaults), enabled = !vm.allDefaults) { vm.resetToDefaults() }
         }
         Box(Modifier.width(1.dp).fillMaxHeight().background(c.border))
         // Right: the chosen section's settings.
@@ -128,16 +141,26 @@ internal fun SettingsContent(vm: SettingsViewModel, initial: Section = Section.A
 
 @Composable
 private fun AppearanceSection(vm: SettingsViewModel) {
-    SettingRow("Theme", "The colours of the whole app. The macOS title bar follows it after a restart.") {
+    SettingRow(tr(Res.string.settings_theme), tr(Res.string.settings_theme_hint)) {
         Segmented(
-            listOf(Choice("Dark", Icons.Outlined.DarkMode), Choice("Light", Icons.Outlined.LightMode)),
+            listOf(Choice("Dark", tr(Res.string.settings_dark), Icons.Outlined.DarkMode), Choice("Light", tr(Res.string.settings_light), Icons.Outlined.LightMode)),
             selected = if (vm.darkTheme) 0 else 1,
             tag = "theme",
         ) { vm.setDarkTheme(it == 0) }
     }
-    SettingRow("Diagram preview", "Recolour diagrams dark in the preview. Exports keep the original colours.") {
+    SettingRow(tr(Res.string.settings_language), tr(Res.string.settings_language_hint)) {
+        val choices = LanguageChoice.entries
         Segmented(
-            listOf(Choice("Light", Icons.Outlined.LightMode), Choice("Dark", Icons.Outlined.DarkMode)),
+            choices.map { ch ->
+                Choice(ch.name, ch.language?.nativeName ?: tr(Res.string.settings_language_system, vm.systemLanguage.nativeName), Icons.Outlined.Language)
+            },
+            selected = choices.indexOf(vm.language),
+            tag = "language",
+        ) { vm.setLanguage(choices[it]) }
+    }
+    SettingRow(tr(Res.string.settings_diagram_preview), tr(Res.string.settings_diagram_preview_hint)) {
+        Segmented(
+            listOf(Choice("Light", tr(Res.string.settings_light), Icons.Outlined.LightMode), Choice("Dark", tr(Res.string.settings_dark), Icons.Outlined.DarkMode)),
             selected = if (vm.darkDiagram) 1 else 0,
             tag = "diagram",
         ) { vm.setDarkDiagram(it == 1) }
@@ -147,15 +170,15 @@ private fun AppearanceSection(vm: SettingsViewModel) {
 @Composable
 private fun EditorSection(vm: SettingsViewModel) {
     val c = ide
-    SettingRow("Font size", "Text size in the code editor.") {
+    SettingRow(tr(Res.string.settings_font_size), tr(Res.string.settings_font_size_hint)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            ToolButton(Icons.Outlined.Remove, "Smaller", enabled = vm.canShrinkFont) { vm.changeFontSize(-1f) }
+            ToolButton(Icons.Outlined.Remove, tr(Res.string.settings_smaller), enabled = vm.canShrinkFont) { vm.changeFontSize(-1f) }
             Text(
-                "${vm.fontSize.toInt()} pt", color = c.text, style = MaterialTheme.typography.labelLarge,
+                tr(Res.string.settings_points, vm.fontSize.toInt()), color = c.text, style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.widthIn(min = 44.dp).testTag("font-size"),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
-            ToolButton(Icons.Outlined.Add, "Larger", enabled = vm.canGrowFont) { vm.changeFontSize(1f) }
+            ToolButton(Icons.Outlined.Add, tr(Res.string.settings_larger), enabled = vm.canGrowFont) { vm.changeFontSize(1f) }
         }
     }
     // A live sample, in the editor's real font, colours and size.
@@ -171,15 +194,12 @@ private fun EditorSection(vm: SettingsViewModel) {
 
 @Composable
 private fun GeneralSection(vm: SettingsViewModel) {
-    SettingRow("Save automatically", "Save diagrams a second after you stop typing, and when you switch tab or app.") {
+    SettingRow(tr(Res.string.settings_save_automatically), tr(Res.string.settings_save_automatically_hint)) {
         Toggle(vm.autoSave, tag = "autosave") { vm.setAutoSave(it) }
     }
     val n = vm.recentCount
-    SettingRow(
-        "Recent projects",
-        when (n) { 0 -> "No recent projects."; 1 -> "1 folder on the welcome screen."; else -> "$n folders on the welcome screen." },
-    ) {
-        ToolButton(null, label = "Clear list", enabled = n > 0) { vm.clearRecents() }
+    SettingRow(tr(Res.string.settings_recent_projects), if (n == 0) tr(Res.string.settings_recent_none) else tr(Res.plurals.settings_recent_count, n, n)) {
+        ToolButton(null, label = tr(Res.string.settings_clear_list), enabled = n > 0) { vm.clearRecents() }
     }
 }
 
@@ -221,7 +241,8 @@ private fun SectionRow(s: Section, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
-private class Choice(val label: String, val icon: ImageVector)
+/** One option of a [Segmented] control. [key] names it in test tags, whatever the language. */
+private class Choice(val key: String, val label: String, val icon: ImageVector)
 
 /** A segmented control: one of a few options, the chosen one highlighted. */
 @Composable
@@ -238,7 +259,7 @@ private fun Segmented(options: List<Choice>, selected: Int, tag: String, onSelec
                     .background(if (on) c.accent else Color.Transparent)
                     .selectable(on, role = Role.RadioButton) { onSelect(i) }
                     .padding(horizontal = 10.dp)
-                    .testTag("$tag:${o.label}"),
+                    .testTag("$tag:${o.key}"),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {

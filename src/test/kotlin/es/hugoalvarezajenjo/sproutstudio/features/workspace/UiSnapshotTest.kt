@@ -10,6 +10,8 @@ import es.hugoalvarezajenjo.sproutstudio.features.palette.projectCommands
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Welcome
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.Workspace
+import es.hugoalvarezajenjo.sproutstudio.core.i18n.Language
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ProvideLanguage
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.PumlTheme
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import java.io.File
@@ -22,9 +24,12 @@ class UiSnapshotTest {
 
     private val out = File("build/ui-snapshots").apply { mkdirs() }
 
-    private fun shoot(name: String, frames: List<Long>, dark: Boolean = true, content: @androidx.compose.runtime.Composable () -> Unit) {
+    private fun shoot(
+        name: String, frames: List<Long>, dark: Boolean = true, language: Language = Language.English,
+        content: @androidx.compose.runtime.Composable () -> Unit,
+    ) {
         val scene = ImageComposeScene(1320, 840, Density(1f)) {
-            PumlTheme(dark = dark) { Surface(color = ide.panel) { content() } }
+            ProvideLanguage(language) { PumlTheme(dark = dark) { Surface(color = ide.panel) { content() } } }
         }
         var img = scene.render(0)
         // Let async work (renders, debounces) settle across a few frames of real time.
@@ -32,6 +37,7 @@ class UiSnapshotTest {
         val bytes = img.encodeToData(EncodedImageFormat.PNG)!!.bytes
         File(out, "$name.png").writeBytes(bytes)
         scene.close()
+        Language.English.makeDefault() // the other tests read English
         assertTrue(bytes.size > 10_000)
     }
 
@@ -98,9 +104,9 @@ class UiSnapshotTest {
         shoot("workspace-find", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
     }
 
-    private fun withPalette(name: String, query: String) {
+    private fun withPalette(name: String, query: String, language: Language = Language.English) {
         val p = pizzaProject()
-        shoot(name, listOf(400, 800, 800, 400)) {
+        shoot(name, listOf(400, 800, 800, 400), language = language) {
             androidx.compose.foundation.layout.Box {
                 Workspace(p, onSave = {}, onCloseTab = {})
                 CommandPalette(projectCommands(p, {}, {}, {}), onDismiss = {}, onRun = {}, recentIds = listOf("view.theme", "preview.png"), initialQuery = query)
@@ -109,6 +115,16 @@ class UiSnapshotTest {
     }
 
     @Test fun commandPalette() = withPalette("command-palette", "")
+
+    @Test fun welcomeSpanish() = shoot("welcome-es", listOf(100), language = Language.Spanish) { Welcome(TestGraph.workspace()) }
+
+    @Test
+    fun workspaceSpanish() {
+        val p = pizzaProject()
+        shoot("workspace-es", listOf(400, 800, 800, 400), language = Language.Spanish) { Workspace(p, onSave = {}, onCloseTab = {}) }
+    }
+
+    @Test fun commandPaletteSpanish() = withPalette("command-palette-es", "", Language.Spanish)
 
     @Test fun commandPaletteSearch() = withPalette("command-palette-search", "exp")
 

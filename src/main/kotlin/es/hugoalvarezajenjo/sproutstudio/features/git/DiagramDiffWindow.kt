@@ -1,5 +1,35 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.common_close
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_before
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_deleted
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_didnt_exist
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_fit_both
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_last_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_new_file
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_no_differences
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_not_in_version
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_parent
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_text
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_unsaved
+import es.hugoalvarezajenjo.sproutstudio.resources.diff_working_copy
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_view
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_cant_render
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_n_of_m
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_next_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_no_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_previous_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_rendering
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_zoom_in
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_zoom_out
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import es.hugoalvarezajenjo.sproutstudio.features.document.DiagramExtensions
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
@@ -96,11 +126,11 @@ fun DiagramDiffWindow(
         state = rememberWindowState(size = DpSize(1400.dp, 820.dp)),
     ) {
         MenuBar {
-            Menu("File") {
-                Item("Close", shortcut = KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
+            Menu(tr(Res.string.menu_file)) {
+                Item(tr(Res.string.common_close), shortcut = KeyShortcut(Key.W, meta = Os.isMac, ctrl = !Os.isMac)) { onClose() }
             }
-            Menu("View") {
-                CheckboxItem("Dark Diagram Preview", checked = deps.diagram.dark.value) { deps.diagram.toggle() }
+            Menu(tr(Res.string.menu_view)) {
+                CheckboxItem(tr(Res.string.menu_dark_diagram_preview), checked = deps.diagram.dark.value) { deps.diagram.toggle() }
             }
         }
         PumlTheme(dark = deps.theme.dark.value) {
@@ -117,9 +147,9 @@ internal fun DiagramDiffView(p: WorkspaceViewModel, file: File) = DiffView(p, fi
 
 internal fun sideTitle(s: DiffSide) = when (s) {
     DiffSide.Head -> "HEAD"
-    DiffSide.WorkingCopy -> "Working copy"
+    DiffSide.WorkingCopy -> text(Res.string.diff_working_copy)
     is DiffSide.At -> s.id.take(7)
-    is DiffSide.Before -> "Before ${s.id.take(7)}"
+    is DiffSide.Before -> text(Res.string.diff_before, s.id.take(7))
 }
 
 /** Text of one side; null = the file doesn't exist there. Re-reads when HEAD or the editor change. */
@@ -175,8 +205,8 @@ internal fun DiffView(
             leadingTools()
             Spacer(Modifier.width(8.dp))
             if (isDiagram) {
-                ToolButton(null, label = "Diagram", selected = !textMode) { textMode = false }
-                ToolButton(null, label = "Text", selected = textMode) { textMode = true }
+                ToolButton(null, label = tr(Res.string.diff_diagram), selected = !textMode) { textMode = false }
+                ToolButton(null, label = tr(Res.string.diff_text), selected = textMode) { textMode = true }
             }
             Spacer(Modifier.weight(1f))
         }
@@ -188,17 +218,17 @@ internal fun DiffView(
                 file, leftText, rightText, leftLoaded,
                 leftTitle = sideTitle(left), leftSub = sideSubtitle(p, left),
                 rightTitle = sideTitle(right),
-                rightSub = if (right == DiffSide.WorkingCopy && doc?.dirty == true) "unsaved edits" else sideSubtitle(p, right),
+                rightSub = if (right == DiffSide.WorkingCopy && doc?.dirty == true) tr(Res.string.diff_unsaved) else sideSubtitle(p, right),
             )
         }
     }
 }
 
 private fun sideSubtitle(p: WorkspaceViewModel, s: DiffSide) = when (s) {
-    DiffSide.Head -> p.git.status.head?.take(7)?.let { "last commit · $it" } ?: ""
+    DiffSide.Head -> p.git.status.head?.take(7)?.let { text(Res.string.diff_last_commit, it) } ?: ""
     DiffSide.WorkingCopy -> ""
-    is DiffSide.At -> "commit"
-    is DiffSide.Before -> "parent"
+    is DiffSide.At -> text(Res.string.diff_commit)
+    is DiffSide.Before -> text(Res.string.diff_parent)
 }
 
 @Composable
@@ -221,29 +251,29 @@ private fun DiagramsSideBySide(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             if (count > 1) {
-                ToolButton(Icons.Outlined.ChevronLeft, "Previous diagram", enabled = rightP.index > 0) { rightP.previousDiagram() }
-                Text("${rightP.index + 1} of $count", style = MaterialTheme.typography.labelMedium, color = c.textMuted)
-                ToolButton(Icons.Outlined.ChevronRight, "Next diagram", enabled = rightP.index < count - 1) { rightP.showDiagram(rightP.index + 1) }
+                ToolButton(Icons.Outlined.ChevronLeft, tr(Res.string.preview_previous_diagram), enabled = rightP.index > 0) { rightP.previousDiagram() }
+                Text(tr(Res.string.preview_n_of_m, rightP.index + 1, count), style = MaterialTheme.typography.labelMedium, color = c.textMuted)
+                ToolButton(Icons.Outlined.ChevronRight, tr(Res.string.preview_next_diagram), enabled = rightP.index < count - 1) { rightP.showDiagram(rightP.index + 1) }
             }
             Spacer(Modifier.weight(1f))
-            ToolButton(Icons.Outlined.Remove, "Zoom out (mouse wheel)") { zoom.zoomBy(1 / 1.25f) }
+            ToolButton(Icons.Outlined.Remove, tr(Res.string.preview_zoom_out)) { zoom.zoomBy(1 / 1.25f) }
             Text(
                 "${(zoom.scale * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = c.textMuted,
                 modifier = Modifier.width(40.dp), textAlign = TextAlign.Center,
             )
-            ToolButton(Icons.Outlined.Add, "Zoom in (mouse wheel)") { zoom.zoomBy(1.25f) }
-            ToolButton(Icons.Outlined.FitScreen, "Fit both (double-click)", selected = zoom.autoFit) { if (fitW > 0f) zoom.fit(fitW, fitH) }
+            ToolButton(Icons.Outlined.Add, tr(Res.string.preview_zoom_in)) { zoom.zoomBy(1.25f) }
+            ToolButton(Icons.Outlined.FitScreen, tr(Res.string.diff_fit_both), selected = zoom.autoFit) { if (fitW > 0f) zoom.fit(fitW, fitH) }
         }
         HLine()
         Row(Modifier.weight(1f).fillMaxWidth()) {
             Side(
                 leftTitle, leftSub, leftP, zoom, fitW, fitH, Modifier.weight(1f),
-                missing = if (leftLoaded && leftText == null) "Not in this version" else null,
+                missing = if (leftLoaded && leftText == null) tr(Res.string.diff_not_in_version) else null,
             )
             VLine()
             Side(
                 rightTitle, rightSub, rightP, zoom, fitW, fitH, Modifier.weight(1f),
-                missing = if (rightText == null) "Not in this version" else null,
+                missing = if (rightText == null) tr(Res.string.diff_not_in_version) else null,
             )
         }
     }
@@ -268,13 +298,13 @@ private fun Side(
         val img = preview.image
         Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(if (missing == null) img?.background ?: c.editor else c.editor)) {
             when {
-                missing != null -> EmptyState(Icons.Outlined.Draw, missing, "The file didn't exist here", Modifier.align(Alignment.Center))
+                missing != null -> EmptyState(Icons.Outlined.Draw, missing, tr(Res.string.diff_didnt_exist), Modifier.align(Alignment.Center))
                 img != null -> DiagramView(
                     img, zoom, dimmed = preview.stale,
                     fitWidth = if (fitW > 0f) fitW else img.width, fitHeight = if (fitH > 0f) fitH else img.height,
                 )
-                !preview.firstDone -> EmptyState(Icons.Outlined.Draw, "Rendering…", "", Modifier.align(Alignment.Center))
-                else -> EmptyState(Icons.Outlined.ErrorOutline, "Can't render", preview.error?.describe() ?: "No diagram found", Modifier.align(Alignment.Center))
+                !preview.firstDone -> EmptyState(Icons.Outlined.Draw, tr(Res.string.preview_rendering), "", Modifier.align(Alignment.Center))
+                else -> EmptyState(Icons.Outlined.ErrorOutline, tr(Res.string.preview_cant_render), preview.error?.describe() ?: tr(Res.string.preview_no_diagram), Modifier.align(Alignment.Center))
             }
         }
     }
@@ -302,9 +332,9 @@ private fun TextDiff(git: GitViewModel, base: String?, current: String?, loaded:
         ) {
             Text("${sideTitle(left)} → ${sideTitle(right)}", style = MaterialTheme.typography.labelLarge, color = c.text)
             when {
-                base == null && current != null -> Text("new file", fontSize = 12.sp, color = c.vcsAdded)
-                current == null && base != null -> Text("deleted", fontSize = 12.sp, color = c.vcsDeleted)
-                changes == 0 -> Text("No differences", fontSize = 12.sp, color = c.textMuted)
+                base == null && current != null -> Text(tr(Res.string.diff_new_file), fontSize = 12.sp, color = c.vcsAdded)
+                current == null && base != null -> Text(tr(Res.string.diff_deleted), fontSize = 12.sp, color = c.vcsDeleted)
+                changes == 0 -> Text(tr(Res.string.diff_no_differences), fontSize = 12.sp, color = c.textMuted)
                 else -> {
                     Text("+$added", fontSize = 12.sp, color = c.vcsAdded)
                     Text("−$deleted", fontSize = 12.sp, color = c.vcsUnversioned)

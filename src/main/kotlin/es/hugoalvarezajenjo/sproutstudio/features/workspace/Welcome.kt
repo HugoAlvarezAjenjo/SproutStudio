@@ -1,5 +1,21 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_new_diagram
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_new_diagram_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_no_recents
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_no_recents_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_open_file
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_open_file_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_open_folder
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_open_folder_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_recent_projects
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_remove_recent
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_settings
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_tagline
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_tip
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,24 +78,24 @@ internal fun Welcome(p: WorkspaceViewModel) {
                     AppMark(48)
                     Column {
                         Text("SproutStudio", style = MaterialTheme.typography.headlineSmall, color = c.text)
-                        Text("PlantUML, offline · v0.1", style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                        Text(tr(Res.string.welcome_tagline), style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                     }
                 }
                 Spacer(Modifier.height(28.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     ActionCard(
-                        Icons.Outlined.FolderOpen, "Open folder", "Open a project directory", primary = true,
+                        Icons.Outlined.FolderOpen, tr(Res.string.welcome_open_folder), tr(Res.string.welcome_open_folder_hint), primary = true,
                     ) { p.chooseFolder()?.let { p.openRoot(it) } }
-                    ActionCard(Icons.Outlined.Description, "Open file", "Open a single .puml diagram") { p.openDiagramDialog() }
-                    ActionCard(Icons.AutoMirrored.Outlined.NoteAdd, "New diagram", "Start from a blank diagram") { p.newDocument() }
+                    ActionCard(Icons.Outlined.Description, tr(Res.string.welcome_open_file), tr(Res.string.welcome_open_file_hint)) { p.openDiagramDialog() }
+                    ActionCard(Icons.AutoMirrored.Outlined.NoteAdd, tr(Res.string.welcome_new_diagram), tr(Res.string.welcome_new_diagram_hint)) { p.newDocument() }
                 }
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "Tip: double-click any .puml file in Finder for an instant preview.",
+                    tr(Res.string.welcome_tip),
                     fontSize = 12.sp, color = c.textMuted,
                 )
                 Spacer(Modifier.height(12.dp))
-                ToolButton(Icons.Outlined.Settings, label = "Settings") { p.deps.windows.openSettings() }
+                ToolButton(Icons.Outlined.Settings, label = tr(Res.string.welcome_settings)) { p.deps.windows.openSettings() }
             }
 
             Box(Modifier.width(1.dp).fillMaxHeight().background(c.border))
@@ -87,7 +103,7 @@ internal fun Welcome(p: WorkspaceViewModel) {
             // Right: recent projects.
             Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 32.dp, vertical = 28.dp)) {
                 Text(
-                    "RECENT PROJECTS",
+                    tr(Res.string.welcome_recent_projects),
                     style = MaterialTheme.typography.labelSmall, color = c.textMuted,
                     fontWeight = FontWeight.SemiBold, letterSpacing = 0.6.sp,
                 )
@@ -96,8 +112,8 @@ internal fun Welcome(p: WorkspaceViewModel) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         EmptyState(
                             Icons.Outlined.History,
-                            "No recent projects",
-                            "Folders you open will show up here.",
+                            tr(Res.string.welcome_no_recents),
+                            tr(Res.string.welcome_no_recents_hint),
                         )
                     }
                 } else {
@@ -186,7 +202,7 @@ private fun RecentRow(dir: File, onOpen: () -> Unit, onRemove: () -> Unit) {
             )
         }
         if (hovered) {
-            Tip("Remove from recents") {
+            Tip(tr(Res.string.welcome_remove_recent)) {
                 Box(
                     Modifier
                         .size(24.dp)
@@ -196,7 +212,7 @@ private fun RecentRow(dir: File, onOpen: () -> Unit, onRemove: () -> Unit) {
                         .clickable(interactionSource = removeInteraction, indication = null, onClick = onRemove),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Outlined.Close, "Remove from recents", tint = c.textMuted, modifier = Modifier.size(15.dp))
+                    Icon(Icons.Outlined.Close, tr(Res.string.welcome_remove_recent), tint = c.textMuted, modifier = Modifier.size(15.dp))
                 }
             }
         }

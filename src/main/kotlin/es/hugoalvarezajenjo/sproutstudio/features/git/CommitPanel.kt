@@ -1,5 +1,55 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.dialog_cancel
+import es.hugoalvarezajenjo.sproutstudio.resources.editor_rollback
+import es.hugoalvarezajenjo.sproutstudio.resources.git_add_gitignore
+import es.hugoalvarezajenjo.sproutstudio.resources.git_add_gitignore_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.git_amend
+import es.hugoalvarezajenjo.sproutstudio.resources.git_amend_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.git_amend_tooltip
+import es.hugoalvarezajenjo.sproutstudio.resources.git_changes
+import es.hugoalvarezajenjo.sproutstudio.resources.git_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.git_commit_message
+import es.hugoalvarezajenjo.sproutstudio.resources.git_commit_tooltip
+import es.hugoalvarezajenjo.sproutstudio.resources.git_drop
+import es.hugoalvarezajenjo.sproutstudio.resources.git_drop_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.git_drop_text
+import es.hugoalvarezajenjo.sproutstudio.resources.git_drop_title
+import es.hugoalvarezajenjo.sproutstudio.resources.git_files
+import es.hugoalvarezajenjo.sproutstudio.resources.git_hide_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.git_include_all
+import es.hugoalvarezajenjo.sproutstudio.resources.git_include_file
+import es.hugoalvarezajenjo.sproutstudio.resources.git_last_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.git_n_of_files
+import es.hugoalvarezajenjo.sproutstudio.resources.git_no_changes
+import es.hugoalvarezajenjo.sproutstudio.resources.git_no_files_yet
+import es.hugoalvarezajenjo.sproutstudio.resources.git_no_repo
+import es.hugoalvarezajenjo.sproutstudio.resources.git_no_repo_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.git_no_user
+import es.hugoalvarezajenjo.sproutstudio.resources.git_open
+import es.hugoalvarezajenjo.sproutstudio.resources.git_pop
+import es.hugoalvarezajenjo.sproutstudio.resources.git_pop_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.git_refresh
+import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_added
+import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_menu
+import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_modified
+import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_title
+import es.hugoalvarezajenjo.sproutstudio.resources.git_show_diff
+import es.hugoalvarezajenjo.sproutstudio.resources.git_show_history
+import es.hugoalvarezajenjo.sproutstudio.resources.git_stash
+import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_changes
+import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_count
+import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_description
+import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_saved
+import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_title
+import es.hugoalvarezajenjo.sproutstudio.resources.git_undo_last_hint
+import es.hugoalvarezajenjo.sproutstudio.resources.git_unversioned
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+
 import androidx.compose.material3.Surface
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Popup
@@ -109,19 +159,19 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
             Modifier.fillMaxWidth().height(36.dp).padding(start = 12.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Commit", style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
+            Text(tr(Res.string.git_commit), style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.weight(1f))
             if (git.isRepo) {
                 Box {
                     ToolButton(
                         Icons.Outlined.Inventory2,
-                        if (git.stashes.isEmpty()) "Stash changes" else "Stash (${git.stashes.size} saved)",
+                        if (git.stashes.isEmpty()) tr(Res.string.git_stash_changes) else tr(Res.string.git_stash_count, git.stashes.size),
                         selected = stashOpen,
                     ) { stashOpen = !stashOpen }
                     if (stashOpen) StashPopup(p, onDismiss = { stashOpen = false })
                 }
-                ToolButton(Icons.Outlined.Refresh, "Refresh") { git.requestRefresh() }
+                ToolButton(Icons.Outlined.Refresh, tr(Res.string.git_refresh)) { git.requestRefresh() }
             }
-            ToolButton(Icons.Outlined.Remove, "Hide (${shortcutHint("0")})") { p.showSidebar(false) }
+            ToolButton(Icons.Outlined.Remove, tr(Res.string.git_hide_panel, shortcutHint("0"))) { p.showSidebar(false) }
         }
 
         if (!git.isRepo) {
@@ -130,12 +180,12 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
             ) {
-                EmptyState(Icons.Outlined.Commit, "No Git repository", "Keep a history of your diagrams: every commit is a snapshot you can go back to.")
+                EmptyState(Icons.Outlined.Commit, tr(Res.string.git_no_repo), tr(Res.string.git_no_repo_hint))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Check(withGitignore, "Add a .gitignore") { withGitignore = !withGitignore }
-                    Text("Add a .gitignore (.DS_Store, temp files)", fontSize = 12.sp, color = c.textMuted)
+                    Check(withGitignore, tr(Res.string.git_add_gitignore)) { withGitignore = !withGitignore }
+                    Text(tr(Res.string.git_add_gitignore_hint), fontSize = 12.sp, color = c.textMuted)
                 }
-                ToolButton(null, label = "Create Git Repository", primary = true) {
+                ToolButton(null, label = tr(Res.string.menu_create_git_repo), primary = true) {
                     p.gitFlow.init(withGitignore)
                 }
                 git.error?.let { Text(it.describe(), color = c.error, fontSize = 12.sp) }
@@ -150,17 +200,17 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (changes.isEmpty()) {
                 Text(
-                    if (git.status.head == null) "No files yet" else "No changes since the last commit",
+                    if (git.status.head == null) tr(Res.string.git_no_files_yet) else tr(Res.string.git_no_changes),
                     fontSize = 12.sp, color = c.textMuted, modifier = Modifier.padding(start = 14.dp, top = 8.dp),
                 )
             }
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = 4.dp)) {
                 if (tracked.isNotEmpty()) {
-                    item(key = "h-changes") { GroupHeader(p, "Changes", tracked) }
+                    item(key = "h-changes") { GroupHeader(p, tr(Res.string.git_changes), tracked) }
                     items(tracked, key = { "c:" + it.path }) { ch -> ChangeRow(p, ch, onRollback = { confirmRollback = it }) }
                 }
                 if (unversioned.isNotEmpty()) {
-                    item(key = "h-unversioned") { GroupHeader(p, "Unversioned Files", unversioned) }
+                    item(key = "h-unversioned") { GroupHeader(p, tr(Res.string.git_unversioned), unversioned) }
                     items(unversioned, key = { "u:" + it.path }) { ch -> ChangeRow(p, ch, onRollback = null) }
                 }
             }
@@ -175,7 +225,7 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
                     .border(1.dp, c.popupBorder, RoundedCornerShape(6.dp))
                     .padding(8.dp),
             ) {
-                if (git.commitMessage.isEmpty()) Text("Commit message", fontSize = 13.sp, color = c.textDisabled)
+                if (git.commitMessage.isEmpty()) Text(tr(Res.string.git_commit_message), fontSize = 13.sp, color = c.textDisabled)
                 BasicTextField(
                     value = git.commitMessage,
                     onValueChange = git::editMessage,
@@ -191,29 +241,29 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
             val n = git.included.size
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ToolButton(
-                    null, tooltip = "${if (git.amend) "Amend" else "Commit"} (${shortcutHint("⏎")})",
-                    label = if (git.amend) "Amend Commit" else "Commit", primary = true,
+                    null, tooltip = tr(if (git.amend) Res.string.git_amend_tooltip else Res.string.git_commit_tooltip, shortcutHint("⏎")),
+                    label = if (git.amend) tr(Res.string.git_amend_commit) else tr(Res.string.git_commit), primary = true,
                     enabled = git.canCommit,
                 ) { p.gitFlow.commit() }
                 Text(
-                    if (changes.isEmpty()) "" else "$n of ${changes.size} file${if (changes.size == 1) "" else "s"}",
+                    if (changes.isEmpty()) "" else tr(Res.plurals.git_n_of_files, changes.size, n, changes.size),
                     fontSize = 12.sp, color = c.textMuted, modifier = Modifier.weight(1f),
                 )
                 if (git.status.head != null) {
-                    Check(git.amend, "Amend") { git.toggleAmend() }
-                    Text("Amend", fontSize = 12.sp, color = c.textMuted)
+                    Check(git.amend, tr(Res.string.git_amend)) { git.toggleAmend() }
+                    Text(tr(Res.string.git_amend), fontSize = 12.sp, color = c.textMuted)
                 }
             }
             git.lastCommit?.let { last ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        "Last: ${last.message}", fontSize = 12.sp, color = c.textMuted,
+                        tr(Res.string.git_last_commit, last.message), fontSize = 12.sp, color = c.textMuted,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
                     )
                     Text("· ${last.short}", fontSize = 12.sp, color = c.textMuted)
                     if (last.parents > 0) {
                         Spacer(Modifier.width(2.dp))
-                        ToolButton(Icons.AutoMirrored.Outlined.Undo, "Undo last commit (keeps its changes)") { p.gitFlow.undoLastCommit() }
+                        ToolButton(Icons.AutoMirrored.Outlined.Undo, tr(Res.string.git_undo_last_hint)) { p.gitFlow.undoLastCommit() }
                     }
                 }
             }
@@ -228,16 +278,16 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
             onDismissRequest = { confirmRollback = null },
             containerColor = ide.popup,
             shape = RoundedCornerShape(10.dp),
-            title = { Text("Rollback ${ch.file.name}?", style = MaterialTheme.typography.titleMedium) },
+            title = { Text(tr(Res.string.git_rollback_title, ch.file.name), style = MaterialTheme.typography.titleMedium) },
             text = {
                 Text(
-                    if (ch.type == ChangeType.ADDED) "It goes back to unversioned. The file stays on disk."
-                    else "Your changes since the last commit are lost. This can't be undone.",
+                    if (ch.type == ChangeType.ADDED) tr(Res.string.git_rollback_added)
+                    else tr(Res.string.git_rollback_modified),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             },
-            confirmButton = { TextButton(onClick = { confirmRollback = null; p.gitFlow.rollback(ch) }) { Text("Rollback", color = ide.error) } },
-            dismissButton = { TextButton(onClick = { confirmRollback = null }) { Text("Cancel") } },
+            confirmButton = { TextButton(onClick = { confirmRollback = null; p.gitFlow.rollback(ch) }) { Text(tr(Res.string.editor_rollback), color = ide.error) } },
+            dismissButton = { TextButton(onClick = { confirmRollback = null }) { Text(tr(Res.string.dialog_cancel)) } },
         )
     }
 }
@@ -255,10 +305,10 @@ private fun GroupHeader(p: WorkspaceViewModel, title: String, items: List<FileCh
     ) {
         Check(
             when (on) { 0 -> false; items.size -> true; else -> null },
-            "Include all $title",
+            tr(Res.string.git_include_all, title),
         ) { val all = on < items.size; items.forEach { git.setIncluded(it, all) } }
         Text(title, style = MaterialTheme.typography.labelLarge, color = c.text)
-        Text("${items.size} file${if (items.size == 1) "" else "s"}", fontSize = 12.sp, color = c.textMuted)
+        Text(tr(Res.plurals.git_files, items.size, items.size), fontSize = 12.sp, color = c.textMuted)
     }
 }
 
@@ -273,11 +323,11 @@ private fun ChangeRow(p: WorkspaceViewModel, ch: FileChange, onRollback: ((FileC
     val isActive = p.active?.file?.let { git.changeOf(it)?.path } == ch.path
     val hasHead = ch.type == ChangeType.MODIFIED || ch.type == ChangeType.DELETED
     val menu = buildList {
-        if (canOpen) add(ContextMenuItem("Open") { p.open(ch.file) })
-        if (canCompare) add(ContextMenuItem("Compare Diagram with HEAD") { p.deps.windows.compareWithHead(p, ch.file) })
-        if (hasHead) add(ContextMenuItem("Show Diff") { p.deps.windows.compareWithHead(p, ch.file, textFirst = true) })
-        if (hasHead) add(ContextMenuItem("Show History") { p.deps.windows.showHistory(p, ch.file) })
-        if (onRollback != null) add(ContextMenuItem("Rollback…") { onRollback(ch) })
+        if (canOpen) add(ContextMenuItem(tr(Res.string.git_open)) { p.open(ch.file) })
+        if (canCompare) add(ContextMenuItem(tr(Res.string.menu_compare_with_head)) { p.deps.windows.compareWithHead(p, ch.file) })
+        if (hasHead) add(ContextMenuItem(tr(Res.string.git_show_diff)) { p.deps.windows.compareWithHead(p, ch.file, textFirst = true) })
+        if (hasHead) add(ContextMenuItem(tr(Res.string.git_show_history)) { p.deps.windows.showHistory(p, ch.file) })
+        if (onRollback != null) add(ContextMenuItem(tr(Res.string.git_rollback_menu)) { onRollback(ch) })
     }
     ContextMenuArea(items = { menu }) {
         Row(
@@ -304,7 +354,7 @@ private fun ChangeRow(p: WorkspaceViewModel, ch: FileChange, onRollback: ((FileC
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Check(git.isIncluded(ch), "Include ${ch.file.name}", enabled = ch.type != ChangeType.CONFLICT) {
+            Check(git.isIncluded(ch), tr(Res.string.git_include_file, ch.file.name), enabled = ch.type != ChangeType.CONFLICT) {
                 git.setIncluded(ch, !git.isIncluded(ch))
             }
             Icon(
@@ -355,7 +405,7 @@ private fun AuthorLine(p: WorkspaceViewModel) {
         Text(p.git.status.branch ?: "", fontSize = 12.sp, color = c.textMuted)
         Text("·", fontSize = 12.sp, color = c.textMuted)
         Text(
-            if (a.implicit) "No git user set: commits as ${a.name}" else "${a.name} <${a.email}>",
+            if (a.implicit) tr(Res.string.git_no_user, a.name) else "${a.name} <${a.email}>",
             fontSize = 12.sp, color = if (a.implicit) c.warning else c.textMuted,
             maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
@@ -400,13 +450,13 @@ private fun StashPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
             modifier = Modifier.width(320.dp).border(1.dp, c.popupBorder, RoundedCornerShape(8.dp)).testTag("stash-popup"),
         ) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Stash Changes", style = MaterialTheme.typography.labelLarge, color = c.text)
-                Text("Puts your uncommitted edits aside and leaves the files as in the last commit.", fontSize = 12.sp, color = c.textMuted)
+                Text(tr(Res.string.git_stash_title), style = MaterialTheme.typography.labelLarge, color = c.text)
+                Text(tr(Res.string.git_stash_hint), fontSize = 12.sp, color = c.textMuted)
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(c.editor)
                         .border(1.dp, c.popupBorder, RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 6.dp),
                 ) {
-                    if (message.isEmpty()) Text("Description (optional)", fontSize = 13.sp, color = c.textDisabled)
+                    if (message.isEmpty()) Text(tr(Res.string.git_stash_description), fontSize = 13.sp, color = c.textDisabled)
                     BasicTextField(
                         message, { message = it }, singleLine = true,
                         textStyle = TextStyle(fontSize = 13.sp, color = c.text), cursorBrush = SolidColor(c.text),
@@ -416,13 +466,13 @@ private fun StashPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
                 Row {
                     Spacer(Modifier.weight(1f))
                     ToolButton(
-                        null, label = "Stash", primary = true,
+                        null, label = tr(Res.string.git_stash), primary = true,
                         enabled = !busy && git.status.head != null && git.status.changes.any { it.type != ChangeType.UNVERSIONED },
                     ) { run { git.stash(message).also { if (it) message = "" } } }
                 }
                 if (git.stashes.isNotEmpty()) {
                     Box(Modifier.fillMaxWidth().height(1.dp).background(c.popupBorder))
-                    Text("Saved", fontSize = 11.sp, color = c.textMuted)
+                    Text(tr(Res.string.git_stash_saved), fontSize = 11.sp, color = c.textMuted)
                     LazyColumn(Modifier.heightIn(max = 220.dp)) {
                         items(git.stashes, key = { "${it.index}:${it.timeMillis}" }) { st ->
                             Row(
@@ -434,8 +484,8 @@ private fun StashPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
                                     Text(st.message.removePrefix("On ").substringAfter(": ", st.message), fontSize = 13.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Text(relativeTime(st.timeMillis), fontSize = 11.sp, color = c.textMuted)
                                 }
-                                ToolButton(null, tooltip = "Apply and remove from the list", label = "Pop", enabled = !busy) { run { git.popStash(st.index) } }
-                                ToolButton(null, tooltip = "Delete without applying", label = "Drop", enabled = !busy) { confirmDrop = st }
+                                ToolButton(null, tooltip = tr(Res.string.git_pop_hint), label = tr(Res.string.git_pop), enabled = !busy) { run { git.popStash(st.index) } }
+                                ToolButton(null, tooltip = tr(Res.string.git_drop_hint), label = tr(Res.string.git_drop), enabled = !busy) { confirmDrop = st }
                             }
                         }
                     }
@@ -450,10 +500,10 @@ private fun StashPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
             onDismissRequest = { confirmDrop = null },
             containerColor = ide.popup,
             shape = RoundedCornerShape(10.dp),
-            title = { Text("Drop this stash?", style = MaterialTheme.typography.titleMedium) },
-            text = { Text("Its changes are deleted without being applied. This can't be undone.", style = MaterialTheme.typography.bodyMedium) },
-            confirmButton = { TextButton(onClick = { confirmDrop = null; run { git.dropStash(st.index) } }) { Text("Drop", color = ide.error) } },
-            dismissButton = { TextButton(onClick = { confirmDrop = null }) { Text("Cancel") } },
+            title = { Text(tr(Res.string.git_drop_title), style = MaterialTheme.typography.titleMedium) },
+            text = { Text(tr(Res.string.git_drop_text), style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = { TextButton(onClick = { confirmDrop = null; run { git.dropStash(st.index) } }) { Text(tr(Res.string.git_drop), color = ide.error) } },
+            dismissButton = { TextButton(onClick = { confirmDrop = null }) { Text(tr(Res.string.dialog_cancel)) } },
         )
     }
 }
