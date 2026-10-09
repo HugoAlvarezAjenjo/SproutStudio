@@ -19,6 +19,10 @@ class AutoSaver(private val settings: AutoSaveSettings) {
 
     fun setEnabled(on: Boolean) { settings.enabled.value = on }
 
+    val isDefault: Boolean get() = settings.enabled.isDefault
+
+    fun resetToDefault() = settings.enabled.reset()
+
     suspend fun flush(docs: Iterable<Document>) {
         if (enabled) docs.forEach { it.saveIfNeeded() }
     }

@@ -20,5 +20,7 @@ class RecentProjects(store: SettingsStore) {
         paths.value = paths.value.filter { it != dir.absolutePath }
     }
 
+    fun clear() { paths.value = emptyList() }
+
     private companion object { const val MAX = 8 }
 }

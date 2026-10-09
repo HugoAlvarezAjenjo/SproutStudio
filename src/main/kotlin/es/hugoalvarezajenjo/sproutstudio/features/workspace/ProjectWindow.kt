@@ -132,6 +132,8 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                     p.active?.let { p.requestCloseTab(it) }
                 }
                 Separator()
+                // On macOS Settings… (⌘,) lives in the app menu (see Main); elsewhere it goes here.
+                Item("Settings…", shortcut = if (Os.isMac) null else shortcut(Key.Comma)) { p.deps.windows.openSettings() }
                 Item("Close Project", enabled = p.root != null || p.docs.isNotEmpty()) { p.requestCloseProject() }
             }
             Menu("Edit") {
@@ -198,7 +200,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
             }
         }
 
-        PumlTheme(dark = p.deps.theme.dark.value) {
+        PumlTheme(dark = p.deps.theme.dark.value, editorFontSize = p.deps.editor.currentFontSize) {
             Box(Modifier.fillMaxSize()) {
             Surface(color = ide.panel) {
                 if (p.root == null && p.docs.isEmpty()) {

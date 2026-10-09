@@ -4,6 +4,7 @@ import es.hugoalvarezajenjo.sproutstudio.core.concurrency.AppDispatchers
 import es.hugoalvarezajenjo.sproutstudio.core.settings.InMemorySettingsStore
 import es.hugoalvarezajenjo.sproutstudio.core.settings.PreferencesSettingsStore
 import es.hugoalvarezajenjo.sproutstudio.core.settings.SettingsStore
+import es.hugoalvarezajenjo.sproutstudio.features.editor.EditorSettings
 import es.hugoalvarezajenjo.sproutstudio.features.palette.PaletteHistory
 import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings
@@ -33,6 +34,7 @@ class AppGraph(
 ) {
     val theme = ThemeSettings(store)
     val diagram = DiagramSettings(store)
+    val editor = EditorSettings(store)
     val layout = LayoutSettings(store)
     val autoSave = AutoSaveSettings(store)
     val recents = RecentProjects(store)
@@ -52,7 +54,7 @@ class AppGraph(
     val deps: WorkspaceDeps by lazy {
         WorkspaceDeps(
             dispatchers, platform, render, git, documents, files, autoSaver,
-            theme, diagram, layout, recents, paletteHistory, windows,
+            theme, diagram, editor, layout, recents, paletteHistory, windows,
         )
     }
 

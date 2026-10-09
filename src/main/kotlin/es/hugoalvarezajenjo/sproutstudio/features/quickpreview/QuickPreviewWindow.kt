@@ -69,6 +69,8 @@ fun QuickPreviewWindow(file: File, deps: WorkspaceDeps, onClose: () -> Unit) {
             Menu("View") {
                 CheckboxItem("Dark Theme", checked = deps.theme.dark.value) { deps.theme.toggle() }
                 CheckboxItem("Dark Diagram Preview", checked = deps.diagram.dark.value) { deps.diagram.toggle() }
+                Separator()
+                Item("Settings…") { deps.windows.openSettings() }
             }
         }
         PumlTheme(dark = deps.theme.dark.value) {

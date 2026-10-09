@@ -15,4 +15,6 @@ interface WindowNavigator {
     /** "Compare Diagram with HEAD" ([textFirst]: the text diff tab first); one window per file. */
     fun compareWithHead(project: WorkspaceViewModel, file: File, textFirst: Boolean = false)
     fun showHistory(project: WorkspaceViewModel, file: File)
+    /** The Settings window (a second request leaves the open one as it is). */
+    fun openSettings()
 }

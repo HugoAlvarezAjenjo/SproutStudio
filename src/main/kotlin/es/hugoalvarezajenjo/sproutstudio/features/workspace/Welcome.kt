@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -45,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.Tip
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
+import androidx.compose.material.icons.outlined.Settings
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import java.io.File
 
@@ -53,13 +54,10 @@ internal fun Welcome(p: WorkspaceViewModel) {
     val c = ide
     // Read without remember so removing a recent repaints the list (recents is backed by a Setting state).
     val recents = p.deps.recents.folders()
-    Box(Modifier.fillMaxSize().background(c.editor), contentAlignment = Alignment.Center) {
-        Row(
-            Modifier.widthIn(max = 920.dp).fillMaxWidth().padding(40.dp),
-            horizontalArrangement = Arrangement.spacedBy(40.dp),
-        ) {
+    // IntelliJ-style: a sidebar flush with the left edge, recents filling the rest of the window.
+    Row(Modifier.fillMaxSize().background(c.editor)) {
             // Left: brand + create/open actions, tip anchored to the bottom.
-            Column(Modifier.width(300.dp).fillMaxHeight()) {
+            Column(Modifier.width(320.dp).fillMaxHeight().background(c.panel).padding(horizontal = 24.dp, vertical = 28.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     AppMark(48)
                     Column {
@@ -80,10 +78,14 @@ internal fun Welcome(p: WorkspaceViewModel) {
                     "Tip: double-click any .puml file in Finder for an instant preview.",
                     fontSize = 12.sp, color = c.textMuted,
                 )
+                Spacer(Modifier.height(12.dp))
+                ToolButton(Icons.Outlined.Settings, label = "Settings") { p.deps.windows.openSettings() }
             }
 
+            Box(Modifier.width(1.dp).fillMaxHeight().background(c.border))
+
             // Right: recent projects.
-            Column(Modifier.weight(1f).fillMaxHeight()) {
+            Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 32.dp, vertical = 28.dp)) {
                 Text(
                     "RECENT PROJECTS",
                     style = MaterialTheme.typography.labelSmall, color = c.textMuted,
@@ -113,7 +115,6 @@ internal fun Welcome(p: WorkspaceViewModel) {
                     }
                 }
             }
-        }
     }
 }
 

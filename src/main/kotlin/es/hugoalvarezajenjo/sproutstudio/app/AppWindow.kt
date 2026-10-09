@@ -25,6 +25,9 @@ sealed class AppWindow {
     /** Commits that touched [file], each viewable as a diagram or text diff. */
     class History(val project: WorkspaceViewModel, val file: File) : AppWindow()
 
+    /** The app's settings. At most one is open. */
+    class Settings : AppWindow()
+
     class Project(val state: WorkspaceViewModel, revealed: Boolean = true) : AppWindow() {
         /** False while composed-but-hidden (the boot welcome waiting to see if a file arrives). */
         var revealed by mutableStateOf(revealed)

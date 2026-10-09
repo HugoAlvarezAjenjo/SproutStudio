@@ -11,7 +11,7 @@ import androidx.compose.runtime.setValue
 class Setting<T>(
     private val store: SettingsStore,
     private val key: String,
-    default: T,
+    val default: T,
     parse: (String) -> T?,
     private val format: (T) -> String,
 ) {
@@ -24,6 +24,10 @@ class Setting<T>(
             state = v
             store.putString(key, format(v))
         }
+
+    val isDefault: Boolean get() = state == default
+
+    fun reset() { value = default }
 }
 
 fun SettingsStore.boolean(key: String, default: Boolean) =

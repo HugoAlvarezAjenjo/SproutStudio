@@ -85,6 +85,10 @@ class WindowManager(private val newWorkspace: () -> WorkspaceViewModel) : Window
         windows += AppWindow.History(project, f)
     }
 
+    override fun openSettings() {
+        if (windows.none { it is AppWindow.Settings }) windows += AppWindow.Settings()
+    }
+
     /** Closing a project window also closes its ViewModel (git, running work). */
     fun close(w: AppWindow) {
         windows.remove(w)

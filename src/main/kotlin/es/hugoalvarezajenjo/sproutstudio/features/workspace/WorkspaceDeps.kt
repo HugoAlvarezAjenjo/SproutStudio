@@ -4,6 +4,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateThumbnails
 import androidx.compose.runtime.getValue
 
 import es.hugoalvarezajenjo.sproutstudio.core.concurrency.AppDispatchers
+import es.hugoalvarezajenjo.sproutstudio.features.editor.EditorSettings
 import es.hugoalvarezajenjo.sproutstudio.features.palette.PaletteHistory
 import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramSettings
 import es.hugoalvarezajenjo.sproutstudio.platform.Platform
@@ -27,6 +28,7 @@ class WorkspaceDeps(
     val autoSaver: AutoSaver,
     val theme: ThemeSettings,
     val diagram: DiagramSettings,
+    val editor: EditorSettings,
     val layout: LayoutSettings,
     val recents: RecentProjects,
     val paletteHistory: PaletteHistory,

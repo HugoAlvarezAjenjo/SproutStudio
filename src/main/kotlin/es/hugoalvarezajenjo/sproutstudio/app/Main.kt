@@ -8,6 +8,7 @@ import androidx.compose.ui.window.application
 import es.hugoalvarezajenjo.sproutstudio.features.git.DiagramDiffWindow
 import es.hugoalvarezajenjo.sproutstudio.features.git.HistoryWindow
 import es.hugoalvarezajenjo.sproutstudio.features.quickpreview.QuickPreviewWindow
+import es.hugoalvarezajenjo.sproutstudio.features.settings.SettingsWindow
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.ProjectWindow
 import es.hugoalvarezajenjo.sproutstudio.services.render.PlantUmlEngine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.AppIcon
@@ -45,6 +46,11 @@ fun main(args: Array<String>) {
         }
     }
 
+    // "SproutStudio → Settings…" (⌘,) in the macOS app menu.
+    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES)) {
+        Desktop.getDesktop().setPreferencesHandler { SwingUtilities.invokeLater { windows.openSettings() } }
+    }
+
     // Our logo in the Dock instead of the Java/Kotlin one (matters for `./gradlew run`).
     // MUST come after the Desktop handlers: touching Taskbar finishes AppKit's launch, and an
     // "open file" event that arrives before setOpenFileHandler is dropped (double-click lost).
@@ -80,6 +86,7 @@ fun main(args: Array<String>) {
                     is AppWindow.Project -> ProjectWindow(w.state, w.revealed, onClose = close)
                     is AppWindow.DiagramDiff -> DiagramDiffWindow(w.project, w.file, w.left, w.right, w.textFirst, onClose = close)
                     is AppWindow.History -> HistoryWindow(w.project, w.file, onClose = close)
+                    is AppWindow.Settings -> SettingsWindow(graph.deps, onClose = close)
                 }
             }
         }

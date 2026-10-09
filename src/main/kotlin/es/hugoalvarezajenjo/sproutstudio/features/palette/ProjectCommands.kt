@@ -11,6 +11,7 @@ import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Templates
 import es.hugoalvarezajenjo.sproutstudio.features.document.PreviewAction
+import es.hugoalvarezajenjo.sproutstudio.features.editor.EditorSettings
 import es.hugoalvarezajenjo.sproutstudio.features.editor.changeAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.editor.findNext
 import es.hugoalvarezajenjo.sproutstudio.features.editor.foldAll
@@ -135,6 +136,11 @@ internal fun projectCommands(
         }
     }
     cmd("view.theme", if (p.deps.theme.dark.value) "Switch to Light Theme" else "Switch to Dark Theme", "View") { p.deps.theme.toggle() }
+    cmd("app.settings", "Settings…", "SproutStudio", if (Os.isMac) "⌘," else "Ctrl+,", restoresFocus = false) { p.deps.windows.openSettings() }
+    val editor = p.deps.editor
+    cmd("view.fontBigger", "Increase Editor Font Size", "View", enabled = editor.currentFontSize < EditorSettings.MAX_FONT_SIZE) { editor.changeFontSize(1f) }
+    cmd("view.fontSmaller", "Decrease Editor Font Size", "View", enabled = editor.currentFontSize > EditorSettings.MIN_FONT_SIZE) { editor.changeFontSize(-1f) }
+    cmd("view.fontReset", "Reset Editor Font Size", "View", enabled = !editor.fontSize.isDefault) { editor.fontSize.reset() }
     cmd("view.diagramDark", if (p.deps.diagram.dark.value) "Light Diagram Preview" else "Dark Diagram Preview", "Preview") { p.deps.diagram.toggle() }
 
     // Preview: export goes through the preview pane (it knows which diagram is showing).

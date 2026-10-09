@@ -105,6 +105,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 import es.hugoalvarezajenjo.sproutstudio.features.editor.Highlighter
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.IdeColors
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.editorTextStyle
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.LocalEditorTextStyle
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
@@ -147,6 +148,7 @@ fun CodeEditor(
     val density = LocalDensity.current
 
     val c = ide
+    val textStyle = LocalEditorTextStyle.current
     val value = doc.value
     val caret = value.selection.start
 
@@ -284,7 +286,7 @@ fun CodeEditor(
                         update(nv, typed)
                         if (moved) completion = null
                     },
-                    textStyle = editorTextStyle.copy(color = c.syntax.symbol),
+                    textStyle = textStyle.copy(color = c.syntax.symbol),
                     cursorBrush = SolidColor(c.text),
                     visualTransformation = transformation,
                     onTextLayout = { layout = it },
@@ -652,7 +654,7 @@ private fun ChangePopup(
                     .testTag("change-popup-diff"),
             ) {
                 // Full line boxes (no first/last-line trim), so each row is exactly one editor line tall.
-                val rowStyle = editorTextStyle.copy(
+                val rowStyle = LocalEditorTextStyle.current.copy(
                     lineHeightStyle = LineHeightStyle(
                         LineHeightStyle.Alignment.Center,
                         LineHeightStyle.Trim.None,

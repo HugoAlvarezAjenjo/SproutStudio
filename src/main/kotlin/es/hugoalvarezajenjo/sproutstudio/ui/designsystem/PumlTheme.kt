@@ -26,8 +26,14 @@ val EditorFont = FontFamily.Monospace
 
 val editorTextStyle = TextStyle(fontFamily = EditorFont, fontSize = 13.sp, lineHeight = 21.sp)
 
+/** The editor's text style at the font size the user chose in Settings (see [PumlTheme]). */
+val LocalEditorTextStyle = staticCompositionLocalOf { editorTextStyle }
+
+/** [editorTextStyle] at [size] sp, keeping its 21/13 line spacing. */
+fun editorTextStyleAt(size: Float) = editorTextStyle.copy(fontSize = size.sp, lineHeight = (size * 21f / 13f).sp)
+
 @Composable
-fun PumlTheme(dark: Boolean = true, content: @Composable () -> Unit) {
+fun PumlTheme(dark: Boolean = true, editorFontSize: Float = 13f, content: @Composable () -> Unit) {
     val c = if (dark) DarkIde else LightIde
     val scheme = (if (dark) darkColorScheme() else lightColorScheme()).copy(
         primary = c.accent,
@@ -51,7 +57,7 @@ fun PumlTheme(dark: Boolean = true, content: @Composable () -> Unit) {
     // JetBrains UI type: 13px body, tight weights. (Inter is what IntelliJ ships; we use the system sans.)
     val base = Typography()
     val ui = TextStyle(fontSize = 13.sp, lineHeight = 18.sp)
-    CompositionLocalProvider(LocalIde provides c) {
+    CompositionLocalProvider(LocalIde provides c, LocalEditorTextStyle provides editorTextStyleAt(editorFontSize)) {
         MaterialTheme(
             colorScheme = scheme,
             shapes = Shapes(
