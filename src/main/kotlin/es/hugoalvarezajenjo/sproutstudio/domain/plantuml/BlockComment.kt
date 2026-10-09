@@ -29,8 +29,8 @@ object BlockComment {
             val wrapped = "$OPEN ${text.substring(min, max)} $CLOSE"
             return TextFieldValue(text.substring(0, min) + wrapped + text.substring(max), TextRange(min, min + wrapped.length))
         }
-        val s = lineStart(text, min)
-        val e = lineEnd(text, endPos)
+        val s = TextLines.startAt(text, min)
+        val e = TextLines.endAt(text, endPos)
         val ind = text.substring(s).takeWhile { it == ' ' || it == '\t' }
         val wrapped = "$ind$OPEN\n${text.substring(s, e)}\n$ind$CLOSE"
         return TextFieldValue(text.substring(0, s) + wrapped + text.substring(e), TextRange(s, s + wrapped.length))
@@ -67,12 +67,12 @@ object BlockComment {
 
     /** What to delete for the `'/` at [at]: its whole line when it stands alone, else it and the space before. */
     private fun closerSpan(text: String, at: Int): IntRange =
-        wholeLine(text, at) ?: ((if (at > lineStart(text, at) && text[at - 1] == ' ') at - 1 else at) until at + CLOSE.length)
+        wholeLine(text, at) ?: ((if (at > TextLines.startAt(text, at) && text[at - 1] == ' ') at - 1 else at) until at + CLOSE.length)
 
     /** The line holding the 2-char marker at [at], with one of its newlines, when nothing else is on it. */
     private fun wholeLine(text: String, at: Int): IntRange? {
-        val ls = lineStart(text, at)
-        val le = lineEnd(text, at)
+        val ls = TextLines.startAt(text, at)
+        val le = TextLines.endAt(text, at)
         if (text.substring(ls, at).isNotBlank() || text.substring(at + 2, le).isNotBlank()) return null
         return when {
             le < text.length -> ls..le
@@ -80,7 +80,4 @@ object BlockComment {
             else -> null
         }
     }
-
-    private fun lineStart(text: String, at: Int) = text.lastIndexOf('\n', at - 1) + 1
-    private fun lineEnd(text: String, at: Int) = text.indexOf('\n', at).let { if (it < 0) text.length else it }
 }

@@ -14,8 +14,6 @@ object EditOps {
     )
     private val closesBlock = Regex("""^\s*(\}|end\b|endif|endwhile|end fork|end split|endswitch|end note|endlegend|end box|else\b|elseif\b)""", RegexOption.IGNORE_CASE)
 
-    private fun lineStart(text: String, pos: Int) = text.lastIndexOf('\n', (pos - 1).coerceAtLeast(-1)).let { if (pos == 0) 0 else it + 1 }
-    private fun lineEnd(text: String, pos: Int) = text.indexOf('\n', pos).let { if (it < 0) text.length else it }
 
     /**
      * Enter: if the current line is a block closer (`end`, `}`, `else`…) first pull it back one
@@ -25,7 +23,7 @@ object EditOps {
         val dedented = dedentCloser(v)
         val text = dedented.text
         val caret = dedented.selection.min
-        val ls = lineStart(text, caret)
+        val ls = TextLines.startAt(text, caret)
         val beforeCaret = text.substring(ls, caret)
         val indent = beforeCaret.takeWhile { it == ' ' || it == '\t' }
         val extra = if (opensBlock.containsMatchIn(beforeCaret)) INDENT else ""
@@ -36,7 +34,7 @@ object EditOps {
     fun dedentCloser(v: TextFieldValue): TextFieldValue {
         val text = v.text
         val caret = v.selection.min
-        val ls = lineStart(text, caret)
+        val ls = TextLines.startAt(text, caret)
         val line = text.substring(ls, caret)
         if (!line.startsWith(INDENT) || !closesBlock.containsMatchIn(line)) return v
         // A closer sits at its opener's level: the previous line's level if that line is the
@@ -96,14 +94,14 @@ object EditOps {
             if (nl < 0) return TextRange(text.length)
             start = nl + 1
         }
-        return TextRange(start, lineEnd(text, start))
+        return TextRange(start, TextLines.endAt(text, start))
     }
 
     private fun selectedLineRange(v: TextFieldValue): Pair<Int, Int> {
         val text = v.text
-        val s = lineStart(text, v.selection.min)
+        val s = TextLines.startAt(text, v.selection.min)
         val endPos = if (!v.selection.collapsed && v.selection.max > 0 && text.getOrNull(v.selection.max - 1) == '\n') v.selection.max - 1 else v.selection.max
-        return s to lineEnd(text, endPos.coerceAtLeast(s))
+        return s to TextLines.endAt(text, endPos.coerceAtLeast(s))
     }
 
     private fun mapLines(v: TextFieldValue, f: (String) -> String): TextFieldValue {

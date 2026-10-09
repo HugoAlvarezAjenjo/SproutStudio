@@ -23,4 +23,10 @@ object TextLines {
         if (i < 0) i = -i - 2
         return i.coerceIn(0, starts.size - 1)
     }
+
+    /** Offset where the line holding [at] starts; no line table needed, for one-off edits. */
+    fun startAt(text: String, at: Int): Int = text.lastIndexOf('\n', at - 1) + 1
+
+    /** Offset where the line holding [at] ends, excluding its `\n`. */
+    fun endAt(text: String, at: Int): Int = text.indexOf('\n', at).let { if (it < 0) text.length else it }
 }
