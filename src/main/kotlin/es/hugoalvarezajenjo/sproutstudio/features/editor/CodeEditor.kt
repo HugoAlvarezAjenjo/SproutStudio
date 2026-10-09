@@ -94,7 +94,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.drawText
@@ -555,6 +557,13 @@ private fun Gutter(
     )
 }
 
+/** [label] with the characters at [indices] drawn in [style]: shows why a suggestion matched. */
+private fun highlightMatches(label: String, indices: List<Int>, style: SpanStyle): AnnotatedString =
+    buildAnnotatedString {
+        append(label)
+        for (i in indices) if (i in label.indices) addStyle(style, i, i + 1)
+    }
+
 @Composable
 private fun CompletionPopup(req: CompletionRequest, selected: Int, onPick: (Completion) -> Unit) {
     val listState = rememberLazyListState()
@@ -582,7 +591,7 @@ private fun CompletionPopup(req: CompletionRequest, selected: Int, onPick: (Comp
                     ) {
                         KindBadge(item.kind)
                         Text(
-                            item.label,
+                            highlightMatches(item.label, item.matched, SpanStyle(color = c.accent, fontWeight = FontWeight.Bold)),
                             style = editorTextStyle.copy(fontSize = 13.sp, color = c.text),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,

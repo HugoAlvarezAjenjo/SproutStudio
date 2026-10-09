@@ -5,8 +5,15 @@ enum class CompletionKind(val badge: String) { KEYWORD("kw"), SYMBOL("sym"), SNI
 /**
  * One suggestion.
  * [insert] replaces the typed prefix. A `$0` marker in [insert] says where the caret lands.
+ * [matched] are the label positions the typed prefix matched (see [FuzzyMatch]), for highlighting.
  */
-data class Completion(val label: String, val insert: String, val kind: CompletionKind, val detail: String = "")
+data class Completion(
+    val label: String,
+    val insert: String,
+    val kind: CompletionKind,
+    val detail: String = "",
+    val matched: List<Int> = emptyList(),
+)
 
 data class CompletionRequest(val prefixStart: Int, val prefix: String, val items: List<Completion>)
 
@@ -54,14 +61,20 @@ object CompletionEngine {
             else -> symbolsAndKeywords(text, caret, afterSomething = false) + snippetsIfEmpty(text)
         }
 
-        val p = prefix.lowercase()
-        val ranked = candidates
-            .filter { it.label.lowercase() != p }
-            .filter { p.isEmpty() || it.label.lowercase().startsWith(p) || (p.length >= 2 && it.label.lowercase().contains(p)) }
-            .sortedWith(compareBy<Completion>({ !it.label.lowercase().startsWith(p) }, { it.kind != CompletionKind.SYMBOL }, { it.label.length }))
+        val ranked = rank(candidates, prefix)
+            .sortedWith(compareBy<Pair<Completion, Int>>({ it.second }, { it.first.kind != CompletionKind.SYMBOL }, { it.first.label.length }))
+            .map { it.first }
             .distinctBy { it.label }
             .take(40)
         return if (ranked.isEmpty()) null else CompletionRequest(start, prefix, ranked)
+    }
+
+    /** Candidates that [FuzzyMatch] accepts for [typed], with their tier; the exact word itself is dropped. */
+    private fun rank(candidates: List<Completion>, typed: String): List<Pair<Completion, Int>> {
+        val t = typed.lowercase()
+        return candidates
+            .filter { it.label.lowercase() != t }
+            .mapNotNull { c -> FuzzyMatch.match(c.label, typed)?.let { m -> c.copy(matched = m.indices) to m.tier } }
     }
 
     /** `!include <` (or `!include_many <`…) up to the caret; group 1 is the path typed so far. */
@@ -76,16 +89,17 @@ object CompletionEngine {
         val lineStart = text.lastIndexOf('\n', c - 1) + 1
         val typed = includeOpen.find(text.substring(lineStart, c))?.groupValues?.get(1) ?: return null
         val closed = text.getOrNull(c) == '>'
-        val t = typed.lowercase()
         val curated = Stdlib.includes.map { Completion(it.path, it.path + if (closed) "" else ">", CompletionKind.DIRECTIVE, it.detail) }
         // Whole libraries the curated list doesn't cover (gcp, k8s, tupadr3…), as a "lib/" start.
         val covered = Stdlib.includes.map { it.path.substringBefore('/').lowercase() }.toSet()
         val libs = Stdlib.libraries.filter { it.lowercase() !in covered }
             .map { Completion("$it/", "$it/", CompletionKind.DIRECTIVE, "stdlib library") }
-        val items = (curated + libs)
-            .filter { t.isEmpty() || it.label.lowercase().startsWith(t) || (t.length >= 2 && it.label.lowercase().contains(t)) }
-            .filter { it.label.lowercase() != t }
-            .sortedBy { !it.label.lowercase().startsWith(t) } // stable: keeps the curated order
+        val items = rank(curated + libs, typed)
+            // Once a '/' is typed the user is walking the path literally; initials would let
+            // `awslib14/Comp` reach `…/SecurityIdentityCompliance`.
+            .filter { !typed.contains('/') || it.second != FuzzyMatch.INITIALS }
+            .sortedBy { it.second } // stable: keeps the curated order within a tier
+            .map { it.first }
             .take(40)
         return if (items.isEmpty()) null else CompletionRequest(c - typed.length, typed, items)
     }
