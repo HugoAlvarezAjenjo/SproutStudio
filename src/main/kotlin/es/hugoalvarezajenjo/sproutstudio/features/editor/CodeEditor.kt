@@ -115,6 +115,7 @@ import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Completion
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.CompletionEngine
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.CompletionKind
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.CompletionRequest
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.BlockComment
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 import es.hugoalvarezajenjo.sproutstudio.features.editor.Highlighter
@@ -130,6 +131,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.key.isAltPressed
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.IncludeReader
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.PathLister
@@ -456,6 +458,7 @@ fun CodeEditor(
                                 ev.isCtrlPressed && ev.key == Key.Spacebar -> {
                                     completion = complete(doc.text, doc.value.selection.start, force = true); selected = 0; true
                                 }
+                                cmd && ev.isAltPressed && ev.key == Key.Slash -> { update(BlockComment.toggle(doc.value), false); true }
                                 cmd && ev.key == Key.Slash -> { update(EditOps.toggleComment(doc.value), false); true }
                                 cmd && ev.key == Key.D -> { update(EditOps.duplicateLines(doc.value), false); true }
                                 ev.key == Key.Tab && ev.isShiftPressed -> { update(EditOps.outdent(doc.value), false); true }

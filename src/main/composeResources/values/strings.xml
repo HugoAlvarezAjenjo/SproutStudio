@@ -109,6 +109,7 @@
     <string name="cmd_autosave_off">Turn Off Save Automatically</string>
     <string name="cmd_autosave_on">Turn On Save Automatically</string>
     <string name="cmd_toggle_comment">Comment / Uncomment Lines</string>
+    <string name="cmd_toggle_block_comment">Block Comment / Uncomment</string>
     <string name="cmd_duplicate_line">Duplicate Line</string>
     <string name="cmd_hide_preview">Hide Preview</string>
     <string name="cmd_hide_problems">Hide Problems</string>

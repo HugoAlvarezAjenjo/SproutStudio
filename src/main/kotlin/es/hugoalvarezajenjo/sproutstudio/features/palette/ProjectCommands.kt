@@ -33,6 +33,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_diagram_in_folder
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_folder
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_rename_file
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_toggle_comment
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_toggle_block_comment
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_trash_file
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_close_project
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_close_tab
@@ -81,6 +82,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.workspace.openDiagramDialog
 
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.BlockComment
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.SymbolIndex
 import es.hugoalvarezajenjo.sproutstudio.features.editor.navigateTo
@@ -160,6 +162,9 @@ internal fun projectCommands(
     cmd("edit.findPrev", text(Res.string.menu_find_previous), text(Res.string.menu_edit), shortcutHint("G", shift = true), enabled = has) { p.revealEditor(); d?.findNext(false) }
     cmd("edit.comment", text(Res.string.cmd_toggle_comment), text(Res.string.menu_edit), shortcutHint("/"), enabled = has) {
         d?.let { p.revealEditor(); it.value = EditOps.toggleComment(it.value) }
+    }
+    cmd("edit.blockComment", text(Res.string.cmd_toggle_block_comment), text(Res.string.menu_edit), shortcutHint("/", alt = true), enabled = has) {
+        d?.let { p.revealEditor(); it.value = BlockComment.toggle(it.value) }
     }
     cmd("edit.duplicate", text(Res.string.cmd_duplicate_line), text(Res.string.menu_edit), shortcutHint("D"), enabled = has) {
         d?.let { p.revealEditor(); it.value = EditOps.duplicateLines(it.value) }
