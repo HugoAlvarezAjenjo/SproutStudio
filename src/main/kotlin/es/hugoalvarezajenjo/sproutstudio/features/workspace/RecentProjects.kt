@@ -15,5 +15,10 @@ class RecentProjects(store: SettingsStore) {
         paths.value = (listOf(dir.absolutePath) + paths.value).distinct().take(MAX)
     }
 
+    /** Drop a folder from the list (e.g. the user removed it from the welcome screen). */
+    fun remove(dir: File) {
+        paths.value = paths.value.filter { it != dir.absolutePath }
+    }
+
     private companion object { const val MAX = 8 }
 }
