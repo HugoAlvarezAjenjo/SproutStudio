@@ -4,7 +4,7 @@ import es.hugoalvarezajenjo.sproutstudio.domain.text.FileHits
 import es.hugoalvarezajenjo.sproutstudio.domain.text.SearchHit
 import es.hugoalvarezajenjo.sproutstudio.features.editor.FileJump
 import es.hugoalvarezajenjo.sproutstudio.features.editor.FindOptions
-import es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint
+import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.find_bad_regex

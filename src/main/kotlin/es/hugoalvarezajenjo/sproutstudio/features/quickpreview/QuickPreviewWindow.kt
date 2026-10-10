@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.quickpreview
 
+import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.common_close
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
@@ -101,7 +102,7 @@ fun QuickPreviewWindow(file: File, deps: WorkspaceDeps, onClose: () -> Unit) {
                         leadingTools = {
                             Tag(file.name, Icons.Outlined.Schema)
                             Spacer(Modifier.width(4.dp))
-                            ToolButton(Icons.Outlined.Edit, tr(Res.string.quick_open_editor), label = tr(Res.string.quick_edit)) { deps.windows.editFile(file) }
+                            ToolButton(Icons.Outlined.Edit, tr(Res.string.quick_open_editor, shortcutHint("E")), label = tr(Res.string.quick_edit)) { deps.windows.editFile(file) }
                         },
                     )
                 }

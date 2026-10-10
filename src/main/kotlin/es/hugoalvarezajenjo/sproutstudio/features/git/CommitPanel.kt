@@ -56,7 +56,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitAuthor
 import es.hugoalvarezajenjo.sproutstudio.services.git.StashInfo
-import es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint
+import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.ContextMenuItem

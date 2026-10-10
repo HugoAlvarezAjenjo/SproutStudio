@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange
 import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff
-import es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint
+import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.change_added
 import es.hugoalvarezajenjo.sproutstudio.resources.change_deleted

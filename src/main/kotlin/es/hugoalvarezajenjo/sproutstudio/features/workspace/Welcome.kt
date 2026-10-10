@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.resources.welcome_tip_windows
+import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.welcome_new_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.welcome_new_diagram_hint
@@ -91,7 +93,7 @@ internal fun Welcome(p: WorkspaceViewModel) {
                 }
                 Spacer(Modifier.weight(1f))
                 Text(
-                    tr(Res.string.welcome_tip),
+                    tr(if (Os.isWindows) Res.string.welcome_tip_windows else Res.string.welcome_tip),
                     fontSize = 12.sp, color = c.textMuted,
                 )
                 Spacer(Modifier.height(12.dp))

@@ -42,7 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
-import es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint
+import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.Dot

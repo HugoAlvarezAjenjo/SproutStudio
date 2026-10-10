@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
+import es.hugoalvarezajenjo.sproutstudio.resources.trash_restore_hint_windows
+import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.branch_create
 import es.hugoalvarezajenjo.sproutstudio.resources.dialog_cancel
@@ -170,7 +172,7 @@ private fun DeleteDialog(p: WorkspaceViewModel, target: File) {
                 Text(
                     buildString {
                         if (f.isDirectory) append(if (inside == 0) tr(Res.string.trash_empty_folder) else tr(Res.plurals.trash_holds, inside, inside)); append(' ')
-                        append(tr(Res.string.trash_restore_hint))
+                        append(tr(if (Os.isWindows) Res.string.trash_restore_hint_windows else Res.string.trash_restore_hint))
                     },
                     style = MaterialTheme.typography.bodyMedium,
                 )

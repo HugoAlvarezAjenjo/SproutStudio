@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.common_close_esc
 import es.hugoalvarezajenjo.sproutstudio.resources.find_bad_regex
@@ -94,7 +95,7 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ToolButton(
                 Icons.Outlined.SwapHoriz,
-                tooltip = if (f.replaceVisible) tr(Res.string.find_hide_replace) else tr(Res.string.find_show_replace),
+                tooltip = if (f.replaceVisible) tr(Res.string.find_hide_replace) else tr(Res.string.find_show_replace, shortcutHint("R")),
                 selected = f.replaceVisible,
             ) { f.replaceVisible = !f.replaceVisible }
             SearchField(
