@@ -49,6 +49,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_edit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_in_files
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_next
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_previous
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_all
@@ -167,6 +168,7 @@ internal fun projectCommands(
     }
     cmd("edit.findNext", text(Res.string.menu_find_next), text(Res.string.menu_edit), shortcutHint("G"), enabled = has) { p.revealEditor(); d?.findNext(true) }
     cmd("edit.findPrev", text(Res.string.menu_find_previous), text(Res.string.menu_edit), shortcutHint("G", shift = true), enabled = has) { p.revealEditor(); d?.findNext(false) }
+    cmd("edit.findInFiles", text(Res.string.menu_find_in_files), text(Res.string.menu_edit), shortcutHint("F", shift = true), enabled = p.root != null, restoresFocus = false) { p.findInFiles() }
     cmd("edit.comment", text(Res.string.cmd_toggle_comment), text(Res.string.menu_edit), shortcutHint("/"), enabled = has) {
         d?.let { p.revealEditor(); it.value = EditOps.toggleComment(it.value) }
     }

@@ -18,10 +18,12 @@ import es.hugoalvarezajenjo.sproutstudio.features.editor.goToDeclaration
 import es.hugoalvarezajenjo.sproutstudio.features.editor.navigateBack
 import es.hugoalvarezajenjo.sproutstudio.features.editor.navigateForward
 import es.hugoalvarezajenjo.sproutstudio.features.editor.reveal
+import es.hugoalvarezajenjo.sproutstudio.features.editor.selectedText
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.ExplorerViewModel
 import java.io.File
 import es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.git.GitViewModel
+import es.hugoalvarezajenjo.sproutstudio.features.search.SearchViewModel
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -117,6 +119,20 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
 
     /** Git status of the project folder; opened by the window when [root] changes. */
     val git = GitViewModel(deps.git, deps.dispatchers, parent = scope.coroutineContext[Job])
+
+    /** Find in Files over the project's diagrams, open tabs read as they are on screen. */
+    val search = SearchViewModel(
+        deps.files, deps.dispatchers,
+        root = { root },
+        openTexts = { docs.mapNotNull { d -> d.file?.let { it.absoluteFile to d.text } }.toMap() },
+        parent = scope.coroutineContext[Job],
+    )
+
+    /** ⇧⌘F: the Find in Files panel, seeded with the active tab's selection. */
+    fun findInFiles() {
+        showTool(SidebarTool.SEARCH)
+        search.open(active?.selectedText())
+    }
 
     fun resizeSidebar(widthDp: Float) {
         sidebarWidth = widthDp.coerceIn(SIDEBAR_MIN, SIDEBAR_MAX)
@@ -227,6 +243,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
 
     fun openRoot(dir: File) {
         root = dir
+        search.clear()
         deps.recents.add(dir)
         explorer.onProjectOpened()
     }
@@ -240,6 +257,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         activeIndex = 0
         root = null
         explorer.clear()
+        search.clear()
     }
 
     fun open(file: File) {
@@ -307,6 +325,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     /** Closes the window's state: its git ViewModel and anything still running. */
     override fun close() {
         git.close()
+        search.close()
         super.close()
     }
 

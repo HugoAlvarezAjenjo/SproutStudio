@@ -3,6 +3,8 @@ package es.hugoalvarezajenjo.sproutstudio.features.workspace
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.tool_commit
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_find_in_files
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_find_in_files
 import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_commit
 import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_project
 import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_templates
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.outlined.Commit
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Schema
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,6 +60,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewPane
 import es.hugoalvarezajenjo.sproutstudio.features.preview.rememberPreviewViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.problems.ProblemsPanel
+import es.hugoalvarezajenjo.sproutstudio.features.search.SearchPanel
 import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateSidebar
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool
@@ -89,6 +93,7 @@ internal fun Workspace(p: WorkspaceViewModel, onSave: (Document) -> Unit, onClos
                         SidebarTool.COMMIT -> CommitPanel(p)
                         SidebarTool.TEMPLATES -> TemplateSidebar(p.deps.thumbnails, onPick = { p.insertTemplate(it) })
                         SidebarTool.PROJECT -> ProjectTree(p)
+                        SidebarTool.SEARCH -> SearchPanel(p)
                     }
                     SidebarSplitter(p)
                 }
@@ -198,12 +203,18 @@ private fun ToolStripe(p: WorkspaceViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val project = p.sidebarVisible && p.sidebarTool == SidebarTool.PROJECT
+        val search = p.sidebarVisible && p.sidebarTool == SidebarTool.SEARCH
         val commit = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT
         ToolButton(
             Icons.Outlined.Folder,
             if (project) tr(Res.string.tool_hide_project, shortcutHint("1")) else tr(Res.string.tool_show_project, shortcutHint("1")),
             selected = project,
         ) { p.toggleTool(SidebarTool.PROJECT) }
+        ToolButton(
+            Icons.Outlined.Search,
+            if (search) tr(Res.string.tool_hide_find_in_files, shortcutHint("F", shift = true)) else tr(Res.string.tool_find_in_files, shortcutHint("F", shift = true)),
+            selected = search,
+        ) { if (search) p.showSidebar(false) else p.findInFiles() }
         ToolButton(
             Icons.Outlined.Commit,
             if (commit) tr(Res.string.tool_hide_commit, shortcutHint("0")) else tr(Res.string.tool_commit, shortcutHint("0")),

@@ -429,4 +429,20 @@
         <item quantity="one">%1$d uso de %2$s</item>
         <item quantity="other">%1$d usos de %2$s</item>
     </plurals>
+
+    <!-- features/search/SearchPanel.kt -->
+    <string name="menu_find_in_files">Buscar en archivos…</string>
+    <string name="tool_find_in_files">Buscar en archivos (%1$s)</string>
+    <string name="tool_hide_find_in_files">Ocultar búsqueda en archivos (%1$s)</string>
+    <string name="search_title">Buscar en archivos</string>
+    <string name="search_placeholder">Texto a buscar</string>
+    <string name="search_hint">Busca en todos los diagramas del proyecto</string>
+    <string name="search_again">Buscar de nuevo</string>
+    <string name="search_hide">Ocultar (%1$s)</string>
+    <string name="search_searching">Buscando…</string>
+    <string name="search_truncated">Se muestran los primeros %1$d</string>
+    <plurals name="search_files">
+        <item quantity="one">%1$d archivo</item>
+        <item quantity="other">%1$d archivos</item>
+    </plurals>
 </resources>

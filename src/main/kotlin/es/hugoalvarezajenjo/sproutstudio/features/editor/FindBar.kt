@@ -4,44 +4,35 @@ import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.common_close_esc
 import es.hugoalvarezajenjo.sproutstudio.resources.find_bad_regex
 import es.hugoalvarezajenjo.sproutstudio.resources.find_hide_replace
-import es.hugoalvarezajenjo.sproutstudio.resources.find_match_case
 import es.hugoalvarezajenjo.sproutstudio.resources.find_next
 import es.hugoalvarezajenjo.sproutstudio.resources.find_no_results
 import es.hugoalvarezajenjo.sproutstudio.resources.find_placeholder
 import es.hugoalvarezajenjo.sproutstudio.resources.find_previous
-import es.hugoalvarezajenjo.sproutstudio.resources.find_regex
 import es.hugoalvarezajenjo.sproutstudio.resources.find_replace
 import es.hugoalvarezajenjo.sproutstudio.resources.find_replace_all
 import es.hugoalvarezajenjo.sproutstudio.resources.find_replace_regex
 import es.hugoalvarezajenjo.sproutstudio.resources.find_replaced
 import es.hugoalvarezajenjo.sproutstudio.resources.find_results
 import es.hugoalvarezajenjo.sproutstudio.resources.find_show_replace
-import es.hugoalvarezajenjo.sproutstudio.resources.find_words
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
 
 import es.hugoalvarezajenjo.sproutstudio.domain.text.FindResult
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SwapHoriz
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,8 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
@@ -67,6 +56,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.SearchField
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 
@@ -107,7 +97,7 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
                 tooltip = if (f.replaceVisible) tr(Res.string.find_hide_replace) else tr(Res.string.find_show_replace),
                 selected = f.replaceVisible,
             ) { f.replaceVisible = !f.replaceVisible }
-            Field(
+            SearchField(
                 value = findValue,
                 onChange = {
                     findValue = it
@@ -118,9 +108,7 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
                 error = result.error != null || (f.query.text.isNotEmpty() && result.matches.isEmpty()),
                 modifier = Modifier.weight(1f).widthIn(max = 420.dp).then(keys { shift -> doc.findNext(forward = !shift) }).focusRequester(findFocus).testTag("find-field"),
             )
-            Toggle("Cc", tr(Res.string.find_match_case), f.query.matchCase) { f.query = f.query.copy(matchCase = it) }
-            Toggle("W", tr(Res.string.find_words), f.query.wholeWords) { f.query = f.query.copy(wholeWords = it) }
-            Toggle(".*", tr(Res.string.find_regex), f.query.regex) { f.query = f.query.copy(regex = it) }
+            FindOptions(f.query) { f.query = it }
             Box(Modifier.widthIn(min = 56.dp).padding(horizontal = 4.dp)) {
                 val (label, bad) = when {
                     result.error != null -> tr(Res.string.find_bad_regex) to true
@@ -140,7 +128,7 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box(Modifier.width(28.dp))
                 var replValue by remember { mutableStateOf(TextFieldValue(f.replacement)) }
-                Field(
+                SearchField(
                     value = replValue,
                     onChange = { replValue = it; f.replacement = it.text },
                     placeholder = if (f.query.regex) tr(Res.string.find_replace_regex) else tr(Res.string.find_replace),
@@ -154,49 +142,4 @@ fun FindBar(doc: Document, result: FindResult, current: Int, onClose: () -> Unit
             }
         }
     }
-}
-
-@Composable
-private fun Field(
-    value: TextFieldValue,
-    onChange: (TextFieldValue) -> Unit,
-    placeholder: String,
-    icon: Boolean,
-    error: Boolean,
-    modifier: Modifier,
-) {
-    val c = ide
-    var focused by remember { mutableStateOf(false) }
-    val border = when {
-        error -> c.error
-        focused -> c.accent
-        else -> c.popupBorder
-    }
-    BasicTextField(
-        value = value,
-        onValueChange = onChange,
-        singleLine = true,
-        textStyle = es.hugoalvarezajenjo.sproutstudio.ui.designsystem.editorTextStyle.copy(color = c.text, fontSize = 13.sp),
-        cursorBrush = SolidColor(c.text),
-        modifier = modifier.widthIn(min = 120.dp).onFocusChanged { focused = it.isFocused },
-        decorationBox = { inner ->
-            Row(
-                Modifier.height(28.dp).background(c.editor, RoundedCornerShape(5.dp))
-                    .border(1.dp, border, RoundedCornerShape(5.dp)).padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                if (icon) Icon(Icons.Outlined.Search, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
-                Box(Modifier.weight(1f)) {
-                    if (value.text.isEmpty()) Text(placeholder, color = c.textDisabled, fontSize = 13.sp, maxLines = 1)
-                    inner()
-                }
-            }
-        },
-    )
-}
-
-@Composable
-private fun Toggle(label: String, tooltip: String, on: Boolean, onChange: (Boolean) -> Unit) {
-    ToolButton(null, tooltip = tooltip, label = label, selected = on) { onChange(!on) }
 }

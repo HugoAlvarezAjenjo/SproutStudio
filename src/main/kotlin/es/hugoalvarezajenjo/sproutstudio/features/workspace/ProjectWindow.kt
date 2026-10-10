@@ -16,6 +16,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_theme
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_edit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_in_files
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_action
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_next
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_previous
@@ -197,6 +198,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 Item(tr(Res.string.menu_replace), shortcut = shortcut(Key.R), enabled = d != null) { d?.let { p.revealEditor(); it.find.open(replace = true, seed = it.selectedText()) } }
                 Item(tr(Res.string.menu_find_next), shortcut = shortcut(Key.G), enabled = d != null) { p.revealEditor(); d?.findNext(true) }
                 Item(tr(Res.string.menu_find_previous), shortcut = shortcut(Key.G, shift = true), enabled = d != null) { p.revealEditor(); d?.findNext(false) }
+                Item(tr(Res.string.menu_find_in_files), shortcut = shortcut(Key.F, shift = true), enabled = p.root != null) { p.findInFiles() }
             }
             Menu(tr(Res.string.menu_code)) {
                 val d = p.active

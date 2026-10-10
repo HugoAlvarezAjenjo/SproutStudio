@@ -428,4 +428,20 @@
         <item quantity="one">%1$d usage of %2$s</item>
         <item quantity="other">%1$d usages of %2$s</item>
     </plurals>
+
+    <!-- features/search/SearchPanel.kt -->
+    <string name="menu_find_in_files">Find in Files…</string>
+    <string name="tool_find_in_files">Find in Files (%1$s)</string>
+    <string name="tool_hide_find_in_files">Hide Find in Files (%1$s)</string>
+    <string name="search_title">Find in Files</string>
+    <string name="search_placeholder">Text to find</string>
+    <string name="search_hint">Searches every diagram in the project</string>
+    <string name="search_again">Search again</string>
+    <string name="search_hide">Hide (%1$s)</string>
+    <string name="search_searching">Searching…</string>
+    <string name="search_truncated">First %1$d shown</string>
+    <plurals name="search_files">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
 </resources>
