@@ -1,18 +1,30 @@
-# Pushing a version tag (git tag v1.2.0 && git push origin v1.2.0) runs the tests,
-# builds SproutStudio-1.2.0.dmg and publishes it as a GitHub Release.
+# Pushing a version tag (git tag v1.2.0 && git push origin v1.2.0) runs the tests on macOS and
+# Windows, builds SproutStudio-1.2.0.dmg and SproutStudio-1.2.0.msi, and publishes both in one
+# GitHub Release.
 name: Release
 
 on:
   push:
     tags: ["v*.*.*"]
 
-permissions:
-  contents: write   # needed to create the Release
-
 jobs:
-  release:
-    runs-on: macos-latest   # Apple Silicon (arm64)
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest      # Apple Silicon (arm64)
+            task: packageDmg
+            format: dmg
+          - os: windows-latest    # x64; the Compose plugin downloads WiX for the .msi
+            task: packageMsi
+            format: msi
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -30,18 +42,39 @@ jobs:
       - name: Test
         run: ./gradlew test --no-daemon -PappVersion=${{ steps.version.outputs.value }}
 
-      - name: Build .dmg
-        run: ./gradlew packageDmg --no-daemon -PappVersion=${{ steps.version.outputs.value }}
+      - name: Build .${{ matrix.format }}
+        run: ./gradlew ${{ matrix.task }} --no-daemon -PappVersion=${{ steps.version.outputs.value }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.format }}
+          path: build/compose/binaries/main/${{ matrix.format }}/*.${{ matrix.format }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build   # only when every installer built and passed its tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to create the Release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          path: installers
+          merge-multiple: true
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.value }}
+          VERSION: ${{ github.ref_name }}
         run: |
-          dmg=$(ls build/compose/binaries/main/dmg/*.dmg)
+          VERSION="${VERSION#v}"
           # This version's section of CHANGELOG.md, without its heading; GitHub's own notes if it has none.
           awk -v v="$VERSION" '$0 == "## " v {on=1; next} /^## / {on=0} on' CHANGELOG.md > notes.md
           if [ -s notes.md ]; then notes=(--notes-file notes.md); else notes=(--generate-notes); fi
-          gh release create "$GITHUB_REF_NAME" "$dmg" \
+          gh release create "$GITHUB_REF_NAME" installers/* \
             --title "SproutStudio $VERSION" \
             "${notes[@]}"
