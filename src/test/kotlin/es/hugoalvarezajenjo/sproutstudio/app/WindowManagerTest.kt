@@ -83,6 +83,14 @@ class WindowManagerTest {
     }
 
     @Test
+    fun fileExitWithTwoProjectsReopensBoth() {
+        wm.openFolder(a); wm.openFolder(b)
+        wm.quit() // File → Exit on Windows: the same as ⌘Q
+        assertTrue(wm.windows.isEmpty())
+        assertEquals(listOf(a, b), relaunch().roots())
+    }
+
+    @Test
     fun closingTheLastWindowReopensItsProject() {
         wm.openFolder(a); wm.openFolder(b)
         wm.windows.toList().forEach(wm::close) // a first, then b: closing b ends the app

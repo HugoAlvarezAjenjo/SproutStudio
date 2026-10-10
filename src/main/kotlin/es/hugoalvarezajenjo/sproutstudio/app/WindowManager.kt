@@ -20,6 +20,14 @@ class WindowManager(
     private var quitting = false
 
     /**
+     * What [quit] runs: Main sets it once the application is up (it needs exitApplication and the
+     * autosaver). Until then quitting just closes every window.
+     */
+    var onQuit: () -> Unit = { rememberSession(); windows.toList().forEach(::close) }
+
+    override fun quit() = onQuit()
+
+    /**
      * Welcome window for a plain launch. Compose quits if its first composition has no window,
      * so it is composed at once but kept HIDDEN: a Finder double-click on a cold start reaches us
      * as an Apple "open file" event that can arrive seconds after main(). If it does, the hidden

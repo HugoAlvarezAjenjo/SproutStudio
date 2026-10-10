@@ -61,6 +61,7 @@
     <string name="menu_close_tab">Cerrar pestaña</string>
     <string name="menu_settings">Ajustes…</string>
     <string name="menu_close_project">Cerrar proyecto</string>
+    <string name="menu_exit">Salir</string>
     <string name="menu_edit">Edición</string>
     <string name="menu_find">Buscar…</string>
     <string name="menu_replace">Reemplazar…</string>

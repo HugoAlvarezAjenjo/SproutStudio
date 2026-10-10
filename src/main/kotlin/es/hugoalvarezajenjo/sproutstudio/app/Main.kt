@@ -43,8 +43,7 @@ fun main(args: Array<String>) {
     // This runs on AppKit's thread, not the UI thread, so the blocking flush can't deadlock.
     if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
         Desktop.getDesktop().setQuitHandler { _, response ->
-            graph.autoSaver.flushNow(windows.windows.filterIsInstance<AppWindow.Project>().flatMap { it.state.docs.toList() })
-            windows.rememberSession()
+            prepareQuit(graph)
             response.performQuit()
         }
     }
@@ -75,6 +74,8 @@ fun main(args: Array<String>) {
             delay(1200)
             windows.revealBootWelcome()
         }
+        // File → Exit (Windows, Linux): the same as ⌘Q, then end the Compose application.
+        windows.onQuit = { prepareQuit(graph); exitApplication() }
         val sawWindow = remember { mutableStateOf(false) }
         LaunchedEffect(windows.windows.size) {
             if (windows.windows.isNotEmpty()) sawWindow.value = true
@@ -97,4 +98,10 @@ fun main(args: Array<String>) {
             }
         }
     }
+}
+
+/** Before the app ends: flush autosave (no edit lost) and record the session for the next launch. */
+private fun prepareQuit(graph: AppGraph) {
+    graph.autoSaver.flushNow(graph.windows.windows.filterIsInstance<AppWindow.Project>().flatMap { it.state.docs.toList() })
+    graph.windows.rememberSession()
 }

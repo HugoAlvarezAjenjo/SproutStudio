@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_exit
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.dialog_cancel
 import es.hugoalvarezajenjo.sproutstudio.resources.dialog_dont_save
@@ -192,6 +193,11 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 // On macOS Settings… (⌘,) lives in the app menu (see Main); elsewhere it goes here.
                 Item(tr(Res.string.menu_settings), shortcut = if (Os.isMac) null else shortcut(Key.Comma)) { p.deps.windows.openSettings() }
                 Item(tr(Res.string.menu_close_project), enabled = p.root != null || p.docs.isNotEmpty()) { p.requestCloseProject() }
+                // macOS quits from the app menu (⌘Q); elsewhere File → Exit does the same.
+                if (!Os.isMac) {
+                    Separator()
+                    Item(tr(Res.string.menu_exit), shortcut = shortcut(Key.Q)) { p.deps.windows.quit() }
+                }
             }
             Menu(tr(Res.string.menu_edit)) {
                 val d = p.active
