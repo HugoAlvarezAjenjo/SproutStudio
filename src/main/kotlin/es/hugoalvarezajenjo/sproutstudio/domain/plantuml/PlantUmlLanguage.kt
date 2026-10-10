@@ -1,17 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.domain.plantuml
 
 /** Diagram kinds we know how to be clever about. */
-enum class DiagramKind(val label: String) {
-    SEQUENCE("Sequence"),
-    CLASS("Class"),
-    ACTIVITY("Activity"),
-    USECASE("Use case"),
-    STATE("State"),
-    COMPONENT("Component"),
-    MINDMAP("Mind map"),
-    GANTT("Gantt"),
-    UNKNOWN("Diagram"),
-}
+enum class DiagramKind { SEQUENCE, CLASS, ACTIVITY, USECASE, STATE, COMPONENT, MINDMAP, GANTT, UNKNOWN }
 
 /**
  * A symbol the user declared in the file (participant, class, procedure...), at its declaration:

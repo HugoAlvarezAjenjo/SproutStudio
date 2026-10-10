@@ -1,9 +1,11 @@
 package es.hugoalvarezajenjo.sproutstudio.domain.plantuml
 
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.CompletionDetail.Tag
+
 enum class CompletionKind(val badge: String) { KEYWORD("kw"), SYMBOL("sym"), SNIPPET("✨"), SKINPARAM("sp"), DIRECTIVE("@") }
 
 /**
- * One suggestion.
+ * One suggestion; [detail] says what it is, null when the label speaks for itself.
  * [insert] replaces the typed prefix. A `$0` marker in [insert] says where the caret lands.
  * [matched] are the label positions the typed prefix matched (see [FuzzyMatch]), for highlighting.
  */
@@ -11,7 +13,7 @@ data class Completion(
     val label: String,
     val insert: String,
     val kind: CompletionKind,
-    val detail: String = "",
+    val detail: CompletionDetail? = null,
     val matched: List<Int> = emptyList(),
 )
 
@@ -56,15 +58,15 @@ object CompletionEngine {
 
         val candidates: List<Completion> = when {
             prefix.startsWith("@") -> directives(text)
-            prefix.startsWith("!") -> PlantUmlLanguage.preprocessor.map { Completion(it, it, CompletionKind.KEYWORD, "preprocessor") }
+            prefix.startsWith("!") -> PlantUmlLanguage.preprocessor.map { Completion(it, it, CompletionKind.KEYWORD, Tag.PREPROCESSOR) }
             // `!theme <name>` -> the bundled theme names.
             trimmedBefore.equals("!theme", ignoreCase = true) ->
-                PlantUmlLanguage.themes.map { Completion(it, it, CompletionKind.DIRECTIVE, "theme") }
+                PlantUmlLanguage.themes.map { Completion(it, it, CompletionKind.DIRECTIVE, Tag.THEME) }
             // A colour: after a bare '#', or after a colour-valued skinparam.
             prefix.startsWith("#") || isColorContext(trimmedBefore) ->
-                PlantUmlLanguage.colors.map { Completion(if (prefix.startsWith("#")) "#$it" else it, if (prefix.startsWith("#")) "#$it" else it, CompletionKind.SKINPARAM, "color") }
+                PlantUmlLanguage.colors.map { Completion(if (prefix.startsWith("#")) "#$it" else it, if (prefix.startsWith("#")) "#$it" else it, CompletionKind.SKINPARAM, Tag.COLOR) }
             trimmedBefore.equals("skinparam", ignoreCase = true) ->
-                PlantUmlLanguage.skinparams.map { Completion(it, it, CompletionKind.SKINPARAM, "skinparam") }
+                PlantUmlLanguage.skinparams.map { Completion(it, it, CompletionKind.SKINPARAM, Tag.SKINPARAM) }
             trimmedBefore.isNotEmpty() -> symbolsAndKeywords(text, caret, afterSomething = true) + arrowsAfterSymbol(text, caret, beforeOnLine)
             else -> symbolsAndKeywords(text, caret, afterSomething = false) + snippetsIfEmpty(text)
         }
@@ -97,11 +99,11 @@ object CompletionEngine {
         val lineStart = text.lastIndexOf('\n', c - 1) + 1
         val typed = includeOpen.find(text.substring(lineStart, c))?.groupValues?.get(1) ?: return null
         val closed = text.getOrNull(c) == '>'
-        val curated = Stdlib.includes.map { Completion(it.path, it.path + if (closed) "" else ">", CompletionKind.DIRECTIVE, it.detail) }
+        val curated = Stdlib.includes.map { Completion(it.path, it.path + if (closed) "" else ">", CompletionKind.DIRECTIVE, CompletionDetail.Verbatim(it.detail)) }
         // Whole libraries the curated list doesn't cover (gcp, k8s, tupadr3…), as a "lib/" start.
         val covered = Stdlib.includes.map { it.path.substringBefore('/').lowercase() }.toSet()
         val libs = Stdlib.libraries.filter { it.lowercase() !in covered }
-            .map { Completion("$it/", "$it/", CompletionKind.DIRECTIVE, "stdlib library") }
+            .map { Completion("$it/", "$it/", CompletionKind.DIRECTIVE, Tag.LIBRARY) }
         val items = rank(curated + libs, typed)
             // Once a '/' is typed the user is walking the path literally; initials would let
             // `awslib14/Comp` reach `…/SecurityIdentityCompliance`.
@@ -138,8 +140,8 @@ object CompletionEngine {
         val candidates = entries
             .filter { it.isDirectory || it.name.substringAfterLast('.', "").lowercase() in includable }
             .map {
-                if (it.isDirectory) Completion("${it.name}/", "${it.name}/", CompletionKind.DIRECTIVE, "folder")
-                else Completion(it.name, it.name, CompletionKind.DIRECTIVE, "file")
+                if (it.isDirectory) Completion("${it.name}/", "${it.name}/", CompletionKind.DIRECTIVE, Tag.FOLDER)
+                else Completion(it.name, it.name, CompletionKind.DIRECTIVE, Tag.FILE)
             }
         val items = rank(candidates, name)
             .sortedWith(compareBy<Pair<Completion, Int>>({ it.second }, { !it.first.label.endsWith('/') }, { it.first.label.lowercase() }))
@@ -160,7 +162,7 @@ object CompletionEngine {
         if (b.isEmpty() || !b.last().isLetterOrDigit()) return emptyList()
         val lastWord = b.takeLastWhile { it.isLetterOrDigit() || it == '_' || it == '.' }
         val known = PlantUmlLanguage.symbols(text).any { it.name == lastWord }
-        return if (known) PlantUmlLanguage.arrows.map { Completion(it, "$it ", CompletionKind.SYMBOL, "arrow") } else emptyList()
+        return if (known) PlantUmlLanguage.arrows.map { Completion(it, "$it ", CompletionKind.SYMBOL, Tag.ARROW) } else emptyList()
     }
 
     fun apply(text: String, request: CompletionRequest, item: Completion, caret: Int): Applied {
@@ -174,11 +176,19 @@ object CompletionEngine {
     private fun symbolsAndKeywords(text: String, caret: Int, afterSomething: Boolean): List<Completion> {
         val kind = PlantUmlLanguage.kindAt(text, caret)
         val symbols = PlantUmlLanguage.symbols(text).map {
-            Completion(it.name, it.name, CompletionKind.SYMBOL, it.kind)
+            Completion(it.name, it.name, CompletionKind.SYMBOL, symbolDetail(it.kind))
         }
         // After an arrow / word on the same line, symbols are what you most likely want.
-        if (afterSomething) return symbols + PlantUmlLanguage.keywordsFor(kind).map { Completion(it, it, CompletionKind.KEYWORD, kind.label) }
-        return PlantUmlLanguage.keywordsFor(kind).map { Completion(it, it, CompletionKind.KEYWORD, kind.label) } + symbols
+        val keywords = PlantUmlLanguage.keywordsFor(kind).map { Completion(it, it, CompletionKind.KEYWORD, CompletionDetail.Keyword(kind)) }
+        return if (afterSomething) symbols + keywords else keywords + symbols
+    }
+
+    /** A [Symbol.kind]: the declaring keyword is shown as is, the rest are translated tags. */
+    private fun symbolDetail(kind: String): CompletionDetail = when (kind) {
+        SymbolIndex.MACRO -> Tag.MACRO
+        SymbolIndex.VARIABLE -> Tag.VARIABLE
+        SymbolIndex.USED -> Tag.USED
+        else -> CompletionDetail.Verbatim(kind)
     }
 
     private fun directives(text: String): List<Completion> {
@@ -186,7 +196,7 @@ object CompletionEngine {
         val close = Regex("""^\s*@end(\w+)""", RegexOption.MULTILINE).findAll(text).count()
         val ends = if (open > close) {
             val last = Regex("""^\s*@start(\w+)""", RegexOption.MULTILINE).findAll(text).last().groupValues[1]
-            listOf(Completion("@end$last", "@end$last", CompletionKind.DIRECTIVE, "close diagram"))
+            listOf(Completion("@end$last", "@end$last", CompletionKind.DIRECTIVE, Tag.CLOSE_DIAGRAM))
         } else emptyList()
         return ends + snippets + PlantUmlLanguage.diagramStarts.map { Completion(it, it, CompletionKind.DIRECTIVE) }
     }
@@ -195,6 +205,6 @@ object CompletionEngine {
 
     /** Whole-diagram templates, as completion snippets offered on an empty file. */
     val snippets: List<Completion> = Templates.wholeDiagrams.map {
-        Completion("@start… ${it.name.lowercase()}", it.body, CompletionKind.SNIPPET, "${it.name} diagram")
+        Completion("@start… ${it.name.lowercase()}", it.body, CompletionKind.SNIPPET, CompletionDetail.Snippet(it.name))
     }
 }

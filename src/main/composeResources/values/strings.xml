@@ -407,6 +407,29 @@
     <string name="quick_edit">Edit</string>
     <!-- features/editor/CodeEditor.kt -->
     <string name="editor_completion_hint">⏎ / ⇥ to insert   ·   esc to close</string>
+    <!-- features/editor/CompletionDetailText.kt -->
+    <string name="cdetail_preprocessor">preprocessor</string>
+    <string name="cdetail_theme">theme</string>
+    <string name="cdetail_color">color</string>
+    <string name="cdetail_skinparam">skinparam</string>
+    <string name="cdetail_library">stdlib library</string>
+    <string name="cdetail_folder">folder</string>
+    <string name="cdetail_file">file</string>
+    <string name="cdetail_arrow">arrow</string>
+    <string name="cdetail_close_diagram">close diagram</string>
+    <string name="cdetail_macro">macro</string>
+    <string name="cdetail_variable">variable</string>
+    <string name="cdetail_used">used</string>
+    <string name="cdetail_snippet">%1$s diagram</string>
+    <string name="diagram_sequence">Sequence</string>
+    <string name="diagram_class">Class</string>
+    <string name="diagram_activity">Activity</string>
+    <string name="diagram_usecase">Use case</string>
+    <string name="diagram_state">State</string>
+    <string name="diagram_component">Component</string>
+    <string name="diagram_mindmap">Mind map</string>
+    <string name="diagram_gantt">Gantt</string>
+    <string name="diagram_unknown">Diagram</string>
     <plurals name="change_added">
         <item quantity="one">%1$d line added</item>
         <item quantity="other">%1$d lines added</item>

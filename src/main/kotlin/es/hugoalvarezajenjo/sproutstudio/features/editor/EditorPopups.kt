@@ -70,8 +70,8 @@ internal fun CompletionPopup(req: CompletionRequest, selected: Int, onPick: (Com
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        if (item.detail.isNotEmpty()) {
-            Text(item.detail, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        item.detail?.let {
+            Text(it.describe(), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
     }
 }

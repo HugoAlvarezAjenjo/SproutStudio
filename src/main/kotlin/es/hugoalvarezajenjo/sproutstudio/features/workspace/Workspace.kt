@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.PlantUmlLanguage
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 import es.hugoalvarezajenjo.sproutstudio.features.editor.CodeEditor
+import es.hugoalvarezajenjo.sproutstudio.features.editor.describe
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.ProjectTree
 import es.hugoalvarezajenjo.sproutstudio.features.git.CommitPanel
 import es.hugoalvarezajenjo.sproutstudio.features.git.rememberLineChanges
@@ -130,7 +131,7 @@ internal fun Workspace(p: WorkspaceViewModel, onSave: (Document) -> Unit, onClos
                             modifier = if (p.problemsExpanded) Modifier.height(200.dp) else Modifier,
                         )
                         val info = StatusInfo(
-                            kind = PlantUmlLanguage.kindAt(doc.text, doc.value.selection.start).label,
+                            kind = PlantUmlLanguage.kindAt(doc.text, doc.value.selection.start).describe(),
                             diagrams = preview.diagramCount,
                             errorLine = preview.error?.let { it.line ?: 0 },
                             problems = preview.problems.size,

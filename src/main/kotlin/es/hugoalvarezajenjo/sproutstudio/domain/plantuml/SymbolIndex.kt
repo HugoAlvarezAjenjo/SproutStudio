@@ -73,6 +73,11 @@ class SymbolIndex private constructor(
     companion object {
         const val GLOBAL = -1
 
+        /** [Symbol.kind] values that aren't a PlantUML keyword; every other kind is the keyword that declared it. */
+        const val MACRO = "macro"
+        const val VARIABLE = "variable"
+        const val USED = "used"
+
         // Highlighting, completion and navigation all ask for the same text on a keystroke.
         @Volatile private var last: SymbolIndex? = null
 
@@ -115,7 +120,7 @@ class SymbolIndex private constructor(
                 .groupBy { it.name to it.scope }
                 .map { (key, occ) ->
                     val d = occ.firstOrNull { it.role == OccurrenceRole.DECLARATION } ?: occ.first()
-                    Symbol(d.name, decls[key]?.kind ?: "used", d.line, d.range, d.scope)
+                    Symbol(d.name, decls[key]?.kind ?: USED, d.line, d.range, d.scope)
                 }
                 .sortedBy { it.range.first }
             return SymbolIndex(text, occurrences, definitions, includes, unknown)
@@ -169,8 +174,8 @@ class SymbolIndex private constructor(
                     val g = m.groups[2]!!
                     declare(g.value, abs(l, g.range), GLOBAL, m.groupValues[1].lowercase())
                 }
-                defineDecl.find(s)?.let { m -> m.groups[1]!!.let { declare(it.value, abs(l, it.range), GLOBAL, "macro") } }
-                variableDecl.find(s)?.let { m -> m.groups[1]!!.let { declare(it.value, abs(l, it.range), GLOBAL, "variable") } }
+                defineDecl.find(s)?.let { m -> m.groups[1]!!.let { declare(it.value, abs(l, it.range), GLOBAL, MACRO) } }
+                variableDecl.find(s)?.let { m -> m.groups[1]!!.let { declare(it.value, abs(l, it.range), GLOBAL, VARIABLE) } }
                 include.find(s)?.let { m -> includes += includeRef(l, m) }
                 return
             }
