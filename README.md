@@ -16,11 +16,12 @@
   <img alt="PlantUML" src="https://img.shields.io/badge/PlantUML-1.2026.8-A7C83B">
   <img alt="JGit" src="https://img.shields.io/badge/JGit-7.8-F05032?logo=git&logoColor=white">
   <img alt="macOS" src="https://img.shields.io/badge/platform-macOS-000000?logo=apple&logoColor=white">
+  <img alt="Windows" src="https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white">
 </p>
 
 ## Features
 
-- **Quick Preview**: double-click a `.puml` in Finder and see the diagram instantly. It refreshes by
+- **Quick Preview**: double-click a `.puml` in Finder or File Explorer and see the diagram instantly. It refreshes by
   itself when the file changes, even if you edit it elsewhere.
 - **Project mode**: open a folder and get a file tree, tabs, a smart editor and a live preview, as
   editor only, editor + preview, or preview only. Create, rename and delete files and folders from the
@@ -74,9 +75,22 @@ The app is unsigned, so the first launch needs right-click → Open.
 
 For a `.dmg` installer: `./gradlew packageDmg`.
 
+## Install it on Windows
+
+```bash
+./gradlew packageMsi
+```
+
+Run the `.msi` from `build/compose/binaries/main/msi/`. It installs for your user only (no administrator
+rights), adds a Start menu entry and a desktop shortcut, and opens `.puml`, `.plantuml` and `.pu` files.
+The installer is unsigned, so SmartScreen warns the first time: More info → Run anyway. Shortcuts use
+Ctrl where macOS uses ⌘, and Alt where it uses ⌥ (the tables below show the macOS keys). Files saved with
+Windows line endings (CRLF) keep them.
+
 ## Releases
 
-CI (`.github/workflows/ci.yml`) runs the tests on every push and pull request; it publishes nothing.
+CI (`.github/workflows/ci.yml`) runs the tests on macOS and Windows on every push and pull request; it
+publishes nothing.
 To publish a version, push a tag:
 
 ```bash
@@ -84,11 +98,11 @@ git tag v1.2.0
 git push origin v1.2.0
 ```
 
-`.github/workflows/release.yml` then tests, builds `SproutStudio-1.2.0.dmg` (version taken from the
-tag) and attaches it to a GitHub Release. Versions must be `MAJOR.MINOR.PATCH` with MAJOR ≥ 1 (macOS
+`.github/workflows/release.yml` then tests on macOS and Windows, builds `SproutStudio-1.2.0.dmg` and
+`SproutStudio-1.2.0.msi` (version taken from the tag) and attaches both to one GitHub Release. Versions must be `MAJOR.MINOR.PATCH` with MAJOR ≥ 1 (macOS
 rule). Local builds default to the current release; override with `-PappVersion=1.2.0`. The release
-notes are that version's section of `CHANGELOG.md` (GitHub's generated notes if it has none). Both workflows run on
-Apple Silicon runners, so the `.dmg` is native arm64.
+notes are that version's section of `CHANGELOG.md` (GitHub's generated notes if it has none). The macOS runners are
+Apple Silicon, so the `.dmg` is native arm64; the `.msi` is x64.
 
 Installing the downloaded, unsigned app on another Mac: drag it to Applications, then right-click →
 Open the first time (or `xattr -dr com.apple.quarantine /Applications/SproutStudio.app`). Nothing else

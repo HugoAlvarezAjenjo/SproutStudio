@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Windows
+- **Windows installer (.msi):** per-user install with Start menu entry, desktop shortcut and `.puml`
+  file associations. Shortcuts use Ctrl and Alt, and tooltips name them that way.
+- **CRLF files** open normally and are saved back with their own line endings.
+- **File → Exit (Ctrl+Q)** quits like ⌘Q on macOS: autosave is flushed and every open project comes back
+  on the next launch.
+- "Show in Explorer" opens the folder with the file selected; texts name File Explorer and the Recycle Bin.
+- CI runs the tests on Windows, and releases publish the `.msi` next to the `.dmg`.
+
 ## 1.1.0
 
 The editor grows up: real undo, project-wide search, navigation and refactoring.
