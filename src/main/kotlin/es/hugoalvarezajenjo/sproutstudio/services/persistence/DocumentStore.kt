@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.services.persistence
 
+import es.hugoalvarezajenjo.sproutstudio.core.text.LineEnding
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -23,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * The lock is only ever held on [io], never while waiting for the UI thread, so the blocking
  * [writeNow] (used where the caller can't suspend, like ⌘Q) can't deadlock with it.
+ *
+ * Text comes out with `\n` line endings whatever the file uses ([LineEnding]); a write keeps
+ * the ending the file already had on disk, so saving a Windows file doesn't rewrite every line.
  */
 class DocumentStore(private val io: CoroutineDispatcher) {
 
@@ -37,10 +41,10 @@ class DocumentStore(private val io: CoroutineDispatcher) {
     /** Same as [write], blocking the caller (the quit handler, menu Save). */
     fun writeNow(f: File, text: String) = runBlocking(io) { lockOf(f).withLock { writeAtomically(f, text) } }
 
-    suspend fun read(f: File): String = withContext(io) { lockOf(f).withLock { f.readText() } }
+    suspend fun read(f: File): String = withContext(io) { lockOf(f).withLock { readText(f) } }
 
     /** [read], or null when [f] is missing or unreadable. */
-    suspend fun readOrNull(f: File): String? = withContext(io) { lockOf(f).withLock { runCatching { f.readText() }.getOrNull() } }
+    suspend fun readOrNull(f: File): String? = withContext(io) { lockOf(f).withLock { runCatching { readText(f) }.getOrNull() } }
 
     /**
      * [f]'s text now, then again every time it changes on disk (polled every [pollMs]); null
@@ -53,14 +57,14 @@ class DocumentStore(private val io: CoroutineDispatcher) {
             val now = if (f.exists()) f.lastModified() else -1L
             if (now != stamp) {
                 stamp = now
-                emit(if (now < 0) null else runCatching { f.readText() }.getOrNull())
+                emit(if (now < 0) null else runCatching { readText(f) }.getOrNull())
             }
             delay(pollMs)
         }
     }.flowOn(io)
 
     /** [read], blocking the caller (opening a tab, which must have its text at once). */
-    fun readNow(f: File): String = runBlocking(io) { lockOf(f).withLock { f.readText() } }
+    fun readNow(f: File): String = runBlocking(io) { lockOf(f).withLock { readText(f) } }
 
     /**
      * Runs [block] while nobody else writes [files] (git rollback, rename, move). [block] may
@@ -74,15 +78,19 @@ class DocumentStore(private val io: CoroutineDispatcher) {
     }
 
     companion object {
+        /** [f]'s text with `\n` line endings. */
+        fun readText(f: File): String = LineEnding.normalize(f.readText())
+
         /**
          * Write via a temp file in the same folder + rename, so a crash or a full disk mid-write
          * (likely enough when saving every second) never leaves a half-written diagram.
+         * [content] uses `\n`; it is written with the line ending [f] has now (new files get `\n`).
          */
         fun writeAtomically(f: File, content: String) {
             val dir = f.absoluteFile.parentFile ?: throw IOException("No folder for ${f.name}")
             val tmp = File(dir, ".${f.name}.sprout-tmp")
             try {
-                tmp.writeText(content)
+                tmp.writeText(endingOf(f).apply(content))
                 try {
                     Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
                 } catch (_: AtomicMoveNotSupportedException) {
@@ -92,5 +100,14 @@ class DocumentStore(private val io: CoroutineDispatcher) {
                 tmp.delete()
             }
         }
+
+        /** The line ending [f] uses, from its first line break (only the start is read). */
+        private fun endingOf(f: File): LineEnding {
+            if (!f.isFile) return LineEnding.LF
+            val head = runCatching { f.inputStream().use { String(it.readNBytes(HEAD_BYTES), Charsets.UTF_8) } }.getOrNull()
+            return head?.let(LineEnding::of) ?: LineEnding.LF
+        }
+
+        private const val HEAD_BYTES = 8192
     }
 }
