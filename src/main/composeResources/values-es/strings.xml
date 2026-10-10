@@ -429,6 +429,26 @@
         <item quantity="one">%1$d uso de %2$s</item>
         <item quantity="other">%1$d usos de %2$s</item>
     </plurals>
+    <string name="menu_rename_symbol">Renombrar símbolo…</string>
+    <string name="rename_title">Renombrar %1$s</string>
+    <string name="rename_label">Nuevo nombre</string>
+    <string name="rename_confirm">Renombrar</string>
+    <plurals name="rename_usages">
+        <item quantity="one">Cambia %1$d uso</item>
+        <item quantity="other">Cambia %1$d usos</item>
+    </plurals>
+    <plurals name="rename_in_files">
+        <item quantity="one">en %1$d archivo</item>
+        <item quantity="other">en %1$d archivos</item>
+    </plurals>
+    <string name="rename_err_blank">Escribe un nombre</string>
+    <string name="rename_err_unchanged">Es el nombre actual</string>
+    <string name="rename_err_invalid">Usa letras, números y _ (entre comillas, cualquier cosa salvo comillas)</string>
+    <string name="rename_err_missing_dollar">El nombre de una variable debe empezar por $</string>
+    <string name="rename_err_unexpected_dollar">Solo las variables empiezan por $</string>
+    <string name="rename_err_keyword">%1$s es una palabra clave de PlantUML</string>
+    <string name="rename_err_taken">%1$s ya está en uso</string>
+    <string name="rename_err_stale">Los archivos han cambiado; vuelve a intentarlo</string>
 
     <!-- features/search/SearchPanel.kt -->
     <string name="menu_find_in_files">Buscar en archivos…</string>

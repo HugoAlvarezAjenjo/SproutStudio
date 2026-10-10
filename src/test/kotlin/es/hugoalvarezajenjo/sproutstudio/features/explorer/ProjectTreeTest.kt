@@ -73,9 +73,9 @@ class ProjectTreeTest {
             File("build/ui-snapshots/tree-new-folder.png").writeBytes(
                 org.jetbrains.skia.Image.makeFromBitmap(img.asSkiaBitmap()).encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)!!.bytes)
         }
-        onNodeWithTag("file-name-field").performTextClearance()
-        onNodeWithTag("file-name-field").performTextInput("diagrams")
-        onNodeWithTag("file-name-confirm").performClick()
+        onNodeWithTag("name-field").performTextClearance()
+        onNodeWithTag("name-field").performTextInput("diagrams")
+        onNodeWithTag("name-confirm").performClick()
         waitForIdle()
         assertTrue(File(dir, "diagrams").isDirectory)
         assertNull(p.explorer.fileAction)
@@ -85,10 +85,10 @@ class ProjectTreeTest {
     @Test fun anExistingNameIsRefusedInTheDialog() = runComposeUiTest {
         val p = TestGraph.workspace().apply { openRoot(dir); explorer.showFileAction(FileAction.NewFolder(dir)) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
-        onNodeWithTag("file-name-field").performTextClearance()
-        onNodeWithTag("file-name-field").performTextInput("docs")
+        onNodeWithTag("name-field").performTextClearance()
+        onNodeWithTag("name-field").performTextInput("docs")
         waitForIdle()
-        onNodeWithTag("file-name-confirm").performClick()
+        onNodeWithTag("name-confirm").performClick()
         waitForIdle()
         assertTrue(p.explorer.fileAction != null, "dialog stays open")
         assertTrue(onAllNodes(androidx.compose.ui.test.hasText("already exists", substring = true)).fetchSemanticsNodes().isNotEmpty())
@@ -97,9 +97,9 @@ class ProjectTreeTest {
     @Test fun renameAndDeleteFromTheDialogs() = runComposeUiTest {
         val p = TestGraph.workspace().apply { openRoot(dir); open(File(dir, "a.puml")); explorer.showFileAction(FileAction.Rename(File(dir, "a.puml"))) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
-        onNodeWithTag("file-name-field").performTextClearance()
-        onNodeWithTag("file-name-field").performTextInput("order.puml")
-        onNodeWithTag("file-name-confirm").performClick()
+        onNodeWithTag("name-field").performTextClearance()
+        onNodeWithTag("name-field").performTextInput("order.puml")
+        onNodeWithTag("name-confirm").performClick()
         waitForIdle()
         assertTrue(File(dir, "order.puml").exists())
         assertEquals("order.puml", p.active?.name)
@@ -170,8 +170,8 @@ class ProjectTreeTest {
     @Test fun newDiagramWithATemplateChosenFromTheGallery() = runComposeUiTest {
         val p = TestGraph.workspace().apply { openRoot(dir); explorer.showFileAction(FileAction.NewDiagram(dir)) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1100.dp, 760.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
-        onNodeWithTag("file-name-field").performTextClearance()
-        onNodeWithTag("file-name-field").performTextInput("login")
+        onNodeWithTag("name-field").performTextClearance()
+        onNodeWithTag("name-field").performTextInput("login")
         onNodeWithTag("choose-template").performClick()
         waitForIdle()
         onNodeWithTag("template-gallery")
@@ -186,7 +186,7 @@ class ProjectTreeTest {
             File("build/ui-snapshots/new-diagram-template.png").writeBytes(
                 org.jetbrains.skia.Image.makeFromBitmap(img.asSkiaBitmap()).encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)!!.bytes)
         }
-        onNodeWithTag("file-name-confirm").performClick()
+        onNodeWithTag("name-confirm").performClick()
         waitForIdle()
         val f = File(dir, "login.puml")
         assertTrue(f.readText().startsWith("@startuml\nactor User"), f.readText())
@@ -195,7 +195,7 @@ class ProjectTreeTest {
     @Test fun newDiagramWithoutATemplateIsEmpty() = runComposeUiTest {
         val p = TestGraph.workspace().apply { openRoot(dir); explorer.showFileAction(FileAction.NewDiagram(dir)) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1100.dp, 760.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
-        onNodeWithTag("file-name-confirm").performClick()
+        onNodeWithTag("name-confirm").performClick()
         waitForIdle()
         assertEquals("", File(dir, "new-diagram.puml").readText())
     }

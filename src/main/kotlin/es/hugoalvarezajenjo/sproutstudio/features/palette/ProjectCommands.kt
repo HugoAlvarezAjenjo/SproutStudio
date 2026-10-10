@@ -5,6 +5,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.cat_insert
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_symbol
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_usages
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_rename_symbol
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_go_to_declaration
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_reformat_code
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_back
@@ -198,6 +199,7 @@ internal fun projectCommands(
     val altCmd = if (Os.isMac) "⌥⌘" else "Ctrl+Alt+"
     cmd("code.declaration", text(Res.string.menu_go_to_declaration), text(Res.string.menu_code), shortcutHint("B"), enabled = has) { p.goToDeclaration() }
     cmd("code.usages", text(Res.string.menu_find_usages), text(Res.string.menu_code), if (Os.isMac) "⌥F7" else "Alt+F7", enabled = has) { p.findUsages() }
+    cmd("code.rename", text(Res.string.menu_rename_symbol), text(Res.string.menu_code), if (Os.isMac) "⇧F6" else "Shift+F6", enabled = has) { p.renameSymbol() }
     cmd("code.back", text(Res.string.menu_navigate_back), text(Res.string.menu_code), "$altCmd←", enabled = d?.nav?.canGoBack == true) { p.navigateBack() }
     cmd("code.forward", text(Res.string.menu_navigate_forward), text(Res.string.menu_code), "$altCmd→", enabled = d?.nav?.canGoForward == true) { p.navigateForward() }
 

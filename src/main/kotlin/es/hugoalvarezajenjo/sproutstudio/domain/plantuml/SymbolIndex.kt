@@ -16,6 +16,9 @@ data class Occurrence(val name: String, val range: IntRange, val role: Occurrenc
 /** An `!include` line. [path] is as written, without quotes, `<>` or a `!part` suffix; [range] covers it. */
 data class IncludeRef(val path: String, val range: IntRange, val line: Int, val stdlib: Boolean) {
     val isUrl: Boolean get() = path.startsWith("http://") || path.startsWith("https://")
+
+    /** A file of the user's own (not the stdlib, not a URL) that can be opened and followed. */
+    val isLocal: Boolean get() = !stdlib && !isUrl && path.isNotEmpty()
 }
 
 /**

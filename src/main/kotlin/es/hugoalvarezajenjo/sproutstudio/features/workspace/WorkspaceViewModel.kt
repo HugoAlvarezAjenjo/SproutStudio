@@ -2,6 +2,9 @@ package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.PlantUmlFormatter
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.RenameProblem
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.SymbolRename
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.SymbolRenaming
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -286,6 +289,45 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     fun findUsages() { active?.let { revealEditor(); it.findUsages() } }
     fun navigateBack() { active?.let { revealEditor(); it.navigateBack() } }
     fun navigateForward() { active?.let { revealEditor(); it.navigateForward() } }
+
+    // ── Code → Rename Symbol (⇧F6) ──
+
+    /** The rename the dialog is asking a new name for; null when it's closed. */
+    var renaming by mutableStateOf<SymbolRenaming?>(null)
+        private set
+
+    /** ⇧F6: plan renaming the symbol at the active tab's caret. Nothing happens off a symbol. */
+    fun renameSymbol() {
+        val d = active ?: return
+        revealEditor()
+        d.nav.closeUsages()
+        renaming = SymbolRename.at(d.text, d.value.selection.start, d.file?.absolutePath, includes)
+    }
+
+    fun dismissRename() { renaming = null }
+
+    /**
+     * Rename to [newName] in every file of the plan, or in none: returns why not. An included
+     * file that isn't open gets a tab (in the background) so the change is visible, saved like
+     * any edit, and undoable there with ⌘Z.
+     */
+    fun rename(newName: String): RenameProblem? {
+        val plan = renaming ?: return null
+        plan.problem(newName)?.let { return it }
+        val current = active ?: return RenameProblem.STALE
+        val targets = plan.edits.map { e -> e to (if (e.path == null) current else tabFor(File(e.path))) }
+        if (targets.any { (e, doc) -> doc.text != e.text }) return RenameProblem.STALE
+        for ((e, doc) in targets) doc.value = SymbolRename.apply(doc.value, e.ranges, newName)
+        renaming = null
+        return null
+    }
+
+    /** The tab showing [file], opened behind the active one when there's none yet. */
+    private fun tabFor(file: File): Document {
+        val f = file.absoluteFile.normalize()
+        docs.firstOrNull { it.file?.absoluteFile?.normalize() == f }?.let { return it }
+        return Document.open(f, deps.documents).also { docs += it }
+    }
 
     fun newDocument(): Document {
         val dir = root

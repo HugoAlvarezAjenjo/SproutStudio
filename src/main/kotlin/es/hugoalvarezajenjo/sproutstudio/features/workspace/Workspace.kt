@@ -61,6 +61,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewPane
 import es.hugoalvarezajenjo.sproutstudio.features.preview.rememberPreviewViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.problems.ProblemsPanel
 import es.hugoalvarezajenjo.sproutstudio.features.search.SearchPanel
+import es.hugoalvarezajenjo.sproutstudio.features.editor.RenameSymbolDialog
 import es.hugoalvarezajenjo.sproutstudio.features.templates.TemplateSidebar
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.SidebarTool
@@ -82,6 +83,7 @@ internal fun Workspace(p: WorkspaceViewModel, onSave: (Document) -> Unit, onClos
     // Git: find the repository of the folder, and re-read status on demand / after each save.
     LaunchedEffect(p.root) { p.git.openIn(p.root) }
     LaunchedEffect(p) { snapshotFlow { p.docs.map { it.savedText } }.collect { p.git.requestRefresh() } }
+    p.renaming?.let { RenameSymbolDialog(it, p.scope, onRename = p::rename, onDismiss = p::dismissRename) }
 
     Column(Modifier.fillMaxSize().background(c.panel)) {
         Row(Modifier.weight(1f)) {

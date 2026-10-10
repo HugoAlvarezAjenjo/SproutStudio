@@ -23,6 +23,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_previous
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_all
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_block
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_usages
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_rename_symbol
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_go_to_declaration
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_reformat_code
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_back
@@ -211,6 +212,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 Separator()
                 Item(tr(Res.string.menu_go_to_declaration), shortcut = shortcut(Key.B), enabled = d != null) { p.goToDeclaration() }
                 Item(tr(Res.string.menu_find_usages), shortcut = KeyShortcut(Key.F7, alt = true), enabled = d != null) { p.findUsages() }
+                Item(tr(Res.string.menu_rename_symbol), shortcut = KeyShortcut(Key.F6, shift = true), enabled = d != null) { p.renameSymbol() }
                 Item(tr(Res.string.menu_navigate_back), shortcut = shortcut(Key.DirectionLeft, alt = true), enabled = d?.nav?.canGoBack == true) { p.navigateBack() }
                 Item(tr(Res.string.menu_navigate_forward), shortcut = shortcut(Key.DirectionRight, alt = true), enabled = d?.nav?.canGoForward == true) { p.navigateForward() }
             }

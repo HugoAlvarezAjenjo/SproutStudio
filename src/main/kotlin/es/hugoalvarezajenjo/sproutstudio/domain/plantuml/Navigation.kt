@@ -67,12 +67,10 @@ private object IncludeDefinitions : DefinitionProvider {
 
 /**
  * A procedure, function, macro or `$variable` this text uses but doesn't declare: its declaration
- * in a local file it includes, directly or through other includes. Files are searched depth-first
- * in include order and the first declaration wins; a file is visited once, so cycles end.
+ * in a local file it includes, directly or through other includes ([IncludeGraph] order: the
+ * first declaration wins).
  */
 private object IncludedDeclarations : DefinitionProvider {
-    private const val MAX_FILES = 64
-
     override fun anchorAt(ctx: NavigationContext, offset: Int) =
         ctx.index.unknownAt(offset)?.takeIf { find(ctx, it.name) != null }?.range
 
@@ -82,24 +80,7 @@ private object IncludedDeclarations : DefinitionProvider {
         return NavigationTarget.InFile(file.path, decl.range)
     }
 
-    private fun find(ctx: NavigationContext, name: String): Pair<SourceFile, Occurrence>? {
-        if (ctx.includes === IncludeReader.NONE) return null
-        val seen = HashSet<String>()
-        ctx.file?.let(seen::add)
-
-        fun visit(from: String?, includes: List<IncludeRef>): Pair<SourceFile, Occurrence>? {
-            for (inc in includes) {
-                if (!inc.isLocal || seen.size >= MAX_FILES) continue
-                val f = ctx.includes.read(from, inc.path) ?: continue
-                if (!seen.add(f.path)) continue
-                f.index.globalDeclaration(name)?.let { return f to it }
-                visit(f.path, f.index.includes)?.let { return it }
-            }
-            return null
-        }
-        return visit(ctx.file, ctx.index.includes)
-    }
+    private fun find(ctx: NavigationContext, name: String): Pair<SourceFile, Occurrence>? =
+        IncludeGraph.reachable(ctx.file, ctx.index.includes, ctx.includes)
+            .firstNotNullOfOrNull { f -> f.index.globalDeclaration(name)?.let { f to it } }
 }
-
-/** A file of the user's own (not the stdlib, not a URL) that navigation can open. */
-private val IncludeRef.isLocal: Boolean get() = !stdlib && !isUrl && path.isNotEmpty()
