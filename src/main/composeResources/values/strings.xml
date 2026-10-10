@@ -110,6 +110,8 @@
     <string name="cmd_autosave_on">Turn On Save Automatically</string>
     <string name="cmd_toggle_comment">Comment / Uncomment Lines</string>
     <string name="cmd_toggle_block_comment">Block Comment / Uncomment</string>
+    <string name="cmd_undo">Undo</string>
+    <string name="cmd_redo">Redo</string>
     <string name="cmd_duplicate_line">Duplicate Line</string>
     <string name="cmd_move_line_up">Move Line Up</string>
     <string name="cmd_move_line_down">Move Line Down</string>

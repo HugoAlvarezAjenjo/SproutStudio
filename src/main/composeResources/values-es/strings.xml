@@ -111,6 +111,8 @@
     <string name="cmd_autosave_on">Activar guardar automáticamente</string>
     <string name="cmd_toggle_comment">Comentar / descomentar líneas</string>
     <string name="cmd_toggle_block_comment">Comentar / descomentar bloque</string>
+    <string name="cmd_undo">Deshacer</string>
+    <string name="cmd_redo">Rehacer</string>
     <string name="cmd_duplicate_line">Duplicar línea</string>
     <string name="cmd_move_line_up">Mover línea arriba</string>
     <string name="cmd_move_line_down">Mover línea abajo</string>

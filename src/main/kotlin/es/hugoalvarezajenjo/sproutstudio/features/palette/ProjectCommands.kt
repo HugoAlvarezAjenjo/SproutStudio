@@ -15,6 +15,8 @@ import es.hugoalvarezajenjo.sproutstudio.resources.cmd_autosave_on
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_copy_image
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_dark_theme
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_duplicate_line
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_redo
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_undo
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_move_line_down
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_move_line_up
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_export_pdf
@@ -155,6 +157,8 @@ internal fun projectCommands(
     cmd("file.closeProject", text(Res.string.menu_close_project), text(Res.string.menu_file), enabled = p.root != null || has, restoresFocus = false) { onCloseProject() }
 
     // Edit
+    cmd("edit.undo", text(Res.string.cmd_undo), text(Res.string.menu_edit), shortcutHint("Z"), enabled = d?.canUndo == true) { p.revealEditor(); d?.undo() }
+    cmd("edit.redo", text(Res.string.cmd_redo), text(Res.string.menu_edit), shortcutHint("Z", shift = true), enabled = d?.canRedo == true) { p.revealEditor(); d?.redo() }
     cmd("edit.find", text(Res.string.menu_find), text(Res.string.menu_edit), shortcutHint("F"), enabled = has, restoresFocus = false) {
         d?.let { p.revealEditor(); it.find.open(replace = false, seed = it.selectedText()) }
     }

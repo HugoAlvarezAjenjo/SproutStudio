@@ -302,7 +302,7 @@ fun CodeEditor(
         CompletionEngine.complete(text, at, force, doc.file?.absolutePath, paths)
 
     fun update(newValue: TextFieldValue, typed: Boolean) {
-        doc.value = newValue
+        if (typed) doc.type(newValue) else doc.value = newValue
         if (typed) {
             doc.dropRollbackUndo() // typing after a rollback: its Undo would lose that typing
             hunk = null
@@ -463,6 +463,14 @@ fun CodeEditor(
                                 req != null && ev.key == Key.Escape -> { completion = null; true }
                                 ev.key == Key.Escape && find.visible -> { closeFind(); true }
                                 // ── editing shortcuts ──
+                                // Ours, not the field's: its own undo misses edits made by commands.
+                                cmd && ev.key == Key.Z -> {
+                                    completion = null
+                                    nav.closeUsages()
+                                    doc.dropRollbackUndo()
+                                    if (ev.isShiftPressed) doc.redo() else doc.undo()
+                                    true
+                                }
                                 ev.isCtrlPressed && ev.key == Key.Spacebar -> {
                                     completion = complete(doc.text, doc.value.selection.start, force = true); selected = 0; true
                                 }

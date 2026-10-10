@@ -3,6 +3,7 @@ package es.hugoalvarezajenjo.sproutstudio.features.document
 import es.hugoalvarezajenjo.sproutstudio.features.editor.FindState
 import es.hugoalvarezajenjo.sproutstudio.features.editor.FoldState
 import es.hugoalvarezajenjo.sproutstudio.features.editor.NavigationState
+import es.hugoalvarezajenjo.sproutstudio.domain.editing.EditHistory
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
 import es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles
 import androidx.compose.runtime.Stable
@@ -30,6 +31,8 @@ class Document(
     initialText: String,
     /** Where saves go: the one writer of diagram files, which keeps writes to a file in order. */
     private val store: DocumentStore,
+    /** Milliseconds, for grouping typing into undo steps. */
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /** Folded blocks; declared first because the [value] setter uses it. */
     val folds = FoldState()
@@ -38,13 +41,45 @@ class Document(
         private set
     private var current by mutableStateOf(TextFieldValue(initialText))
 
-    /** Every writer goes through here, so folds follow edits and never hide the caret. */
+    private val history = EditHistory()
+    /** Bumped on every undo/redo-relevant change, so menus and the palette re-read [canUndo]. */
+    private var historyVersion by mutableStateOf(0)
+
+    /**
+     * Every writer goes through here, so folds follow edits and never hide the caret. A write
+     * that changes the text is one undo step (see [type] for keystrokes, which are grouped).
+     */
     var value: TextFieldValue
         get() = current
-        set(v) {
-            folds.onEdit(current.text, v.text)
-            current = folds.adjust(current, v)
+        set(v) = write(v, EditHistory.Kind.COMMAND)
+
+    /** A keystroke in the editor: consecutive ones are undone together. */
+    fun type(v: TextFieldValue) = write(v, EditHistory.Kind.TYPING)
+
+    private fun write(v: TextFieldValue, kind: EditHistory.Kind) {
+        val before = current
+        show(v)
+        if (before.text != current.text) {
+            history.record(before, current, kind, clock())
+            historyVersion++
+        } else if (before.selection != current.selection) {
+            history.breakGroup() // typing after moving the caret is a new step
         }
+    }
+
+    private fun show(v: TextFieldValue) {
+        folds.onEdit(current.text, v.text)
+        current = folds.adjust(current, v)
+    }
+
+    val canUndo: Boolean get() = historyVersion.let { history.canUndo }
+    val canRedo: Boolean get() = historyVersion.let { history.canRedo }
+
+    /** ⌘Z: back to the text and selection before the last step. */
+    fun undo() = history.undo()?.let { show(it); historyVersion++ }
+
+    /** ⇧⌘Z: forward again to the text and selection after the last undone step. */
+    fun redo() = history.redo()?.let { show(it); historyVersion++ }
     var savedText by mutableStateOf(initialText)
         private set
 
@@ -79,22 +114,25 @@ class Document(
         if (gitLines !== index) gitLines = index
     }
 
-    /** Text before the last "Rollback Lines", for its Undo; cleared by the next edit. */
+    /**
+     * Text before the last "Rollback Lines", while its toast offers Undo; cleared by the next
+     * edit, after which the toast's Undo would undo that edit instead of the rollback.
+     */
     var rollbackUndo by mutableStateOf<TextFieldValue?>(null)
         private set
 
-    /** Replace the text with a rolled-back version, remembering the current one for Undo. */
+    /** Replace the text with a rolled-back version, as one undo step. */
     fun applyRollback(restored: TextFieldValue) {
         val before = value
         value = restored
         rollbackUndo = before
     }
 
-    /** Undo of the last rollback, as long as nothing was typed since. */
+    /** The toast's Undo: the same as ⌘Z right after the rollback. */
     fun undoRollback() {
-        val prev = rollbackUndo ?: return
-        value = prev
+        if (rollbackUndo == null) return
         rollbackUndo = null
+        undo()
     }
 
     /** The rollback's Undo no longer applies (typing after it would be lost, or it timed out). */
