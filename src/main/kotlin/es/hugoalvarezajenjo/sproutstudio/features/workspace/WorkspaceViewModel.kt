@@ -30,6 +30,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.search.SearchViewModel
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
@@ -310,12 +311,33 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     var renaming by mutableStateOf<SymbolRenaming?>(null)
         private set
 
-    /** ⇧F6: plan renaming the symbol at the active tab's caret. Nothing happens off a symbol. */
-    fun renameSymbol() {
-        val d = active ?: return
+    /** Working out the plan for the dialog, off the UI thread; null when idle. */
+    private var planning: Job? = null
+
+    /**
+     * ⇧F6: plan renaming the symbol at the active tab's caret, then open the dialog. Nothing
+     * opens off a symbol, or when another tab is active by the time the plan is ready.
+     *
+     * For a procedure or `$variable` the plan reads every diagram of the project, so that happens
+     * off the UI thread, from the tabs' texts as they were at ⇧F6. The plan holds those texts:
+     * an edit made meanwhile makes [rename] refuse it rather than apply it to a different text.
+     */
+    fun renameSymbol(): Job {
+        planning?.cancel()
+        val d = active ?: return Job().apply { complete() }
         revealEditor()
         d.nav.closeUsages()
-        renaming = SymbolRename.at(d.text, d.value.selection.start, d.file?.absolutePath, includes)
+        val text = d.text
+        val caret = d.value.selection.start
+        val file = d.file?.absoluteFile?.normalize()?.path
+        val open = docs.mapNotNull { o -> o.file?.let { it.absoluteFile.normalize() to o.text } }.toMap()
+        return scope.launch {
+            val plan = withContext(deps.dispatchers.io) {
+                val project = explorer.allDiagrams().map { it.absoluteFile.normalize().path }
+                SymbolRename.at(text, caret, file, IncludeFiles { open[it] }, project)
+            }
+            if (active === d) renaming = plan
+        }.also { planning = it }
     }
 
     fun dismissRename() { renaming = null }
