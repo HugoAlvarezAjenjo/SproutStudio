@@ -10,6 +10,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.palette.PaletteHistory
 import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.LayoutSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.RecentProjects
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.SessionSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSaver
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
@@ -40,6 +41,7 @@ class AppGraph(
     val layout = LayoutSettings(store)
     val autoSave = AutoSaveSettings(store)
     val recents = RecentProjects(store)
+    val session = SessionSettings(store)
     val paletteHistory = PaletteHistory(store)
 
     val render: RenderService = PlantUmlRenderService()
@@ -50,13 +52,13 @@ class AppGraph(
     val files = ProjectFiles(trash = { trash(it) })
     val autoSaver = AutoSaver(autoSave)
 
-    val windows = WindowManager { newWorkspace() }
+    val windows = WindowManager(session) { newWorkspace() }
 
     /** Everything a window needs, in one bundle (see [WorkspaceDeps]). */
     val deps: WorkspaceDeps by lazy {
         WorkspaceDeps(
             dispatchers, platform, render, git, documents, files, autoSaver,
-            theme, diagram, editor, language, layout, recents, paletteHistory, windows,
+            theme, diagram, editor, language, layout, recents, session, paletteHistory, windows,
         )
     }
 
@@ -65,10 +67,15 @@ class AppGraph(
     companion object {
         /**
          * The app's graph. Under tests (`-Dsproutstudio.settings=memory`, set by the Gradle test
-         * task) it keeps settings in memory, so no test changes the user's preferences.
+         * task) it keeps settings in memory, so no test changes the user's preferences. It also
+         * doesn't restore sessions there: tests share this graph, and one test's tabs would
+         * otherwise reopen in the next test that opens the same folder.
          */
         val default: AppGraph by lazy {
-            AppGraph(if (System.getProperty("sproutstudio.settings") == "memory") InMemorySettingsStore() else PreferencesSettingsStore())
+            AppGraph(
+                if (System.getProperty("sproutstudio.settings") == "memory") InMemorySettingsStore(mapOf("restoreSession" to "false"))
+                else PreferencesSettingsStore(),
+            )
         }
 
         fun forTests(dispatchers: AppDispatchers = AppDispatchers.Production, platform: Platform = DesktopPlatform()) =

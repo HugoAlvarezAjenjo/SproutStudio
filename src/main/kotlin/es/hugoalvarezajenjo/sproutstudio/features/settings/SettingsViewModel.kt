@@ -30,13 +30,17 @@ class SettingsViewModel(private val deps: WorkspaceDeps) {
     /** Open windows flush their own edits when they next lose focus or switch tab. */
     fun setAutoSave(on: Boolean) = deps.autoSaver.setEnabled(on)
 
+    /** On launch, reopen the projects and tabs you had open. */
+    val restoreSession: Boolean get() = deps.session.restore.value
+    fun setRestoreSession(on: Boolean) { deps.session.restore.value = on }
+
     val recentCount: Int get() = deps.recents.folders().size
     fun clearRecents() = deps.recents.clear()
 
     /** Appearance and editor settings all at their defaults (recents and window layout don't count). */
     val allDefaults: Boolean
         get() = deps.theme.dark.isDefault && deps.language.choice.isDefault && deps.diagram.dark.isDefault &&
-            deps.editor.fontSize.isDefault && deps.autoSaver.isDefault
+            deps.editor.fontSize.isDefault && deps.autoSaver.isDefault && deps.session.restore.isDefault
 
     fun resetToDefaults() {
         deps.theme.dark.reset()
@@ -44,5 +48,6 @@ class SettingsViewModel(private val deps: WorkspaceDeps) {
         deps.diagram.dark.reset()
         deps.editor.fontSize.reset()
         deps.autoSaver.resetToDefault()
+        deps.session.restore.reset()
     }
 }

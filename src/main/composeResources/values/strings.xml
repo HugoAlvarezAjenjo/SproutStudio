@@ -23,6 +23,8 @@
     <string name="settings_points">%1$d pt</string>
     <string name="settings_save_automatically">Save automatically</string>
     <string name="settings_save_automatically_hint">Save diagrams a second after you stop typing, and when you switch tab or app.</string>
+    <string name="settings_restore_session">Restore session</string>
+    <string name="settings_restore_session_hint">On launch, reopen the projects you had open, each with its tabs and caret where you left them.</string>
     <string name="settings_recent_projects">Recent projects</string>
     <string name="settings_recent_none">No recent projects.</string>
     <plurals name="settings_recent_count">

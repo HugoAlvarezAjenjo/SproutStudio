@@ -1,6 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.app
 
 import java.io.File
+import java.nio.file.Files
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -51,5 +53,68 @@ class WindowManagerTest {
         wm.openBootWelcome()
         wm.revealBootWelcome()
         assertTrue((wm.windows.single() as AppWindow.Project).revealed)
+    }
+
+    // ── Restore session: the projects open at the last quit come back on a plain launch ──
+
+    private val a = Files.createTempDirectory("sprout-a").toFile().absoluteFile
+    private val b = Files.createTempDirectory("sprout-b").toFile().absoluteFile
+
+    @AfterTest
+    fun tearDown() { a.deleteRecursively(); b.deleteRecursively() }
+
+    private fun relaunch(): WindowManager {
+        val next = AppGraph(graph.store).windows // same settings, as on the next launch
+        next.openBootWelcome()
+        next.revealBootWelcome()
+        return next
+    }
+
+    private fun WindowManager.roots() = windows.filterIsInstance<AppWindow.Project>().map { it.state.root }
+
+    @Test
+    fun quitWithTwoProjectsReopensBoth() {
+        wm.openFolder(a); wm.openFolder(b)
+        wm.rememberSession()
+        wm.windows.toList().forEach(wm::close) // windows going away after ⌘Q don't rewrite it
+        val next = relaunch()
+        assertEquals(listOf(a, b), next.roots())
+        assertTrue(next.windows.all { (it as AppWindow.Project).revealed })
+    }
+
+    @Test
+    fun closingTheLastWindowReopensItsProject() {
+        wm.openFolder(a); wm.openFolder(b)
+        wm.windows.toList().forEach(wm::close) // a first, then b: closing b ends the app
+        assertEquals(listOf(b), relaunch().roots())
+    }
+
+    @Test
+    fun quittingFromTheWelcomeShowsTheWelcomeNextTime() {
+        wm.openFolder(a)
+        (wm.windows.single() as AppWindow.Project).state.closeProject()
+        wm.rememberSession()
+        val next = relaunch()
+        assertEquals(listOf(null), next.roots())
+        assertTrue((next.windows.single() as AppWindow.Project).revealed)
+    }
+
+    @Test
+    fun turnedOffTheWelcomeShows() {
+        wm.openFolder(a)
+        wm.rememberSession()
+        graph.session.restore.value = false
+        assertEquals(listOf(null), relaunch().roots())
+    }
+
+    @Test
+    fun aFileOpenedAtLaunchWinsOverTheSession() {
+        wm.openFolder(a)
+        wm.rememberSession()
+        val next = AppGraph(graph.store).windows
+        next.openBootWelcome()
+        next.openFile(pizza) // Finder double-click on a cold start
+        next.revealBootWelcome()
+        assertIs<AppWindow.QuickPreview>(next.windows.single())
     }
 }

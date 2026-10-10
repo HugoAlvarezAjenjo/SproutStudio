@@ -160,6 +160,18 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     /** Git operations that also touch the tabs and the tree. */
     val gitFlow = GitWorkflow(this)
 
+    /** The tabs to reopen with this project next time (Settings → Restore session). */
+    private val session = WorkspaceSession(this, deps.session)
+    private var sessionJob: Job? = null
+
+    /** Record the tabs as they change. The window starts it once it's on screen. */
+    fun startSessionTracking() {
+        if (sessionJob == null) sessionJob = scope.launch { session.track() }
+    }
+
+    /** Record the tabs now: ⌘Q quits without closing windows, and the tracker debounces. */
+    fun saveSession() = session.save()
+
     // ── Saving and closing ──────────────────────────────────────────────────────────────────
 
     private var autoSaveJob: Job? = null
@@ -249,6 +261,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         search.clear()
         deps.recents.add(dir)
         explorer.onProjectOpened()
+        if (docs.isEmpty()) session.reopen(dir)?.let { (tabs, active) -> docs += tabs; activeIndex = active }
     }
 
     /**
@@ -256,6 +269,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
      * [requestCloseProject], which asks about unsaved tabs and resets [git] too.
      */
     fun closeProject() {
+        session.save() // reopening this project later brings these tabs back
         docs.clear()
         activeIndex = 0
         root = null
@@ -366,6 +380,7 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
 
     /** Closes the window's state: its git ViewModel and anything still running. */
     override fun close() {
+        session.save()
         git.close()
         search.close()
         super.close()

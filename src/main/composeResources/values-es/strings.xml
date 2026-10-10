@@ -23,6 +23,8 @@
     <string name="settings_points">%1$d pt</string>
     <string name="settings_save_automatically">Guardar automáticamente</string>
     <string name="settings_save_automatically_hint">Guarda los diagramas un segundo después de dejar de escribir, y al cambiar de pestaña o de app.</string>
+    <string name="settings_restore_session">Restaurar la sesión</string>
+    <string name="settings_restore_session_hint">Al arrancar, reabre los proyectos que tenías abiertos, cada uno con sus pestañas y el cursor donde lo dejaste.</string>
     <string name="settings_recent_projects">Proyectos recientes</string>
     <string name="settings_recent_none">No hay proyectos recientes.</string>
     <plurals name="settings_recent_count">

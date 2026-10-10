@@ -47,6 +47,7 @@ class SettingsViewModelTest {
         graph.recents.add(dir)
         assertTrue(vm.allDefaults)
         vm.setDarkTheme(false); vm.setDarkDiagram(true); vm.changeFontSize(3f); vm.setAutoSave(false)
+        vm.setRestoreSession(false)
         assertFalse(vm.allDefaults)
 
         vm.resetToDefaults()
@@ -55,6 +56,7 @@ class SettingsViewModelTest {
         assertTrue(graph.theme.dark.value)
         assertEquals(EditorSettings.DEFAULT_FONT_SIZE, vm.fontSize)
         assertTrue(graph.autoSaver.enabled)
+        assertTrue(vm.restoreSession, "restoring the session is on by default")
         assertEquals(1, vm.recentCount, "recents are cleared on their own, not by Restore defaults")
     }
 

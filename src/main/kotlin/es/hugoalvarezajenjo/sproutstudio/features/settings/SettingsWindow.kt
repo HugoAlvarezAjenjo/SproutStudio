@@ -197,6 +197,9 @@ private fun GeneralSection(vm: SettingsViewModel) {
     SettingRow(tr(Res.string.settings_save_automatically), tr(Res.string.settings_save_automatically_hint)) {
         Toggle(vm.autoSave, tag = "autosave") { vm.setAutoSave(it) }
     }
+    SettingRow(tr(Res.string.settings_restore_session), tr(Res.string.settings_restore_session_hint)) {
+        Toggle(vm.restoreSession, tag = "restore-session") { vm.setRestoreSession(it) }
+    }
     val n = vm.recentCount
     SettingRow(tr(Res.string.settings_recent_projects), if (n == 0) tr(Res.string.settings_recent_none) else tr(Res.plurals.settings_recent_count, n, n)) {
         ToolButton(null, label = tr(Res.string.settings_clear_list), enabled = n > 0) { vm.clearRecents() }

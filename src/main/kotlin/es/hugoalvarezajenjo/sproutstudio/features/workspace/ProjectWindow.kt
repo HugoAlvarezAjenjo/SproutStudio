@@ -127,7 +127,7 @@ private fun shortcut(key: Key, shift: Boolean = false, alt: Boolean = false) =
 @Composable
 fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit) {
     // Autosave: 1 s after you stop typing, and whenever you switch tab. Runs in p's own scope.
-    LaunchedEffect(p) { p.startAutoSave() }
+    LaunchedEffect(p) { p.startAutoSave(); p.startSessionTracking() }
 
     DisposableEffect(p) { onDispose { p.close() } }
 

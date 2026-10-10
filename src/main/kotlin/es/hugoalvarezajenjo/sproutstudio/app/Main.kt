@@ -38,11 +38,13 @@ fun main(args: Array<String>) {
         }
     }
 
-    // ⌘Q quits without closing windows one by one, so flush autosave first (no edit lost).
+    // ⌘Q quits without closing windows one by one, so flush autosave first (no edit lost) and
+    // record the session for the next launch.
     // This runs on AppKit's thread, not the UI thread, so the blocking flush can't deadlock.
     if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
         Desktop.getDesktop().setQuitHandler { _, response ->
             graph.autoSaver.flushNow(windows.windows.filterIsInstance<AppWindow.Project>().flatMap { it.state.docs.toList() })
+            windows.rememberSession()
             response.performQuit()
         }
     }

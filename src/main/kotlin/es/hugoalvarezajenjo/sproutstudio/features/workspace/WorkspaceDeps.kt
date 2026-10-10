@@ -33,6 +33,7 @@ class WorkspaceDeps(
     val language: LanguageSettings,
     val layout: LayoutSettings,
     val recents: RecentProjects,
+    val session: SessionSettings,
     val paletteHistory: PaletteHistory,
     val windows: WindowNavigator,
 ) {

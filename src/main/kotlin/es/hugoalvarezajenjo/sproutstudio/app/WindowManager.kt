@@ -2,13 +2,22 @@ package es.hugoalvarezajenjo.sproutstudio.app
 
 import androidx.compose.runtime.mutableStateListOf
 import es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide
+import es.hugoalvarezajenjo.sproutstudio.features.workspace.SessionSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WindowNavigator
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import java.io.File
 
 /** The app's windows. Main composes one window per entry; screens open more through [WindowNavigator]. */
-class WindowManager(private val newWorkspace: () -> WorkspaceViewModel) : WindowNavigator {
+class WindowManager(
+    private val session: SessionSettings,
+    private val newWorkspace: () -> WorkspaceViewModel,
+) : WindowNavigator {
     val windows = mutableStateListOf<AppWindow>()
+
+    private val projects get() = windows.filterIsInstance<AppWindow.Project>()
+
+    /** Set by [rememberSession] on ⌘Q, so windows closing after it don't rewrite what it saved. */
+    private var quitting = false
 
     /**
      * Welcome window for a plain launch. Compose quits if its first composition has no window,
@@ -24,9 +33,22 @@ class WindowManager(private val newWorkspace: () -> WorkspaceViewModel) : Window
         windows += w
     }
 
-    /** Called once the app has settled with no file to open: show the welcome after all. */
+    /**
+     * Called once the app has settled with no file to open: reopen the projects open when the
+     * app last quit (Settings → Restore session), or show the welcome after all.
+     */
     fun revealBootWelcome() {
-        bootWelcome?.revealed = true
+        val w = bootWelcome ?: return
+        val last = session.projectsToReopen()
+        if (last.isEmpty()) w.revealed = true
+        else last.forEach(::openFolder) // the first one lands in the boot welcome
+    }
+
+    /** ⌘Q: record the open projects and their tabs for the next launch. */
+    fun rememberSession() {
+        quitting = true
+        session.rememberOpenProjects(projects.mapNotNull { it.state.root })
+        projects.forEach { it.state.saveSession() }
     }
 
     /** A file arrived: the boot welcome isn't wanted, unless the user already started using it. */
@@ -49,9 +71,9 @@ class WindowManager(private val newWorkspace: () -> WorkspaceViewModel) : Window
 
     override fun openFolder(dir: File) {
         val d = dir.absoluteFile
-        windows.filterIsInstance<AppWindow.Project>().firstOrNull { it.state.root == d }?.let { return }
+        projects.firstOrNull { it.state.root == d }?.let { return }
         // Reuse an empty welcome window if there is one.
-        val empty = windows.filterIsInstance<AppWindow.Project>().firstOrNull { it.state.root == null && it.state.docs.isEmpty() }
+        val empty = projects.firstOrNull { it.state.root == null && it.state.docs.isEmpty() }
         if (empty != null) {
             empty.state.openRoot(d)
             empty.revealed = true
@@ -66,7 +88,7 @@ class WindowManager(private val newWorkspace: () -> WorkspaceViewModel) : Window
 
     override fun editFile(file: File) {
         val dir = file.absoluteFile.parentFile
-        val existing = windows.filterIsInstance<AppWindow.Project>().firstOrNull { it.state.root == dir }
+        val existing = projects.firstOrNull { it.state.root == dir }
         val target = existing?.state ?: newWorkspace().apply { openRoot(dir) }.also { windows += AppWindow.Project(it) }
         target.open(file)
         // The quick preview of that file isn't needed any more.
@@ -89,8 +111,14 @@ class WindowManager(private val newWorkspace: () -> WorkspaceViewModel) : Window
         if (windows.none { it is AppWindow.Settings }) windows += AppWindow.Settings()
     }
 
-    /** Closing a project window also closes its ViewModel (git, running work). */
+    /**
+     * Closing a project window also closes its ViewModel (git, running work). Closing the last
+     * one ends the app, so its project is what the next launch reopens (none from the welcome).
+     */
     fun close(w: AppWindow) {
+        if (w is AppWindow.Project && !quitting && projects.none { it !== w }) {
+            session.rememberOpenProjects(listOfNotNull(w.state.root))
+        }
         windows.remove(w)
         if (w is AppWindow.Project) w.state.close()
     }
