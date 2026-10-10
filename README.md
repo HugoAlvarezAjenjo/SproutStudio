@@ -25,9 +25,15 @@
 - **Project mode**: open a folder and get a file tree, tabs, a smart editor and a live preview, as
   editor only, editor + preview, or preview only. Create, rename and delete files and folders from the
   tree (deleting goes to the Trash); open tabs follow renames.
-- **Smart editor**: syntax highlighting, completion that knows the diagram type, your own participants,
-  `!theme` names and colours, smart indent, code folding, find & replace with regex, and a command palette
-  (Shift Shift) with every action.
+- **Smart editor**: syntax highlighting, completion that knows the diagram type (also by initials), your
+  own participants, `!theme` names, colours and local `!include` paths, smart indent, code folding, find &
+  replace with regex, real undo/redo, and a command palette (Shift Shift) with every action.
+- **Navigation and refactoring**: Go to Declaration (⌘B) and Find Usages (⌥F7), also through local
+  `!include`s; Rename Symbol (⇧F6) across the files that include each other; Reformat Code (⌥⌘L) that only
+  touches whitespace PlantUML ignores.
+- **Find in Files** (⇧⌘F): search every diagram in the project, with match case, whole words and regex.
+- **Restore session**: reopens your projects with their tabs and caret on launch (Settings → General).
+- **English and Spanish**: follows the system or pick one in Settings (⌘,); switches at once.
 - **C4, AWS and Azure, offline**: PlantUML's standard library ships inside the app, so
   `!include <C4/C4_Container>`, `!include <awslib14/Compute/Lambda>` or `!include <azure/AzureCommon>`
   just work, with no download. Typing `!include <` suggests the paths.
@@ -80,7 +86,8 @@ git push origin v1.2.0
 
 `.github/workflows/release.yml` then tests, builds `SproutStudio-1.2.0.dmg` (version taken from the
 tag) and attaches it to a GitHub Release. Versions must be `MAJOR.MINOR.PATCH` with MAJOR ≥ 1 (macOS
-rule). Local builds default to 1.0.0; override with `-PappVersion=1.2.0`. Both workflows run on
+rule). Local builds default to the current release; override with `-PappVersion=1.2.0`. The release
+notes are that version's section of `CHANGELOG.md` (GitHub's generated notes if it has none). Both workflows run on
 Apple Silicon runners, so the `.dmg` is native arm64.
 
 Installing the downloaded, unsigned app on another Mac: drag it to Applications, then right-click →
@@ -99,13 +106,23 @@ needs to be installed: the app ships its own Java runtime.
 | ⇧⌘N | the template gallery — ready-made diagrams and blocks with live thumbnails (also File → New from Template…) |
 | ⏎ | smart indent (`alt`, `loop`, `if`, `{` … indent; `end`, `else`, `}` snap back) |
 | ⇥ / ⇧⇥ | indent / outdent lines |
-| ⌘/ | comment / uncomment lines |
+| ⌘/, ⌥⌘/ | comment / uncomment lines, block comment `/' '/` |
 | ⌘D | duplicate line |
+| ⌥↑ / ⌥↓ | move the line (or the selected lines) up / down |
+| ⌘Z, ⇧⌘Z | undo / redo; every command is its own step, typing is grouped |
+| ⌥⌘L | reformat the file or the selection |
+| ⌘B, ⌘-click | go to declaration (also in included files); on an `!include`, open the file |
+| ⌥F7 | find usages of the symbol at the caret |
+| ⌥⌘← / ⌥⌘→ | back / forward through navigation |
+| ⇧F6 | rename symbol, everywhere it is used |
+| ⇧⌘F | find in files across the project |
+| `!include ` | local folders and PlantUML files, one folder at a time |
 | ⌘F, ⌘R | find, find & replace (Cc match case, W whole words, .* regex with `$1` groups) |
 | ⏎ / ⇧⏎ (or ⌘G / ⇧⌘G) | next / previous match; Esc closes the bar |
 | ⇧⌘P, ⇧⌘A, Shift Shift | command palette: every action, templates, the project's diagrams and recent projects |
 | ⌘-, ⌘= / ⇧⌘-, ⇧⌘= | fold / unfold the block at the caret / all blocks (or click the ▾ ▸ chevrons in the gutter) |
 | ⌘S, ⇧⌘S | save, save as (autosave is on: File → Save Automatically) |
+| ⌘, | Settings: theme, language, preview, font size, autosave, restore session |
 | ⌘N, ⌘O, ⇧⌘O | new diagram, open folder, open diagram |
 | ⌘P, ⌘1 | show / hide the preview, the project panel |
 | ⌘6 | show / hide the Problems panel |
@@ -183,7 +200,7 @@ MVVM in layers; dependencies only point down (`ArchitectureTest` checks it).
 src/main/kotlin/es/hugoalvarezajenjo/sproutstudio/
   app/                    main(), AppGraph (wires everything by hand), WindowManager
   core/                   dispatchers, LatestWinsQueue, ViewModel base, settings store
-  domain/                 plain Kotlin: PlantUML language (completion, templates, edits, folding, syntax), find & replace, line diffs
+  domain/                 plain Kotlin: PlantUML language (completion, navigation, rename, formatting, folding), undo history, search, sessions, line diffs
   services/
     render/               PlantUML in-process behind RenderService: one queued worker, offline guard
     git/                  GitService/GitRepository on JGit, typed GitError
@@ -192,7 +209,7 @@ src/main/kotlin/es/hugoalvarezajenjo/sproutstudio/
   platform/               native dialogs, Trash, Finder, clipboard (DesktopPlatform)
   features/               one folder per feature: its ViewModel + its Composables
     workspace/            project window, WorkspaceViewModel, layout, tabs, status bar, autosave
-    document/ editor/ preview/ problems/ explorer/ git/ templates/ palette/ quickpreview/
+    document/ editor/ preview/ problems/ explorer/ git/ templates/ palette/ quickpreview/ search/ settings/
   ui/designsystem/        theme, colours, shared components
 src/test/                 same layout: unit, ViewModel, render, off-screen UI and architecture tests
 samples/                  example diagrams

@@ -36,8 +36,12 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
         run: |
           dmg=$(ls build/compose/binaries/main/dmg/*.dmg)
+          # This version's section of CHANGELOG.md, without its heading; GitHub's own notes if it has none.
+          awk -v v="$VERSION" '$0 == "## " v {on=1; next} /^## / {on=0} on' CHANGELOG.md > notes.md
+          if [ -s notes.md ]; then notes=(--notes-file notes.md); else notes=(--generate-notes); fi
           gh release create "$GITHUB_REF_NAME" "$dmg" \
-            --title "SproutStudio ${{ steps.version.outputs.value }}" \
-            --generate-notes
+            --title "SproutStudio $VERSION" \
+            "${notes[@]}"
