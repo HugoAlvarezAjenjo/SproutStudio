@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.services.persistence.DocumentStore
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.IncludeReader
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.SourceFile
 import java.io.File
@@ -26,7 +27,7 @@ class IncludeFiles(private val openText: (File) -> String? = { null }) : Include
         }
         val modified = f.lastModified()
         if (cached != null && cached.modified == modified) return cached.file
-        val text = runCatching { f.readText() }.getOrNull() ?: return null
+        val text = runCatching { DocumentStore.readText(f) }.getOrNull() ?: return null
         return SourceFile(key, text).also { cache[key] = Cached(it, modified) }
     }
 

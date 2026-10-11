@@ -1,4 +1,10 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import javax.imageio.ImageIO
 
 plugins {
     kotlin("jvm") version "2.4.20"
@@ -66,10 +72,15 @@ tasks.processResources { exclude("**/.DS_Store") }
 
 // ---- App icon -------------------------------------------------------------------------------
 // Single source of truth: src/main/resources/icon.png (square, ideally 1024x1024).
-// At runtime it is the Dock/window icon; for the packaged .app we turn it into an .icns
-// with the macOS built-ins `sips` + `iconutil` (no download, no extra tool).
+// At runtime it is the Dock/window icon. For the packaged app we turn it into an .icns (macOS,
+// with the built-ins `sips` + `iconutil`) or an .ico (Windows, plain Java ImageIO), so no
+// download and no extra tool. Each is built only on its own OS.
 val iconPng = layout.projectDirectory.file("src/main/resources/icon.png")
 val iconIcns = layout.buildDirectory.file("generated/icon/SproutStudio.icns")
+val iconIco = layout.buildDirectory.file("generated/icon/SproutStudio.ico")
+val hostOs: String = System.getProperty("os.name").lowercase()
+val onMac = "mac" in hostOs
+val onWindows = "windows" in hostOs
 
 val generateMacIcon by tasks.registering {
     description = "Builds SproutStudio.icns from src/main/resources/icon.png"
@@ -77,7 +88,7 @@ val generateMacIcon by tasks.registering {
     val out = iconIcns.get().asFile
     inputs.file(src).optional()
     outputs.file(out)
-    onlyIf { src.exists() }
+    onlyIf { src.exists() && onMac }
     doLast {
         fun run(vararg cmd: String) {
             val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
@@ -97,9 +108,44 @@ val generateMacIcon by tasks.registering {
     }
 }
 
-// Every native packaging task needs the .icns first.
+val generateWindowsIcon by tasks.registering {
+    description = "Builds SproutStudio.ico from src/main/resources/icon.png"
+    val src = iconPng.asFile
+    val out = iconIco.get().asFile
+    inputs.file(src).optional()
+    outputs.file(out)
+    onlyIf { src.exists() && onWindows }
+    doLast {
+        // An .ico is a directory of images; since Windows Vista each entry may be a whole PNG.
+        val original = ImageIO.read(src) ?: error("${src.name} is not a readable image")
+        val sizes = listOf(16, 24, 32, 48, 64, 128, 256)
+        val pngs = sizes.map { px ->
+            val img = BufferedImage(px, px, BufferedImage.TYPE_INT_ARGB)
+            img.createGraphics().apply {
+                setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+                setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+                drawImage(original, 0, 0, px, px, null)
+                dispose()
+            }
+            ByteArrayOutputStream().also { ImageIO.write(img, "png", it) }.toByteArray()
+        }
+        val header = ByteBuffer.allocate(6 + 16 * sizes.size).order(ByteOrder.LITTLE_ENDIAN)
+        header.putShort(0).putShort(1).putShort(sizes.size.toShort()) // reserved, type 1 = icon, count
+        var offset = header.capacity()
+        sizes.zip(pngs).forEach { (px, png) ->
+            val dim = if (px >= 256) 0 else px // 0 means 256
+            header.put(dim.toByte()).put(dim.toByte()).put(0).put(0) // width, height, palette, reserved
+            header.putShort(1).putShort(32).putInt(png.size).putInt(offset) // planes, bits, size, offset
+            offset += png.size
+        }
+        out.parentFile.mkdirs()
+        out.outputStream().use { o -> o.write(header.array()); pngs.forEach(o::write) }
+    }
+}
+
+// Every native packaging task needs the icon for its OS first.
 tasks.matching { it.name.startsWith("createDistributable") || it.name.startsWith("package") }
-    .configureEach { dependsOn(generateMacIcon) }
+    .configureEach { dependsOn(generateMacIcon, generateWindowsIcon) }
 
 compose.resources {
     packageOfResClass = "es.hugoalvarezajenjo.sproutstudio.resources"
@@ -113,7 +159,7 @@ compose.desktop {
         jvmArgs += "--enable-native-access=ALL-UNNAMED"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi)
             packageName = "SproutStudio"
             packageVersion = appVersion
             description = "A friendly, offline PlantUML studio"
@@ -148,6 +194,17 @@ compose.desktop {
                 appCategory = "public.app-category.developer-tools"
                 // Generated from src/main/resources/icon.png; without it, the default icon.
                 if (iconPng.asFile.exists()) iconFile.set(iconIcns)
+            }
+
+            windows {
+                // Fixed for good: it is how Windows knows a new .msi upgrades the installed app.
+                upgradeUuid = "6f1c2b0e-8d4a-4b7e-9a35-2c1e5f7d9b40"
+                menuGroup = "SproutStudio"
+                menu = true
+                shortcut = true
+                dirChooser = true
+                perUserInstall = true // no administrator rights needed
+                if (iconPng.asFile.exists()) iconFile.set(iconIco)
             }
         }
     }

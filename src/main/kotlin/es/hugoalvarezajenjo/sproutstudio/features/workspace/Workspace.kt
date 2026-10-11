@@ -57,7 +57,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.editor.describe
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.ProjectTree
 import es.hugoalvarezajenjo.sproutstudio.features.git.CommitPanel
 import es.hugoalvarezajenjo.sproutstudio.features.git.rememberLineChanges
-import es.hugoalvarezajenjo.sproutstudio.features.palette.shortcutHint
+import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.features.preview.PreviewPane
 import es.hugoalvarezajenjo.sproutstudio.features.preview.rememberPreviewViewModel
 import es.hugoalvarezajenjo.sproutstudio.features.problems.ProblemsPanel
@@ -106,7 +106,7 @@ internal fun Workspace(p: WorkspaceViewModel, onSave: (Document) -> Unit, onClos
                 val doc = p.active
                 if (doc == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        EmptyState(Icons.Outlined.Schema, tr(Res.string.workspace_no_file), tr(Res.string.workspace_no_file_hint))
+                        EmptyState(Icons.Outlined.Schema, tr(Res.string.workspace_no_file), tr(Res.string.workspace_no_file_hint, shortcutHint("N")))
                     }
                 } else {
                     key(doc) {

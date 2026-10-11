@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.search
 
+import es.hugoalvarezajenjo.sproutstudio.services.persistence.DocumentStore
 import es.hugoalvarezajenjo.sproutstudio.core.concurrency.AppDispatchers
 import es.hugoalvarezajenjo.sproutstudio.core.viewmodel.ViewModel
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.SourceFile
@@ -98,7 +99,7 @@ class SearchViewModel(
 
     private fun sources(dir: File, open: Map<File, String>): Sequence<SourceFile> =
         files.allDiagrams(dir).asSequence().mapNotNull { f ->
-            val text = open[f] ?: runCatching { f.readText() }.getOrNull() ?: return@mapNotNull null
+            val text = open[f] ?: runCatching { DocumentStore.readText(f) }.getOrNull() ?: return@mapNotNull null
             SourceFile(f.path, text)
         }
 

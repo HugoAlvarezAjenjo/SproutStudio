@@ -17,4 +17,9 @@ interface WindowNavigator {
     fun showHistory(project: WorkspaceViewModel, file: File)
     /** The Settings window (a second request leaves the open one as it is). */
     fun openSettings()
+    /**
+     * Quit the whole app, as ⌘Q does on macOS: flush autosave, record the session, close
+     * everything. For File → Exit where the OS has no app-wide quit (Windows, Linux).
+     */
+    fun quit()
 }

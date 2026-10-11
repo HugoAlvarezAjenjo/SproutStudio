@@ -1,5 +1,7 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_reveal_explorer
+import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_folder
 import es.hugoalvarezajenjo.sproutstudio.resources.git_open
@@ -123,8 +125,8 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
             ToolButton(Icons.AutoMirrored.Outlined.NoteAdd, tr(Res.string.tree_new_diagram)) { targetDir(p)?.let { p.explorer.showFileAction(FileAction.NewDiagram(it)) } }
             ToolButton(Icons.Outlined.CreateNewFolder, tr(Res.string.cmd_new_folder)) { targetDir(p)?.let { p.explorer.showFileAction(FileAction.NewFolder(it)) } }
             ToolButton(Icons.Outlined.UnfoldLess, tr(Res.string.tree_collapse_all)) { p.explorer.collapseAll() }
-            ToolButton(Icons.Outlined.Refresh, tr(Res.string.tree_refresh)) { p.explorer.refreshTree() }
-            ToolButton(Icons.Outlined.Remove, tr(Res.string.tree_hide)) { p.showSidebar(false) }
+            ToolButton(Icons.Outlined.Refresh, tr(Res.string.tree_refresh, shortcutHint("Y", alt = true))) { p.explorer.refreshTree() }
+            ToolButton(Icons.Outlined.Remove, tr(Res.string.tree_hide, shortcutHint("1"))) { p.showSidebar(false) }
         }
         // Root row: a folder like any other, so it collapses too.
         ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
@@ -198,8 +200,17 @@ private fun folderMenu(p: WorkspaceViewModel, dir: java.io.File, isRoot: Boolean
     } else {
         add(ContextMenuItem(if (p.explorer.rootCollapsed) text(Res.string.tree_expand) else text(Res.string.tree_collapse)) { p.explorer.toggleRootCollapsed() })
     }
-    add(ContextMenuItem(if (Os.isMac) text(Res.string.tree_reveal_finder) else text(Res.string.tree_open_folder)) { p.deps.platform.reveal(dir) })
+    add(ContextMenuItem(revealLabel()) { p.deps.platform.reveal(dir) })
 }
+
+/** "Reveal in Finder", "Show in Explorer", or the generic "Open Containing Folder". */
+private fun revealLabel(): String = text(
+    when {
+        Os.isMac -> Res.string.tree_reveal_finder
+        Os.isWindows -> Res.string.tree_reveal_explorer
+        else -> Res.string.tree_open_folder
+    },
+)
 
 @Composable
 private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDrop: (java.io.File, java.io.File) -> Unit) {
@@ -213,7 +224,7 @@ private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDro
             add(ContextMenuItem(text(Res.string.cmd_new_folder)) { p.explorer.showFileAction(FileAction.NewFolder(dir)) })
             add(ContextMenuItem(text(Res.string.tree_rename)) { p.explorer.showFileAction(FileAction.Rename(f)) })
             add(ContextMenuItem(text(Res.string.tree_trash)) { p.explorer.showFileAction(FileAction.Delete(f)) })
-            add(ContextMenuItem(if (Os.isMac) text(Res.string.tree_reveal_finder) else text(Res.string.tree_open_folder)) { p.deps.platform.reveal(f) })
+            add(ContextMenuItem(revealLabel()) { p.deps.platform.reveal(f) })
             if (p.git.status.head != null) {
                 if (canCompareWithHead(p, f)) add(ContextMenuItem(text(Res.string.menu_compare_with_head)) { p.deps.windows.compareWithHead(p, f) })
                 if (hasCommittedChanges(p, f)) add(ContextMenuItem(text(Res.string.menu_show_diff_with_head)) { p.deps.windows.compareWithHead(p, f, textFirst = true) })

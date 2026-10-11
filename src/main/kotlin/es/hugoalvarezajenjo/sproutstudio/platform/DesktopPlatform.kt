@@ -16,6 +16,7 @@ import javax.swing.JFileChooser
 class DesktopPlatform : Platform {
 
     override val isMac = System.getProperty("os.name").lowercase().contains("mac")
+    private val isWindows = System.getProperty("os.name").lowercase().contains("windows")
 
     override fun chooseFile(title: String, extensions: Set<String>): File? {
         val d = FileDialog(null as Frame?, title, FileDialog.LOAD).apply {
@@ -58,8 +59,12 @@ class DesktopPlatform : Platform {
 
     override fun reveal(f: File) {
         runCatching {
-            if (isMac) ProcessBuilder("open", "-R", f.absolutePath).start()
-            else Desktop.getDesktop().open(if (f.isDirectory) f else f.absoluteFile.parentFile)
+            when {
+                isMac -> ProcessBuilder("open", "-R", f.absolutePath).start()
+                // Opens the folder with [f] selected. One argument: explorer parses "/select,<path>" itself.
+                isWindows -> ProcessBuilder("explorer.exe", "/select,${f.absolutePath}").start()
+                else -> Desktop.getDesktop().open(if (f.isDirectory) f else f.absoluteFile.parentFile)
+            }
         }
     }
 

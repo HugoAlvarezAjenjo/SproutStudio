@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.services.git
 
+import es.hugoalvarezajenjo.sproutstudio.core.text.LineEnding
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ResetCommand
 import org.eclipse.jgit.api.errors.CheckoutConflictException
@@ -69,7 +70,7 @@ class JGitRepository internal constructor(private val repo: Repository) : GitRep
         val path = relPath(f) ?: return null
         val tree = runCatching { repo.resolve("$rev^{tree}") }.getOrNull() ?: return null
         TreeWalk.forPath(repo, path, tree)?.use { tw ->
-            return String(repo.open(tw.getObjectId(0)).bytes, Charsets.UTF_8)
+            return LineEnding.normalize(String(repo.open(tw.getObjectId(0)).bytes, Charsets.UTF_8))
         }
         return null
     }

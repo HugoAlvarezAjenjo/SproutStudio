@@ -41,6 +41,7 @@
     <string name="welcome_new_diagram">New diagram</string>
     <string name="welcome_new_diagram_hint">Start from a blank diagram</string>
     <string name="welcome_tip">Tip: double-click any .puml file in Finder for an instant preview.</string>
+    <string name="welcome_tip_windows">Tip: double-click any .puml file in File Explorer for an instant preview.</string>
     <string name="welcome_settings">Settings</string>
     <string name="welcome_recent_projects">RECENT PROJECTS</string>
     <string name="welcome_no_recents">No recent projects</string>
@@ -59,6 +60,7 @@
     <string name="menu_close_tab">Close Tab</string>
     <string name="menu_settings">Settings…</string>
     <string name="menu_close_project">Close Project</string>
+    <string name="menu_exit">Exit</string>
     <string name="menu_edit">Edit</string>
     <string name="menu_find">Find…</string>
     <string name="menu_replace">Replace…</string>
@@ -155,7 +157,7 @@
     <string name="status_offline">Offline</string>
     <!-- features/workspace/Workspace.kt -->
     <string name="workspace_no_file">No file open</string>
-    <string name="workspace_no_file_hint">Pick a diagram on the left, or press ⌘N</string>
+    <string name="workspace_no_file_hint">Pick a diagram on the left, or press %1$s</string>
     <string name="tool_hide_project">Hide Project (%1$s)</string>
     <string name="tool_show_project">Show Project (%1$s)</string>
     <string name="tool_hide_commit">Hide Commit (%1$s)</string>
@@ -168,7 +170,7 @@
     <string name="dialog_save_diagram">Save diagram</string>
     <!-- features/editor/FindBar.kt -->
     <string name="find_hide_replace">Hide Replace</string>
-    <string name="find_show_replace">Replace (⌘R)</string>
+    <string name="find_show_replace">Replace (%1$s)</string>
     <string name="find_placeholder">Find</string>
     <string name="find_match_case">Match Case</string>
     <string name="find_words">Words</string>
@@ -337,14 +339,15 @@
     <string name="tree_project">Project</string>
     <string name="tree_new_diagram">New Diagram…</string>
     <string name="tree_collapse_all">Collapse All</string>
-    <string name="tree_refresh">Refresh (⌥⌘Y)</string>
-    <string name="tree_hide">Hide (⌘1)</string>
+    <string name="tree_refresh">Refresh (%1$s)</string>
+    <string name="tree_hide">Hide (%1$s)</string>
     <string name="tree_no_diagrams">No diagrams in this folder</string>
     <string name="tree_rename">Rename…</string>
     <string name="tree_trash">Move to Trash…</string>
     <string name="tree_expand">Expand</string>
     <string name="tree_collapse">Collapse</string>
     <string name="tree_reveal_finder">Reveal in Finder</string>
+    <string name="tree_reveal_explorer">Show in Explorer</string>
     <string name="tree_open_folder">Open Containing Folder</string>
     <!-- features/explorer/FileDialogs.kt -->
     <string name="file_new_folder">New Folder</string>
@@ -367,6 +370,7 @@
         <item quantity="other">It holds %1$d files.</item>
     </plurals>
     <string name="trash_restore_hint">You can get it back from the Trash in Finder.</string>
+    <string name="trash_restore_hint_windows">You can get it back from the Recycle Bin.</string>
     <string name="trash_unsaved">Unsaved changes in %1$s will be lost.</string>
     <string name="trash_confirm">Move to Trash</string>
     <!-- features/preview/RenderErrorText.kt -->
@@ -403,7 +407,7 @@
     <!-- features/quickpreview/QuickPreviewWindow.kt -->
     <string name="quick_edit_diagram">Edit This Diagram</string>
     <string name="quick_not_found">File not found</string>
-    <string name="quick_open_editor">Open in the editor (⌘E)</string>
+    <string name="quick_open_editor">Open in the editor (%1$s)</string>
     <string name="quick_edit">Edit</string>
     <!-- features/editor/CodeEditor.kt -->
     <string name="editor_completion_hint">⏎ / ⇥ to insert   ·   esc to close</string>

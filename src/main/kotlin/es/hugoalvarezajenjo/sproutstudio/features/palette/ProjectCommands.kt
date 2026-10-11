@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.palette
 
+import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_insert
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_preview
@@ -108,11 +109,6 @@ import es.hugoalvarezajenjo.sproutstudio.features.git.canCompareWithHead
 import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
-
-/** Shortcut label in the platform's style: "⇧⌘F" on macOS, "Ctrl+Shift+F" elsewhere. */
-internal fun shortcutHint(key: String, shift: Boolean = false, alt: Boolean = false): String =
-    if (Os.isMac) buildString { if (alt) append('⌥'); if (shift) append('⇧'); append('⌘'); append(key) }
-    else buildString { append("Ctrl+"); if (alt) append("Alt+"); if (shift) append("Shift+"); append(key) }
 
 /**
  * Everything the command palette can do in a project window: the menu actions, templates,

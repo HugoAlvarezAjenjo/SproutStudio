@@ -1,0 +1,13 @@
+# LF in the repository and in every checkout, whatever core.autocrlf says (Windows CI turns it
+# on). Sources, tests and samples are compared byte for byte, and Kotlin raw strings would pick
+# up \r. The app itself reads CRLF files fine (LineEnding); this is only about the repo.
+* text=auto eol=lf
+
+# cmd.exe needs CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png binary
+*.icns binary
+*.ico binary
+*.jar binary

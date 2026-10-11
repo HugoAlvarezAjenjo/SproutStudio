@@ -16,8 +16,15 @@ permissions:
 
 jobs:
   test:
-    runs-on: macos-latest   # Apple Silicon (arm64)
+    strategy:
+      fail-fast: false   # a Windows failure must not hide the macOS result, or the reverse
+      matrix:
+        os: [macos-latest, windows-latest]   # macOS on Apple Silicon (arm64)
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash   # Git Bash on Windows, so ./gradlew works the same everywhere
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +42,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-report
+          name: test-report-${{ matrix.os }}
           path: build/reports/tests/test
           retention-days: 7

@@ -81,4 +81,23 @@ class DocumentStoreTest {
         assertEquals(null, store.readOrNull(File(dir, "nope.puml")))
         assertEquals("v1", store.readOrNull(f))
     }
+
+    @Test
+    fun aWindowsFileReadsWithLfAndSavesBackWithCrlf() = runBlocking {
+        f.writeText("@startuml\r\nA -> B\r\n@enduml\r\n")
+        val text = store.read(f)
+        assertEquals("@startuml\nA -> B\n@enduml\n", text)
+        store.write(f, text.replace("A -> B", "A -> C"))
+        assertEquals("@startuml\r\nA -> C\r\n@enduml\r\n", f.readText(), "only the edited line changes")
+    }
+
+    @Test
+    fun lfFilesAndNewFilesAreWrittenWithLf() = runBlocking {
+        f.writeText("a\nb\n")
+        store.write(f, "a\nc\n")
+        assertEquals("a\nc\n", f.readText())
+        val fresh = File(dir, "new.puml")
+        store.write(fresh, "x\ny\n")
+        assertEquals("x\ny\n", fresh.readText())
+    }
 }
