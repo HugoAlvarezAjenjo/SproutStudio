@@ -150,7 +150,9 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
     suspend fun rename(target: File, newName: String): Result<File> = runCatching {
         val from = target.absoluteFile
         val to = files.renameTarget(root, from, newName)
-        if (to == from) from else relocate(from, to)
+        // Compare paths, not Files: on Windows File equality ignores case, so a.puml -> A.puml
+        // would look like "nothing to do".
+        if (to.path == from.path) from else relocate(from, to)
     }
 
     /**
