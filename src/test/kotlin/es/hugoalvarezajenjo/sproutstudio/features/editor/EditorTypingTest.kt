@@ -3,9 +3,15 @@ package es.hugoalvarezajenjo.sproutstudio.features.editor
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
 
 import androidx.compose.material3.Surface
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.text.TextRange
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
@@ -19,15 +25,20 @@ import kotlin.test.assertEquals
 @OptIn(ExperimentalTestApi::class)
 class EditorTypingTest {
 
-    private fun typeAtEnd(initial: String, chars: String): String {
+    private fun typeAtEnd(initial: String, chars: String): String =
+        edit(initial, TextRange(initial.length)) { field ->
+            // One character at a time, each followed by a full frame, like real typing.
+            for (ch in chars) { field.performTextInput(ch.toString()); waitForIdle() }
+        }
+
+    /** Opens [initial] with [selection] in the real editor and runs [actions] on its text field. */
+    private fun edit(initial: String, selection: TextRange, actions: ComposeUiTest.(SemanticsNodeInteraction) -> Unit): String {
         val doc = TestGraph.document(null, initial)
-        doc.value = doc.value.copy(selection = TextRange(initial.length))
+        doc.value = doc.value.copy(selection = selection)
         runComposeUiTest {
             setContent { PumlTheme(dark = true) { Surface(color = ide.panel) { CodeEditor(doc, errorLine = null) } } }
             waitForIdle()
-            val field = onNode(hasSetTextAction())
-            // One character at a time, each followed by a full frame, like real typing.
-            for (ch in chars) { field.performTextInput(ch.toString()); waitForIdle() }
+            actions(onNode(hasSetTextAction()))
         }
         return doc.text
     }
@@ -43,5 +54,32 @@ class EditorTypingTest {
     fun typingAtEndOfFileWithoutTrailingNewlineDoesNotCrash() {
         val initial = "@startuml\nUser -> App"
         assertEquals(initial + ": hi", typeAtEnd(initial, ": hi"))
+    }
+
+    @Test
+    fun bracketsCloseThemselvesAndTheCloserIsSteppedOver() {
+        // "{" adds "}" after the caret, and typing ")" next to its pair moves past it.
+        assertEquals("class A {x}", typeAtEnd("class A ", "{x"))
+        assertEquals("\$f(a)b", typeAtEnd("\$f", "(a)b"))
+    }
+
+    @Test
+    fun typingABracketOverASelectionWrapsIt() {
+        val initial = "A -> B : hi"
+        val text = edit(initial, TextRange(9, 11)) { field ->
+            field.performTextInput("(")
+            waitForIdle()
+        }
+        assertEquals("A -> B : (hi)", text)
+    }
+
+    @Test
+    fun backspaceInsideAnEmptyPairDeletesBothHalves() {
+        val text = edit("class A {}", TextRange(9)) { field ->
+            field.requestFocus()
+            field.performKeyInput { pressKey(Key.Backspace) }
+            waitForIdle()
+        }
+        assertEquals("class A ", text)
     }
 }

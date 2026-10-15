@@ -8,6 +8,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import es.hugoalvarezajenjo.sproutstudio.domain.git.LineChange
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.AutoPairs
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Completion
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.CompletionEngine
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.CompletionRequest
@@ -43,12 +44,13 @@ internal class CodeEditorState(val doc: Document, private val paths: PathLister)
             doc.value = newValue
             return
         }
-        doc.type(newValue)
+        val value = AutoPairs.adjust(doc.value, newValue) ?: newValue
+        doc.type(value)
         doc.dropRollbackUndo() // typing after a rollback: its Undo would lose that typing
         hunk = null
         doc.nav.closeUsages()
         link = null
-        show(complete(newValue.text, newValue.selection.start))
+        show(complete(value.text, value.selection.start))
     }
 
     /** ⌘Z / ⇧⌘Z. Ours, not the field's: its own undo misses edits made by commands. */
