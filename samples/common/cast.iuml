@@ -1,0 +1,14 @@
+' Pieces that diagrams take one by one with !includesub cast.iuml!NAME.
+' A plain !include would bring in every block at once.
+!startsub PARTICIPANTS
+actor Customer
+participant "Till" as Till
+participant "Oven" as Oven
+participant "Rider" as Rider
+!endsub
+
+!startsub LEGEND
+legend right
+  $SHOP · oven time $OVEN_MINUTES min
+endlegend
+!endsub

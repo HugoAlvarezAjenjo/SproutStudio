@@ -1,0 +1,49 @@
+' Preprocessor tour: everything below comes from common/pizzeria.iuml.
+' Cmd+click a name to go to its declaration, Alt+F7 for its uses,
+' Shift+F6 renames it here and in the library at once.
+
+@startuml kitchen
+' Set before the include, so the library's ?= keeps this value
+!$CURRENCY = "EUR"
+!include common/pizzeria.iuml
+!includesub common/cast.iuml!PARTICIPANTS
+
+title $SHOP · %upper("evening rush")
+
+$order(Customer, "Margherita")
+$order(Customer, "Diavola", 2)
+$note(Two pizzas go in the oven)
+
+' Loop over a list of pizzas
+!$pizzas = ["Margherita", "Diavola"]
+!foreach $p in $pizzas
+  $bake($p)
+!endfor
+
+!if ($OVEN_MINUTES > 10)
+  Oven -[COLD]> Till : ready in $eta(2)
+!else
+  Oven -> Till : ready now
+!endif
+Till -> Rider : 2 boxes
+Rider --> Customer : delivered 🛵
+
+!includesub common/cast.iuml!LEGEND
+@enduml
+
+@startuml rush_hour
+' A local procedure and a while loop: one order per minute
+!include common/pizzeria.iuml
+!includesub common/cast.iuml!PARTICIPANTS
+
+!procedure $rush($count)
+  !$i = 1
+  !while ($i <= $count)
+    $order(Customer, "Pizza #" + $i, $i - 1)
+    !$i = $i + 1
+  !endwhile
+!endprocedure
+
+title Rush hour · ETA $eta(4)
+$rush(4)
+@enduml

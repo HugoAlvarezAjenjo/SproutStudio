@@ -1,0 +1,43 @@
+' Shared library for the pizzeria samples.
+' Try it: Cmd+click (or Cmd+B) a call in kitchen.puml to jump here,
+' Alt+F7 on a name to list its uses, Shift+F6 to rename it everywhere.
+!include_once style.iuml
+
+' --- Global variables -----------------------------------------------
+!$SHOP = "Sprout Pizza"
+!$OVEN_MINUTES = 12
+' ?= only sets it if nobody set it before including this file
+!$CURRENCY ?= "€"
+
+' --- Macros ---------------------------------------------------------
+!define HOT #E4572E
+!define COLD #4C9BE8
+
+' --- Functions: return a value --------------------------------------
+!function $price($base, $extras = 0)
+  !$total = $base + $extras * 2
+  !return $total + " " + $CURRENCY
+!endfunction
+
+!function $eta($pizzas)
+  !if ($pizzas > 3)
+    !return ($pizzas * $OVEN_MINUTES / 2) + " min"
+  !else
+    !return $OVEN_MINUTES + " min"
+  !endif
+!endfunction
+
+' --- Procedures: emit diagram lines ---------------------------------
+!procedure $order($who, $pizza, $extras = 0)
+  $who -> Till : $pizza (+$extras extras)
+  Till --> $who : $price(9, $extras)
+!endprocedure
+
+!procedure $bake($pizza)
+  Oven -[HOT]> Oven : bake $pizza\n$OVEN_MINUTES min
+!endprocedure
+
+' Unquoted: call it like a keyword, no quotes around the arguments
+!unquoted procedure $note(text)
+  note over Till #FFF6D5 : text
+!endprocedure

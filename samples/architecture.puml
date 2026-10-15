@@ -1,0 +1,41 @@
+' Standard library tour: !include <...> pulls files bundled with PlantUML.
+' Type "!include <" to browse the libraries; Cmd+click a C4 call to open its source.
+
+@startuml containers
+!include <C4/C4_Container>
+!include common/pizzeria.iuml
+
+LAYOUT_LEFT_RIGHT()
+title $SHOP · system overview
+
+Person(customer, "Customer", "Orders from the phone")
+System_Boundary(shop, $SHOP) {
+  Container(app, "Pizza App", "Kotlin", "Menu, cart and payment")
+  Container(api, "Orders API", "HTTP", "Takes and tracks orders")
+  ContainerDb(db, "Orders", "PostgreSQL")
+}
+System_Ext(oven, "Smart oven", "Reports $OVEN_MINUTES min bakes")
+
+Rel(customer, app, "Orders a pizza")
+Rel(app, api, "POST /orders", "JSON")
+Rel(api, db, "Reads and writes")
+Rel(api, oven, "Starts a bake")
+SHOW_LEGEND()
+@enduml
+
+@startuml icons
+' Icon sprites from the standard library
+!include <tupadr3/common>
+!include <tupadr3/font-awesome/mobile>
+!include <tupadr3/font-awesome/fire>
+!include <tupadr3/font-awesome/motorcycle>
+
+title From phone to door
+FA_MOBILE(phone, "Order", participant)
+FA_FIRE(oven, "Oven", participant)
+FA_MOTORCYCLE(rider, "Rider", participant)
+
+phone -> oven : Margherita
+oven -> rider : ready
+rider -> phone : delivered
+@enduml

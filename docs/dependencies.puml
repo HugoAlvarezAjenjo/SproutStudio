@@ -1,0 +1,131 @@
+' SproutStudio: the classes that do the work in a project window, and what flows between them.
+' AppGraph (manual DI) and the *Settings classes are left out on purpose.
+' Arrow labels say WHAT goes across, not just "uses". Members are the real ones, trimmed.
+
+@startuml dependencies
+title SproutStudio · How a project window works
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam nodesep 40
+skinparam ranksep 55
+skinparam defaultFontSize 13
+hide empty members
+hide circle
+
+package "Views (Compose)" #FFF8E8 {
+  class Workspace <<view>>
+  class CodeEditor <<view>>
+}
+
+package "ViewModels and state (Main thread)" #F1FBEF {
+  class WorkspaceViewModel {
+    root : File?
+    docs : List<Document>
+    activeIndex
+    --
+    save() · reformatCode()
+    renameSymbol() · findInFiles()
+  }
+  class Document {
+    value : TextFieldValue
+    file · savedText · dirty
+    --
+    type() · undo() · redo()
+    save()
+  }
+  class EditHistory {
+    record() · undo() · redo()
+  }
+  class PreviewViewModel {
+    image · problems · error
+  }
+  class GitViewModel {
+    status · commitMessage
+    --
+    refresh() · commitSelected()
+  }
+  class SearchViewModel {
+    query · result
+  }
+  class AutoSaver {
+    watch() · flush()
+  }
+  class WorkspaceSession {
+    reopen() · track()
+  }
+}
+
+package "domain (pure, no IO)" #F4F4F4 {
+  class SymbolIndex {
+    occurrences · includes
+    --
+    usagesOf() · globalDeclaration()
+  }
+  class "CompletionEngine\nNavigation\nSymbolRename" as SymbolUsers
+  class PlantUmlFormatter
+}
+
+package "services (IO, own threads)" #FFF1F1 {
+  interface RenderService {
+    problems(source)
+    preview(request)
+  }
+  class LatestWinsQueue {
+    submit(priority, key)
+  }
+  class DocumentStore {
+    read() · write() · watch()
+  }
+  interface GitService
+}
+
+Workspace -down-> WorkspaceViewModel : reads state,\ncalls actions
+Workspace -right-> CodeEditor : active tab
+Workspace *-down- PreviewViewModel : one per\nvisible preview
+CodeEditor -down-> Document : keystrokes -> type(),\nshortcuts -> value = ...
+
+WorkspaceViewModel *-down- Document : one per tab
+WorkspaceViewModel *-- GitViewModel
+WorkspaceViewModel *-- SearchViewModel
+WorkspaceViewModel --> AutoSaver : dirty tabs
+WorkspaceViewModel *-- WorkspaceSession : tabs + cursors
+WorkspaceViewModel --> PlantUmlFormatter : Alt+Cmd+L
+WorkspaceViewModel --> SymbolUsers : Shift+F6 plan\n(off the UI thread)
+CodeEditor --> SymbolUsers : completion,\nCmd+click
+
+Document *-right- EditHistory : every write\nis a step
+Document -down-> DocumentStore : save / reload
+
+PreviewViewModel --> Document : watches text
+PreviewViewModel -down-> RenderService : 300 ms after the\nlast keystroke
+RenderService -right-> LatestWinsQueue : one PlantUML thread
+AutoSaver --> Document : save() after 1 s idle
+GitViewModel --> GitService : status, commit
+SearchViewModel --> Document : unsaved text\nof open tabs
+SymbolUsers -down-> SymbolIndex
+
+note bottom of LatestWinsQueue
+  A newer request with the same key
+  replaces the one still waiting:
+  fast typing never piles up renders.
+end note
+
+note bottom of DocumentStore
+  The only writer to disk:
+  atomic write, one lock per file.
+end note
+
+note bottom of SymbolIndex
+  Declarations and uses of every name in one file.
+  Completion, go to definition, find usages and
+  rename all read it, so they always agree.
+end note
+
+note right of Document
+  The model of a tab. Everything that
+  changes the text goes through value /
+  type(), so undo, autosave, preview and
+  dirty marks follow without extra wiring.
+end note
+@enduml
