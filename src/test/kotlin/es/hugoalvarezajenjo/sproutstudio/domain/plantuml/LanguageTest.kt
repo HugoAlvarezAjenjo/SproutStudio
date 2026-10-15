@@ -128,6 +128,27 @@ class LanguageTest {
     }
 
     @Test
+    fun `tokenizer colours keywords in any case`() {
+        val text = "@startuml\nParticipant Alice\nCLASS Foo\nAlice -> Foo\n@enduml"
+        val tokens = SyntaxScanner.tokenize(text)
+        fun typeOf(s: String) = tokens.firstOrNull { text.substring(it.start, it.end) == s }?.type
+        assertEquals(TokenType.KEYWORD, typeOf("Participant"))
+        assertEquals(TokenType.KEYWORD, typeOf("CLASS"))
+    }
+
+    @Test
+    fun `a declared symbol spelled like a keyword in another case stays a symbol`() {
+        val text = "@startuml\nparticipant Database\nDatabase -> database\n@enduml"
+        val tokens = SyntaxScanner.tokenize(text, symbols = setOf("Database"))
+        val types = tokens.filter { text.substring(it.start, it.end).equals("database", ignoreCase = true) }
+            .map { text.substring(it.start, it.end) to it.type }
+        assertEquals(
+            listOf("Database" to TokenType.SYMBOL, "Database" to TokenType.SYMBOL, "database" to TokenType.KEYWORD),
+            types,
+        )
+    }
+
+    @Test
     fun `finds matching brackets around the caret`() {
         val text = "class A {\n  x()\n}"
         assertEquals(8 to 16, SyntaxScanner.matchingBracket(text, 9))

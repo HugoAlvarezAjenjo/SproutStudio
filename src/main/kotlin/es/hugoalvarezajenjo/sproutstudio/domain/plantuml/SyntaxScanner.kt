@@ -40,9 +40,12 @@ object SyntaxScanner {
                 val start = m.range.first + (m.value.length - m.value.trimStart().length)
                 val end = m.range.last + 1
                 when (type) {
+                    // PlantUML keywords are case-insensitive, but a name the user declared
+                    // (`participant Database`) wins over a keyword spelled in another case.
                     TokenType.KEYWORD -> when {
                         m.value in PlantUmlLanguage.allKeywords -> claim(start, end, TokenType.KEYWORD)
                         m.value in symbols -> claim(start, end, TokenType.SYMBOL)
+                        m.value.lowercase() in PlantUmlLanguage.allKeywords -> claim(start, end, TokenType.KEYWORD)
                     }
                     else -> claim(start, end, type)
                 }
