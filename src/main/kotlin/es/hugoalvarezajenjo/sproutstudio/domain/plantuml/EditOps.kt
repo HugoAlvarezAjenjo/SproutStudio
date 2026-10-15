@@ -17,7 +17,9 @@ object EditOps {
 
     /**
      * Enter: if the current line is a block closer (`end`, `}`, `else`…) first pull it back one
-     * level, then keep the line's indent and add one level after a block opener.
+     * level, then keep the line's indent and add one level after a block opener. Between `{` and
+     * `}` the closing brace moves to its own line at the opener's level, and the caret stays on
+     * the indented line in between.
      */
     fun newline(v: TextFieldValue): TextFieldValue {
         val dedented = dedentCloser(v)
@@ -27,6 +29,13 @@ object EditOps {
         val beforeCaret = text.substring(ls, caret)
         val indent = beforeCaret.takeWhile { it == ' ' || it == '\t' }
         val extra = if (opensBlock.containsMatchIn(beforeCaret)) INDENT else ""
+        val end = dedented.selection.max
+        val gap = text.substring(end, TextLines.endAt(text, end)).takeWhile { it == ' ' || it == '\t' }
+        if (beforeCaret.trimEnd().endsWith('{') && text.startsWith("}", end + gap.length)) {
+            val body = "\n" + indent + extra
+            val newText = text.substring(0, caret) + body + "\n" + indent + text.substring(end + gap.length)
+            return TextFieldValue(newText, TextRange(caret + body.length))
+        }
         return replaceSelection(dedented, "\n" + indent + extra)
     }
 

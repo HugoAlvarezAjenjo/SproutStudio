@@ -25,6 +25,20 @@ class EditOpsTest {
     }
 
     @Test
+    fun `enter between braces puts the closing brace on its own line`() {
+        val r = EditOps.newline(at("class Test {}", caret = 12))
+        assertEquals("class Test {\n  \n}", r.text)
+        assertEquals(TextRange(15), r.selection)
+    }
+
+    @Test
+    fun `enter between indented braces keeps the closing brace at the opener level`() {
+        val r = EditOps.newline(at("package p {\n  class A { }\n}", caret = 23))
+        assertEquals("package p {\n  class A {\n    \n  }\n}", r.text)
+        assertEquals(TextRange(28), r.selection)
+    }
+
+    @Test
     fun `pressing enter after end pulls it back to the opener level`() {
         val r = EditOps.newline(at("alt ok\n  A -> B\n  end"))
         assertEquals("alt ok\n  A -> B\nend\n", r.text)
