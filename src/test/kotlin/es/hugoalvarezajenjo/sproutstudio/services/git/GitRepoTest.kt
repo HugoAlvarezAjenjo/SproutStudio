@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.services.git
 
+import es.hugoalvarezajenjo.sproutstudio.TestRepos
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -22,7 +23,7 @@ class GitRepoTest {
     /** A repo with a fixed author, so tests don't depend on the machine's git config. */
     private fun newRepo(): GitRepository {
         val r = JGitService().init(dir).also { opened += it }
-        File(dir, ".git/config").appendText("[user]\n\tname = Test\n\temail = test@example.com\n[commit]\n\tgpgsign = false\n")
+        TestRepos.configure(dir)
         return JGitService().find(dir)!!.also { opened += it }.also { r.close() }
     }
 

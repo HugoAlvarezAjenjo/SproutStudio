@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.TestRepos
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
 
 import androidx.compose.foundation.layout.size
@@ -41,7 +42,7 @@ class CommitPanelTest {
     @AfterTest fun cleanup() { TestGraph.graph.layout.sidebarVisible.value = sidebar; dir.deleteRecursively() }
 
     private fun configure() =
-        File(dir, ".git/config").appendText("[user]\n\tname = Test\n\temail = test@example.com\n[commit]\n\tgpgsign = false\n")
+        TestRepos.configure(dir)
 
     private fun write(name: String, text: String) = File(dir, name).apply { writeText(text) }
 

@@ -34,6 +34,7 @@ class AutoSaverTest {
     fun tearDown() {
         TestGraph.graph.autoSave.enabled.value = savedPref
         dir.setWritable(true)
+        dir.listFiles()?.forEach { it.setWritable(true) } // Windows can't delete a read-only file
         dir.deleteRecursively()
     }
 
@@ -126,11 +127,13 @@ class AutoSaverTest {
     fun `a failed save keeps the edits and reports why`() = runBlocking<Unit> {
         val doc = fileDoc()
         doc.value = TextFieldValue("@startuml\nkeep me\n@enduml\n")
-        dir.setWritable(false)
+        // A read-only folder blocks the temp file on macOS/Linux; Windows ignores that on
+        // folders but refuses to replace a read-only file.
+        dir.setWritable(false); doc.file!!.setWritable(false)
         assertFalse(doc.save())
         assertTrue(doc.dirty)
         assertNotNull(doc.saveError)
-        dir.setWritable(true)
+        dir.setWritable(true); doc.file!!.setWritable(true)
         assertTrue(doc.save())
         assertNull(doc.saveError)
         assertEquals("@startuml\nkeep me\n@enduml\n", doc.file!!.readText())

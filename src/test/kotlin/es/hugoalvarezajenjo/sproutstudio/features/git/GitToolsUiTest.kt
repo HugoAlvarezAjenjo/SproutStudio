@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.TestRepos
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
 
 import androidx.compose.foundation.layout.size
@@ -47,7 +48,7 @@ class GitToolsUiTest {
     /** Two commits of a.puml ("one" -> v1, "two" -> v2), then an uncommitted edit (v3). */
     private fun repo(): WorkspaceViewModel {
         JGitService().init(dir).close()
-        File(dir, ".git/config").appendText("[user]\n\tname = T\n\temail = t@e\n[commit]\n\tgpgsign = false\n")
+        TestRepos.configure(dir, "T", "t@e")
         JGitService().find(dir)!!.use { r ->
             a.writeText("@startuml\nA -> B: v1\n@enduml\n"); r.commit(listOf(a), "one")
             a.writeText("@startuml\nA -> B: v2\n@enduml\n"); r.commit(listOf(a), "two")

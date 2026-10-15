@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.services.git
 
+import es.hugoalvarezajenjo.sproutstudio.TestRepos
 import java.io.File
 import java.nio.file.Files
 import es.hugoalvarezajenjo.sproutstudio.domain.git.LineDiff
@@ -19,7 +20,7 @@ class GitHistoryTest {
 
     private fun repo(gitignore: Boolean = false): GitRepository {
         JGitService().init(dir, gitignore).close()
-        File(dir, ".git/config").appendText("[user]\n\tname = Test\n\temail = t@e\n[commit]\n\tgpgsign = false\n")
+        TestRepos.configure(dir, "Test", "t@e")
         return JGitService().find(dir)!!.also { opened += it }
     }
 

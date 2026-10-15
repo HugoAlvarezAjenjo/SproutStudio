@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.TestRepos
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
 
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,7 +51,7 @@ class GitSnapshotTest {
 
     private fun repo(): WorkspaceViewModel {
         JGitService().init(dir).close()
-        File(dir, ".git/config").appendText("[user]\n\tname = Hugo\n\temail = hugo@example.com\n[commit]\n\tgpgsign = false\n")
+        TestRepos.configure(dir, "Hugo", "hugo@example.com")
         File(dir, ".gitignore").writeText("archive/\n")
         val order = File(dir, "order.puml").apply {
             writeText("@startuml\nactor Customer\nparticipant Shop\nparticipant Kitchen\n\nCustomer -> Shop: order pizza\nShop -> Kitchen: bake\nKitchen --> Shop: ready\nShop --> Customer: deliver\n@enduml\n")

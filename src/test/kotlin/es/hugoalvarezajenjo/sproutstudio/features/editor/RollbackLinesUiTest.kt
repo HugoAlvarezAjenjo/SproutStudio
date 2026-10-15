@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.editor
 
+import es.hugoalvarezajenjo.sproutstudio.TestRepos
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
 
 import androidx.compose.foundation.layout.size
@@ -51,7 +52,7 @@ class RollbackLinesUiTest {
 
     private fun project(): WorkspaceViewModel {
         JGitService().init(dir).close()
-        File(dir, ".git/config").appendText("[user]\n\tname = T\n\temail = t@e\n[commit]\n\tgpgsign = false\n")
+        TestRepos.configure(dir, "T", "t@e")
         a.writeText(committed)
         JGitService().find(dir)!!.use { it.commit(listOf(a), "init") }
         return TestGraph.workspace().apply { openRoot(dir); open(a); changeLayout(EditorLayout.EDITOR) }
