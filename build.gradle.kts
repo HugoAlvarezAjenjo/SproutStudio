@@ -70,6 +70,22 @@ tasks.test {
 // Finder litter in src/main/resources must not end up inside the app jar.
 tasks.processResources { exclude("**/.DS_Store") }
 
+// The app reads its own version at runtime (welcome screen) from a generated resource, so it is
+// always the one being built: -PappVersion in releases, the fallback above locally.
+val generateBuildInfo by tasks.registering {
+    description = "Writes sproutstudio/build-info.properties with the app version"
+    val out = layout.buildDirectory.dir("generated/buildinfo")
+    val version = appVersion
+    inputs.property("version", version)
+    outputs.dir(out)
+    doLast {
+        val file = out.get().file("sproutstudio/build-info.properties").asFile
+        file.parentFile.mkdirs()
+        file.writeText("version=$version\n")
+    }
+}
+sourceSets.main { resources.srcDir(generateBuildInfo) }
+
 // ---- App icon -------------------------------------------------------------------------------
 // Single source of truth: src/main/resources/icon.png (square, ideally 1024x1024).
 // At runtime it is the Dock/window icon. For the packaged app we turn it into an .icns (macOS,
@@ -162,7 +178,7 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi)
             packageName = "SproutStudio"
             packageVersion = appVersion
-            description = "A friendly, offline PlantUML studio"
+            description = "PlantUML IDE"
             vendor = "Hugo Alvarez Ajenjo"
 
             // java.desktop for AWT/Desktop (open-file events), java.xml for SVG,

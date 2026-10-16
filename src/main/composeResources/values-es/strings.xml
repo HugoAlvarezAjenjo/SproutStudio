@@ -34,7 +34,7 @@
     </plurals>
     <string name="settings_clear_list">Vaciar lista</string>
     <!-- features/workspace/Welcome.kt -->
-    <string name="welcome_tagline">PlantUML, sin conexión · v0.1</string>
+    <string name="welcome_tagline">IDE de PlantUML · v%1$s</string>
     <string name="welcome_open_folder">Abrir carpeta</string>
     <string name="welcome_open_folder_hint">Abre la carpeta de un proyecto</string>
     <string name="welcome_open_file">Abrir archivo</string>

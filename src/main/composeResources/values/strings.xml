@@ -33,7 +33,7 @@
     </plurals>
     <string name="settings_clear_list">Clear list</string>
     <!-- features/workspace/Welcome.kt -->
-    <string name="welcome_tagline">PlantUML, offline · v0.1</string>
+    <string name="welcome_tagline">PlantUML IDE · v%1$s</string>
     <string name="welcome_open_folder">Open folder</string>
     <string name="welcome_open_folder_hint">Open a project directory</string>
     <string name="welcome_open_file">Open file</string>

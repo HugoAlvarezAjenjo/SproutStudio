@@ -17,6 +17,9 @@ import es.hugoalvarezajenjo.sproutstudio.resources.welcome_settings
 import es.hugoalvarezajenjo.sproutstudio.resources.welcome_tagline
 import es.hugoalvarezajenjo.sproutstudio.resources.welcome_tip
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.AppIcon
+import es.hugoalvarezajenjo.sproutstudio.core.buildinfo.BuildInfo
+import androidx.compose.foundation.Image
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -77,10 +80,10 @@ internal fun Welcome(p: WorkspaceViewModel) {
             // Left: brand + create/open actions, tip anchored to the bottom.
             Column(Modifier.width(320.dp).fillMaxHeight().background(c.panel).padding(horizontal = 24.dp, vertical = 28.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    AppMark(48)
+                    AppIcon.painter?.let { Image(it, contentDescription = null, modifier = Modifier.size(48.dp)) }
                     Column {
                         Text("SproutStudio", style = MaterialTheme.typography.headlineSmall, color = c.text)
-                        Text(tr(Res.string.welcome_tagline), style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                        Text(tr(Res.string.welcome_tagline, BuildInfo.version), style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                     }
                 }
                 Spacer(Modifier.height(28.dp))
@@ -219,15 +222,6 @@ private fun RecentRow(dir: File, onOpen: () -> Unit, onRemove: () -> Unit) {
             }
         }
     }
-}
-
-/** Rounded square app mark with an accent "S". */
-@Composable
-private fun AppMark(size: Int) {
-    Box(
-        Modifier.size(size.dp).clip(RoundedCornerShape((size / 4).dp)).background(Color(0xFF2FA36B)),
-        contentAlignment = Alignment.Center,
-    ) { Text("S", color = Color.White, fontSize = (size * 0.5).sp, fontWeight = FontWeight.Bold) }
 }
 
 /** JetBrains recent-project tile: two initials on a tinted square. */
