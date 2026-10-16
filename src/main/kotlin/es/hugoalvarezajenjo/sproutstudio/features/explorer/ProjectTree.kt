@@ -1,6 +1,5 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
-import es.hugoalvarezajenjo.sproutstudio.resources.tree_reveal_explorer
 import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_folder
@@ -14,11 +13,9 @@ import es.hugoalvarezajenjo.sproutstudio.resources.tree_expand
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_hide
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_new_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_no_diagrams
-import es.hugoalvarezajenjo.sproutstudio.resources.tree_open_folder
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_project
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_refresh
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_rename
-import es.hugoalvarezajenjo.sproutstudio.resources.tree_reveal_finder
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_trash
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
@@ -84,7 +81,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileAction
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.FileActionDialog
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.TreeDrag
@@ -202,15 +198,6 @@ private fun folderMenu(p: WorkspaceViewModel, dir: java.io.File, isRoot: Boolean
     }
     add(ContextMenuItem(revealLabel()) { p.deps.platform.reveal(dir) })
 }
-
-/** "Reveal in Finder", "Show in Explorer", or the generic "Open Containing Folder". */
-private fun revealLabel(): String = text(
-    when {
-        Os.isMac -> Res.string.tree_reveal_finder
-        Os.isWindows -> Res.string.tree_reveal_explorer
-        else -> Res.string.tree_open_folder
-    },
-)
 
 @Composable
 private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDrop: (java.io.File, java.io.File) -> Unit) {
