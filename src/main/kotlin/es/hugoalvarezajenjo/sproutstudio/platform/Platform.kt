@@ -27,4 +27,6 @@ interface Platform {
     fun reveal(f: File)
 
     fun copyImageToClipboard(png: ByteArray)
+
+    fun copyTextToClipboard(text: String)
 }

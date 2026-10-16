@@ -230,7 +230,33 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         if (dirty.isEmpty()) then() else pendingClose = PendingClose(dirty, then)
     }
 
-    fun requestCloseTab(doc: Document): Job = requestClose(listOf(doc)) { closeDoc(doc) }
+    fun requestCloseTab(doc: Document): Job = requestCloseTabs(listOf(doc))
+
+    /** Close several tabs at once, asking a single question about the unsaved ones among them. */
+    fun requestCloseTabs(tabs: List<Document>): Job = requestClose(tabs) { tabs.forEach(::closeDoc) }
+
+    // ── Tab menu: [doc] is the right-clicked tab, made active first as in IntelliJ and VS Code ──
+
+    fun closeOtherTabs(doc: Document): Job = closeAround(doc) { i, at -> i != at }
+    fun closeTabsToTheLeft(doc: Document): Job = closeAround(doc) { i, at -> i < at }
+    fun closeTabsToTheRight(doc: Document): Job = closeAround(doc) { i, at -> i > at }
+    fun closeAllTabs(): Job = requestCloseTabs(docs.toList())
+
+    /** Close the tabs at the indices [which] picks, given where [doc] is. */
+    private fun closeAround(doc: Document, which: (i: Int, at: Int) -> Boolean): Job {
+        val at = docs.indexOf(doc)
+        if (at < 0) return Job().apply { complete() }
+        selectTab(at)
+        return requestCloseTabs(docs.filterIndexed { i, _ -> which(i, at) })
+    }
+
+    /** Dragging a tab from [from] to [to]; the active tab stays the active one. */
+    fun moveTab(from: Int, to: Int) {
+        if (from !in docs.indices || to !in docs.indices || from == to) return
+        val current = active
+        docs.add(to, docs.removeAt(from))
+        activeIndex = docs.indexOf(current).coerceAtLeast(0)
+    }
 
     /** File → Close Project: back to the welcome screen, after the usual question. */
     fun requestCloseProject(): Job = requestClose(docs.toList()) {

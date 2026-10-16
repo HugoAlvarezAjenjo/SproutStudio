@@ -6,6 +6,7 @@ import java.awt.Frame
 import java.awt.Image
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
 import java.awt.datatransfer.UnsupportedFlavorException
 import java.io.File
@@ -71,6 +72,10 @@ class DesktopPlatform : Platform {
     override fun copyImageToClipboard(png: ByteArray) {
         val image = ImageIO.read(png.inputStream()) ?: error("Could not build the image")
         Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageSelection(image), null)
+    }
+
+    override fun copyTextToClipboard(text: String) {
+        Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
     }
 
     private class ImageSelection(private val image: Image) : Transferable {

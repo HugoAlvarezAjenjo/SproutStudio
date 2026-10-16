@@ -59,6 +59,11 @@
     <string name="menu_save_automatically">Guardar automáticamente</string>
     <string name="menu_save_as">Guardar como…</string>
     <string name="menu_close_tab">Cerrar pestaña</string>
+    <string name="tab_close_others">Cerrar las demás pestañas</string>
+    <string name="tab_close_left">Cerrar las pestañas de la izquierda</string>
+    <string name="tab_close_right">Cerrar las pestañas de la derecha</string>
+    <string name="tab_close_all">Cerrar todas las pestañas</string>
+    <string name="tab_copy_path">Copiar ruta</string>
     <string name="menu_settings">Ajustes…</string>
     <string name="menu_close_project">Cerrar proyecto</string>
     <string name="menu_exit">Salir</string>

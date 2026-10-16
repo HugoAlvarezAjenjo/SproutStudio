@@ -2,13 +2,23 @@ package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.common_close
+import es.hugoalvarezajenjo.sproutstudio.resources.tab_close_all
+import es.hugoalvarezajenjo.sproutstudio.resources.tab_close_left
+import es.hugoalvarezajenjo.sproutstudio.resources.tab_close_others
+import es.hugoalvarezajenjo.sproutstudio.resources.tab_close_right
+import es.hugoalvarezajenjo.sproutstudio.resources.tab_copy_path
+import es.hugoalvarezajenjo.sproutstudio.features.explorer.revealLabel
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
 
 import androidx.compose.runtime.getValue
 
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
+import androidx.compose.foundation.ContextMenuArea
+import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -34,13 +44,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.pointer.PointerButton
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
 import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
@@ -55,46 +75,92 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
 internal fun TabsBar(p: WorkspaceViewModel, onCloseTab: (Document) -> Unit) {
     if (p.docs.isEmpty()) return
     val c = ide
+    val drag = remember(p) { TabDrag({ p.docs }, p::moveTab) }
     Column {
         Row(Modifier.fillMaxWidth().height(36.dp).background(c.panel), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState())) {
-            p.docs.forEachIndexed { i, d ->
-                val active = i == p.activeIndex
-                val interaction = remember { MutableInteractionSource() }
-                val hovered by interaction.collectIsHoveredAsState()
-                Box(
-                    Modifier
-                        .fillMaxHeight()
-                        .background(if (active) c.editor else if (hovered) c.hover else Color.Transparent)
-                        .hoverable(interaction)
-                        .clickable { p.selectTab(i) },
-                ) {
-                    Row(
-                        Modifier.fillMaxHeight().padding(start = 12.dp, end = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Icon(Icons.Outlined.Schema, null, tint = c.syntax.arrow, modifier = Modifier.size(15.dp))
-                        Text(d.name, style = MaterialTheme.typography.bodyMedium, color = if (active) c.text else c.textMuted)
-                        Box(
-                            Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).clickable { onCloseTab(d) },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            when {
-                                d.dirty && !hovered -> Dot(c.accent, 6)
-                                hovered || active -> Icon(Icons.Outlined.Close, tr(Res.string.common_close), tint = c.textMuted, modifier = Modifier.size(13.dp))
-                            }
+            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState())) {
+                p.docs.forEachIndexed { i, d ->
+                    // Keyed by document, so a tab keeps its drag gesture while it changes places.
+                    key(d) {
+                        ContextMenuArea(items = { tabMenu(p, d, onCloseTab) }) {
+                            EditorTab(d, active = i == p.activeIndex, drag, onSelect = { p.selectTab(p.docs.indexOf(d)) }, onClose = { onCloseTab(d) })
                         }
                     }
-                    // Active-tab indicator, like the New UI.
-                    if (active) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(2.dp).background(c.accent))
                 }
-                VLine()
             }
-        }
             LayoutSwitcher(p)
         }
         HLine()
+    }
+}
+
+/** One tab: click selects, middle-click or the X closes, dragging reorders. */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun EditorTab(d: Document, active: Boolean, drag: TabDrag<Document>, onSelect: () -> Unit, onClose: () -> Unit) {
+    val c = ide
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val dragging = drag.dragged === d
+    DisposableEffect(d) { onDispose { drag.forget(d) } }
+    Row(
+        Modifier
+            .fillMaxHeight()
+            .onSizeChanged { drag.measured(d, it.width) }
+            .zIndex(if (dragging) 1f else 0f)
+            .graphicsLayer { translationX = if (dragging) drag.offset else 0f }
+            .pointerInput(d) {
+                detectHorizontalDragGestures(
+                    onDragStart = { onSelect(); drag.start(d) },
+                    onDragEnd = drag::end,
+                    onDragCancel = drag::end,
+                ) { change, dx -> change.consume(); drag.dragBy(dx) }
+            }
+            .onPointerEvent(PointerEventType.Release) { if (it.button == PointerButton.Tertiary) onClose() }
+            .testTag("tab-${d.name}"),
+    ) {
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .background(if (active || dragging) c.editor else if (hovered) c.hover else c.panel)
+                .hoverable(interaction)
+                .clickable(onClick = onSelect),
+        ) {
+            Row(
+                Modifier.fillMaxHeight().padding(start = 12.dp, end = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Icon(Icons.Outlined.Schema, null, tint = c.syntax.arrow, modifier = Modifier.size(15.dp))
+                Text(d.name, style = MaterialTheme.typography.bodyMedium, color = if (active) c.text else c.textMuted)
+                Box(
+                    Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).clickable(onClick = onClose),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    when {
+                        d.dirty && !hovered -> Dot(c.accent, 6)
+                        hovered || active -> Icon(Icons.Outlined.Close, tr(Res.string.common_close), tint = c.textMuted, modifier = Modifier.size(13.dp))
+                    }
+                }
+            }
+            // Active-tab indicator, like the New UI.
+            if (active) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(2.dp).background(c.accent))
+        }
+        VLine()
+    }
+}
+
+/** Right-click on a tab. Entries that would do nothing (no tabs to the left...) are left out. */
+private fun tabMenu(p: WorkspaceViewModel, d: Document, onCloseTab: (Document) -> Unit) = buildList {
+    val i = p.docs.indexOf(d)
+    add(ContextMenuItem(text(Res.string.common_close)) { onCloseTab(d) })
+    if (p.docs.size > 1) add(ContextMenuItem(text(Res.string.tab_close_others)) { p.closeOtherTabs(d) })
+    if (i > 0) add(ContextMenuItem(text(Res.string.tab_close_left)) { p.closeTabsToTheLeft(d) })
+    if (i < p.docs.lastIndex) add(ContextMenuItem(text(Res.string.tab_close_right)) { p.closeTabsToTheRight(d) })
+    add(ContextMenuItem(text(Res.string.tab_close_all)) { p.closeAllTabs() })
+    d.file?.let { f ->
+        add(ContextMenuItem(text(Res.string.tab_copy_path)) { p.deps.platform.copyTextToClipboard(f.absolutePath) })
+        add(ContextMenuItem(revealLabel()) { p.deps.platform.reveal(f) })
     }
 }
 

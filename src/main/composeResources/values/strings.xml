@@ -58,6 +58,11 @@
     <string name="menu_save_automatically">Save Automatically</string>
     <string name="menu_save_as">Save As…</string>
     <string name="menu_close_tab">Close Tab</string>
+    <string name="tab_close_others">Close Other Tabs</string>
+    <string name="tab_close_left">Close Tabs to the Left</string>
+    <string name="tab_close_right">Close Tabs to the Right</string>
+    <string name="tab_close_all">Close All Tabs</string>
+    <string name="tab_copy_path">Copy Path</string>
     <string name="menu_settings">Settings…</string>
     <string name="menu_close_project">Close Project</string>
     <string name="menu_exit">Exit</string>
