@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
+import androidx.compose.runtime.snapshots.Snapshot
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
@@ -31,18 +32,20 @@ class GitViewModelTest {
     /** A repository whose status() can be held until a latch opens. */
     private class FakeRepo(val name: String) : GitRepository {
         var head = "c1"
+        @Volatile var current = name
+        @Volatile var branchList = listOf(name)
         @Volatile var hold: CountDownLatch? = null
         @Volatile var statusCalls = 0
         val texts = mutableMapOf<String, String>()
         override val workTree = File("/tmp/$name")
         override fun relPath(f: File) = f.name
-        override fun branch() = name
+        override fun branch() = current
         override fun headId() = head
         override fun status(scope: File?): GitStatus {
             statusCalls++
             val h = head
             hold?.await()
-            return GitStatus(name, h, emptyList(), emptySet())
+            return GitStatus(current, h, emptyList(), emptySet())
         }
         override fun headText(f: File) = texts[head]
         override fun textAt(rev: String, f: File) = texts[rev]
@@ -56,7 +59,7 @@ class GitViewModelTest {
         override fun stashes() = emptyList<StashInfo>()
         override fun popStash(index: Int) = Unit
         override fun dropStash(index: Int) = Unit
-        override fun branches() = listOf(name)
+        override fun branches() = branchList
         override fun checkout(name: String) = Unit
         override fun createBranch(name: String) = Unit
         override fun deleteBranch(name: String) = Unit
@@ -115,6 +118,27 @@ class GitViewModelTest {
             first.join(); second.join()
             assertEquals("c2", vm.status.head, "a slow, older read must not overwrite a newer one")
         }
+    }
+
+    @Test
+    fun aRefreshNeverShowsTheNewBranchBeforeTheBranchList() = runBlocking {
+        val a = FakeRepo("a").also { repos["a"] = it }
+        vm.open(File("/x/a"))
+        // A branch is created and checked out: status and branch list both change.
+        a.current = "new"
+        a.branchList = listOf("a", "new")
+        // What anyone reading the ViewModel could see at each state write that becomes visible.
+        val seen = mutableListOf<Pair<String?, List<String>>>()
+        val observer = Snapshot.registerGlobalWriteObserver { seen += vm.status.branch to vm.branches }
+        try {
+            vm.refresh()
+        } finally {
+            observer.dispose()
+        }
+        assertEquals("new", vm.status.branch)
+        assertEquals(listOf("a", "new"), vm.branches)
+        val torn = seen.filter { (branch, list) -> branch == "new" && "new" !in list }
+        assertEquals(emptyList(), torn, "the status showed the new branch while the list was still the old one")
     }
 
     @Test

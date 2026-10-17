@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.snapshots.Snapshot
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -187,8 +188,10 @@ class GitViewModel(
             old = repo
             root = dir?.absoluteFile
             repo = found
-            status = GitStatus.Empty
-            branches = emptyList(); lastCommit = null; stashes = emptyList()
+            Snapshot.withMutableSnapshot {
+                status = GitStatus.Empty
+                branches = emptyList(); lastCommit = null; stashes = emptyList()
+            }
             headCache.clear()
         }
         old?.let { withContext(io + NonCancellable) { it.close() } }
@@ -204,10 +207,13 @@ class GitViewModel(
         val r = repo ?: run { status = GitStatus.Empty; return }
         val gen = generation
         val scopeDir = root
-        runCatching { withContext(io) { Snapshot(r.status(scopeDir), r.branches(), r.lastCommit(), r.stashes()) } }
+        runCatching { withContext(io) { RepoState(r.status(scopeDir), r.branches(), r.lastCommit(), r.stashes()) } }
             .onSuccess {
                 if (gen != generation) return // the folder changed meanwhile
-                status = it.status; branches = it.branches; lastCommit = it.last; stashes = it.stashes
+                // All at once: a reader on another thread never sees the new branch with the old list.
+                Snapshot.withMutableSnapshot {
+                    status = it.status; branches = it.branches; lastCommit = it.last; stashes = it.stashes
+                }
             }
             .onFailure { if (gen == generation) error = errorOf(it) }
     }
@@ -322,5 +328,5 @@ class GitViewModel(
         r?.let { kotlin.concurrent.thread(name = "git-close", isDaemon = true) { it.close() } }
     }
 
-    private data class Snapshot(val status: GitStatus, val branches: List<String>, val last: CommitInfo?, val stashes: List<StashInfo>)
+    private data class RepoState(val status: GitStatus, val branches: List<String>, val last: CommitInfo?, val stashes: List<StashInfo>)
 }
