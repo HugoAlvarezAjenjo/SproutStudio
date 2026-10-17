@@ -274,7 +274,7 @@ private fun ErrorStrip(err: RenderError, onJumpToLine: ((Int) -> Unit)?) {
             Icon(Icons.Outlined.ErrorOutline, null, tint = c.error, modifier = Modifier.size(16.dp))
             Text(
                 buildString {
-                    append(if (err.line != null) tr(Res.string.preview_line_prefix, err.line ?: 0) else tr(Res.string.preview_syntax_prefix)); append(' ')
+                    append(if (err.line != null) tr(Res.string.preview_line_prefix, err.line) else tr(Res.string.preview_syntax_prefix)); append(' ')
                     append(err.describe())
                 },
                 style = MaterialTheme.typography.bodyMedium,

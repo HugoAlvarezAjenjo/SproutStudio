@@ -148,7 +148,7 @@ object PlantUmlFormatter {
         var opener = -1
         for (l in lines) {
             when {
-                l.role is LineRole.Open && (l.role as LineRole.Open).kind in BlockSyntax.textBodies -> opener = l.index
+                l.role is LineRole.Open && l.role.kind in BlockSyntax.textBodies -> opener = l.index
                 l.role == LineRole.Body && opener >= 0 && l.raw.isNotBlank() -> {
                     val n = l.raw.takeWhile { it == ' ' || it == '\t' }.length
                     out[opener] = minOf(out[opener] ?: n, n)

@@ -170,7 +170,7 @@ internal fun EditorGutter(
                         // Deleted lines: a small grey wedge on the boundary where they were.
                         val atBottom = !lineChanges.deletedAbove(real)
                         val yy = if (atBottom) y + lineH else y
-                        val k = if (hotDeleted && hotChange?.start == (if (atBottom) real + 1 else real)) 1.7f else 1f
+                        val k = if (hotDeleted && hotChange.start == (if (atBottom) real + 1 else real)) 1.7f else 1f
                         val wedge = Path().apply {
                             moveTo(barX, yy - barW * k); lineTo(barX + barW * 1.6f * k, yy); lineTo(barX, yy + barW * k); close()
                         }

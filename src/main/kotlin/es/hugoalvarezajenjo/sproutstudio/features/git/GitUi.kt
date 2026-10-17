@@ -35,7 +35,7 @@ internal fun rememberLineChanges(git: GitViewModel, file: File?, text: String): 
     val type = file?.let { git.changeOf(it)?.type }
     val tracked = file != null && head != null && type != ChangeType.UNVERSIONED && type != ChangeType.ADDED
     LaunchedEffect(file, text, head, tracked) {
-        if (!tracked || file == null) { idx = LineDiff.Index.Empty; return@LaunchedEffect }
+        if (!tracked) { idx = LineDiff.Index.Empty; return@LaunchedEffect }
         delay(120) // typing debounce
         idx = git.lineChanges(file, text)
     }
