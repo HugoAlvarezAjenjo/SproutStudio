@@ -16,7 +16,7 @@ group = "es.hugoalvarezajenjo"
 
 // App version. The release workflow passes it from the git tag (v1.2.0 -> -PappVersion=1.2.0);
 // local builds fall back to the current release. macOS requires MAJOR.MINOR.PATCH with MAJOR > 0.
-val appVersion = (findProperty("appVersion") as String?) ?: "1.1.0"
+val appVersion = (findProperty("appVersion") as String?) ?: "1.2.0"
 require(Regex("""[1-9]\d*\.\d+\.\d+""").matches(appVersion)) {
     "appVersion must be MAJOR.MINOR.PATCH with MAJOR > 0 (macOS rule), got '$appVersion'"
 }

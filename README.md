@@ -25,10 +25,12 @@
   itself when the file changes, even if you edit it elsewhere.
 - **Project mode**: open a folder and get a file tree, tabs, a smart editor and a live preview, as
   editor only, editor + preview, or preview only. Create, rename and delete files and folders from the
-  tree (deleting goes to the Trash); open tabs follow renames.
+  tree (deleting goes to the Trash); open tabs follow renames. Drag tabs to reorder them, middle-click
+  to close one, right-click for Close Others / Left / Right / All, Copy Path and Show in Finder.
 - **Smart editor**: syntax highlighting, completion that knows the diagram type (also by initials), your
-  own participants, `!theme` names, colours and local `!include` paths, smart indent, code folding, find &
-  replace with regex, real undo/redo, and a command palette (Shift Shift) with every action.
+  own participants, `!theme` names, colours and local `!include` paths, smart indent, brackets and quotes
+  that close themselves, code folding, find & replace with regex, real undo/redo, and a command palette
+  (Shift Shift) with every action.
 - **Navigation and refactoring**: Go to Declaration (⌘B) and Find Usages (⌥F7), also through local
   `!include`s; Rename Symbol (⇧F6) across the files that include each other; Reformat Code (⌥⌘L) that only
   touches whitespace PlantUML ignores.
@@ -118,7 +120,8 @@ needs to be installed: the app ships its own Java runtime.
 | `@st` + ⏎ | pick a ready-made diagram template |
 | left stripe (grid icon) | the Templates panel — the same catalogue as a narrow side list, click a row to insert |
 | ⇧⌘N | the template gallery — ready-made diagrams and blocks with live thumbnails (also File → New from Template…) |
-| ⏎ | smart indent (`alt`, `loop`, `if`, `{` … indent; `end`, `else`, `}` snap back) |
+| ⏎ | smart indent (`alt`, `loop`, `if`, `{` … indent; `end`, `else`, `}` snap back); between `{` and `}` the brace goes to its own line |
+| `{` `(` `[` `"` | add their closer; typing the closer steps over it, ⌫ on the empty pair removes both, typed over a selection they wrap it |
 | ⇥ / ⇧⇥ | indent / outdent lines |
 | ⌘/, ⌥⌘/ | comment / uncomment lines, block comment `/' '/` |
 | ⌘D | duplicate line |
@@ -146,6 +149,9 @@ needs to be installed: the app ships its own Java runtime.
 | ⌥⌘Y | refresh the file tree |
 | drag in the Project tree | move a file or folder: drop it on a folder, or on the project folder row / the empty space to move it to the top |
 | right-click in the Project tree | New Diagram…, New Folder…, Rename…, Move to Trash…, Reveal in Finder (the project folder row and the empty space below create in the project folder) |
+| drag a tab | reorder the tabs; hold it at the bar's edge to scroll to tabs out of sight |
+| middle-click a tab | close it (asks first if it has unsaved changes) |
+| right-click a tab | Close, Close Other Tabs, Close Tabs to the Left / Right, Close All, Copy Path, Show in Finder |
 
 Preview: mouse wheel to zoom at the pointer, drag with the left or middle button to pan (⇧+wheel or a
 sideways trackpad swipe also pans), double-click to fit. Export to SVG, PNG or PDF (vector, with real selectable text), or copy the picture to the

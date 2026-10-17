@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.2.0
+
+SproutStudio on Windows, and an editor that types like VS Code.
 
 ### Windows
 - **Windows installer (.msi):** per-user install with Start menu entry, desktop shortcut and `.puml`
@@ -9,7 +11,32 @@
 - **File → Exit (Ctrl+Q)** quits like ⌘Q on macOS: autosave is flushed and every open project comes back
   on the next launch.
 - "Show in Explorer" opens the folder with the file selected; texts name File Explorer and the Recycle Bin.
+- Renaming a file by changing only the case of its name (`a.puml` → `A.puml`) works.
 - CI runs the tests on Windows, and releases publish the `.msi` next to the `.dmg`.
+
+### Editor
+- **Brackets and quotes close themselves:** typing `{`, `(`, `[` or `"` adds the closer, typing the
+  closer steps over it, Backspace on an empty pair removes both, and typing one over a selection wraps it.
+  Like VS Code, only the closers it added are stepped over.
+- **Enter between `{` and `}`** puts the closing brace on its own line, with the caret indented between
+  ([#5](https://github.com/HugoAlvarezAjenjo/SproutStudio/issues/5)).
+- **Keywords are coloured in any case** (`Participant`, `CLASS`)
+  ([#4](https://github.com/HugoAlvarezAjenjo/SproutStudio/issues/4)).
+
+### Tabs
+- **Drag tabs to reorder them;** the bar scrolls by itself when you hold a tab at its edge. The order is
+  kept with the session.
+- **Middle-click closes a tab.**
+- **Right-click menu:** Close, Close Other Tabs, Close Tabs to the Left / Right, Close All, Copy Path and
+  Show in Finder / Explorer. Closing several asks once about the unsaved ones.
+
+### App
+- The home screen shows the app logo and the real version; new app icon.
+- New samples (`kitchen.puml`, `architecture.puml` and the `common/` library) that show includes,
+  functions, procedures, variables and the standard library.
+
+### Under the hood
+- UI tests use Compose's `runComposeUiTest` v2; no compiler or Gradle 10 deprecation warnings left.
 
 ## 1.1.0
 
