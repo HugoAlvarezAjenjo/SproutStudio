@@ -34,7 +34,7 @@ dependencies {
     // Vector icons (compiled into the app, no runtime download).
     implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
     // Translated texts: src/main/composeResources/values[-es]/strings.xml -> generated Res.string.*
-    implementation(compose.components.resources)
+    implementation("org.jetbrains.compose.components:components-resources:1.12.1")
 
     // PlantUML engine, MIT-licensed build. Includes the Smetana layout engine,
     // so no Graphviz / dot binary is needed. Rendering is 100% in-process.
@@ -72,7 +72,7 @@ tasks.processResources { exclude("**/.DS_Store") }
 
 // The app reads its own version at runtime (welcome screen) from a generated resource, so it is
 // always the one being built: -PappVersion in releases, the fallback above locally.
-val generateBuildInfo by tasks.registering {
+val generateBuildInfo = tasks.register("generateBuildInfo") {
     description = "Writes sproutstudio/build-info.properties with the app version"
     val out = layout.buildDirectory.dir("generated/buildinfo")
     val version = appVersion
@@ -98,7 +98,7 @@ val hostOs: String = System.getProperty("os.name").lowercase()
 val onMac = "mac" in hostOs
 val onWindows = "windows" in hostOs
 
-val generateMacIcon by tasks.registering {
+val generateMacIcon = tasks.register("generateMacIcon") {
     description = "Builds SproutStudio.icns from src/main/resources/icon.png"
     val src = iconPng.asFile
     val out = iconIcns.get().asFile
@@ -124,7 +124,7 @@ val generateMacIcon by tasks.registering {
     }
 }
 
-val generateWindowsIcon by tasks.registering {
+val generateWindowsIcon = tasks.register("generateWindowsIcon") {
     description = "Builds SproutStudio.ico from src/main/resources/icon.png"
     val src = iconPng.asFile
     val out = iconIco.get().asFile
