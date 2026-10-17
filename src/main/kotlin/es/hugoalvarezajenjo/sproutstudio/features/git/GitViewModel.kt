@@ -29,7 +29,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import androidx.compose.runtime.snapshots.Snapshot
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -60,16 +59,18 @@ class GitViewModel(
 
     var repo by mutableStateOf<GitRepository?>(null)
         private set
-    var status by mutableStateOf(GitStatus.Empty)
-        private set
+    /**
+     * What was last read from the repository, as one value: a refresh replaces it in a single
+     * write, so nobody (on any thread) sees the new branch next to the old branch list.
+     */
+    private var state by mutableStateOf(RepoState.Empty)
+
+    val status: GitStatus get() = state.status
     /** Local branches, refreshed with [status]. */
-    var branches by mutableStateOf<List<String>>(emptyList())
-        private set
+    val branches: List<String> get() = state.branches
     /** The commit HEAD points at (for "Undo Last Commit" and amend). */
-    var lastCommit by mutableStateOf<CommitInfo?>(null)
-        private set
-    var stashes by mutableStateOf<List<StashInfo>>(emptyList())
-        private set
+    val lastCommit: CommitInfo? get() = state.last
+    val stashes: List<StashInfo> get() = state.stashes
     /** Branch whose checkout was refused because of local changes (offers "stash and switch"). */
     var blockedCheckout by mutableStateOf<String?>(null)
         private set
@@ -188,10 +189,7 @@ class GitViewModel(
             old = repo
             root = dir?.absoluteFile
             repo = found
-            Snapshot.withMutableSnapshot {
-                status = GitStatus.Empty
-                branches = emptyList(); lastCommit = null; stashes = emptyList()
-            }
+            state = RepoState.Empty
             headCache.clear()
         }
         old?.let { withContext(io + NonCancellable) { it.close() } }
@@ -204,16 +202,13 @@ class GitViewModel(
 
     /** Caller holds [stateLock]. */
     private suspend fun readStatus() {
-        val r = repo ?: run { status = GitStatus.Empty; return }
+        val r = repo ?: run { state = RepoState.Empty; return }
         val gen = generation
         val scopeDir = root
         runCatching { withContext(io) { RepoState(r.status(scopeDir), r.branches(), r.lastCommit(), r.stashes()) } }
             .onSuccess {
                 if (gen != generation) return // the folder changed meanwhile
-                // All at once: a reader on another thread never sees the new branch with the old list.
-                Snapshot.withMutableSnapshot {
-                    status = it.status; branches = it.branches; lastCommit = it.last; stashes = it.stashes
-                }
+                state = it
             }
             .onFailure { if (gen == generation) error = errorOf(it) }
     }
@@ -328,5 +323,9 @@ class GitViewModel(
         r?.let { kotlin.concurrent.thread(name = "git-close", isDaemon = true) { it.close() } }
     }
 
-    private data class RepoState(val status: GitStatus, val branches: List<String>, val last: CommitInfo?, val stashes: List<StashInfo>)
+    private data class RepoState(val status: GitStatus, val branches: List<String>, val last: CommitInfo?, val stashes: List<StashInfo>) {
+        companion object {
+            val Empty = RepoState(GitStatus.Empty, emptyList(), null, emptyList())
+        }
+    }
 }
