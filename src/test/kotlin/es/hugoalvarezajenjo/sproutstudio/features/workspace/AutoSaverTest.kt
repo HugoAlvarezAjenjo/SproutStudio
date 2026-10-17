@@ -48,12 +48,24 @@ class AutoSaverTest {
         Snapshot.sendApplyNotifications() // what the Compose frame clock does in the app
     }
 
-    /** Runs [AutoSave.watch] with a short idle time while [body] executes. */
+    /** Runs [AutoSave.watch] while [body] executes, with an idle time well above the typing pauses below. */
     private fun watching(docs: List<Document>, body: suspend () -> Unit) = runBlocking {
-        val job = launch { TestGraph.graph.autoSaver.watch({ docs }, idleMs = 100) }
+        val job = launch { TestGraph.graph.autoSaver.watch({ docs }, idleMs = 300) }
         delay(50)
         body()
         job.cancel()
+    }
+
+    /**
+     * Waits for [done] instead of a fixed time: a slow CI machine may take longer than the
+     * idle time plus the write, and stopping the watcher mid-save leaves the edits marked dirty.
+     */
+    private suspend fun eventually(what: String, done: () -> Boolean) {
+        val until = System.nanoTime() + 5_000_000_000
+        while (!done()) {
+            check(System.nanoTime() < until) { "timed out waiting for: $what" }
+            delay(20)
+        }
     }
 
     @Test
@@ -61,7 +73,7 @@ class AutoSaverTest {
         val doc = fileDoc()
         watching(listOf(doc)) {
             doc.type("@startuml\nA -> C\n@enduml\n")
-            delay(400)
+            eventually("the save") { !doc.dirty }
         }
         assertEquals("@startuml\nA -> C\n@enduml\n", doc.file!!.readText())
         assertFalse(doc.dirty)
@@ -74,7 +86,7 @@ class AutoSaverTest {
         watching(listOf(doc)) {
             repeat(8) { i -> doc.type("@startuml\nA -> B$i\n@enduml\n"); delay(40) }
             assertEquals(original, doc.file!!.readText(), "saved mid-typing")
-            delay(400)
+            eventually("the save") { !doc.dirty }
         }
         assertEquals("@startuml\nA -> B7\n@enduml\n", doc.file!!.readText())
     }
@@ -84,7 +96,7 @@ class AutoSaverTest {
         val doc = TestGraph.document(null, "@startuml\n@enduml\n")
         watching(listOf(doc)) {
             doc.type("@startuml\nX -> Y\n@enduml\n")
-            delay(400)
+            delay(700) // well past the idle time: a save would have happened
         }
         assertTrue(doc.dirty)
         TestGraph.graph.autoSaver.flush(listOf(doc))
@@ -99,7 +111,7 @@ class AutoSaverTest {
         val doc = fileDoc(original)
         watching(listOf(doc)) {
             doc.type("@startuml\nchanged\n@enduml\n")
-            delay(400)
+            delay(700) // well past the idle time: a save would have happened
         }
         TestGraph.graph.autoSaver.flush(listOf(doc))
         assertEquals(original, doc.file!!.readText())
