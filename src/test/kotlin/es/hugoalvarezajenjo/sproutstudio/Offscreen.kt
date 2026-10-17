@@ -5,15 +5,18 @@ import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
 import org.jetbrains.skia.Image
 import java.awt.EventQueue
+import kotlinx.coroutines.Dispatchers
 
 /**
  * Off-screen renders for tests, on the Swing UI thread.
  *
  * A scene watches state on the thread it renders on, and Compose Desktop sends its global state
- * notifications on the Swing thread (as do the app's ViewModels). Rendering from the test thread
- * worked only until a notification landed mid-frame, then failed with "multithreaded access to
- * SnapshotStateObserver". So every scene call goes to the UI thread, and the waits between
- * frames stay on the test thread, so the UI thread is free to run the app's work meanwhile.
+ * notifications on the Swing thread (as do the app's ViewModels). So every scene call goes to the
+ * UI thread, and its effects (`LaunchedEffect`, `snapshotFlow`) run there too: by default a scene
+ * runs them on `Dispatchers.Unconfined`, which resumes them on whatever thread woke them (IO, a
+ * timer) and a `snapshotFlow` read there sends notifications to the scene from that thread. Either
+ * way it failed with "multithreaded access to SnapshotStateObserver". The waits between frames
+ * stay on the test thread, so the UI thread is free to run the app's work meanwhile.
  */
 object Offscreen {
 
@@ -26,7 +29,7 @@ object Offscreen {
         width: Int, height: Int, frames: List<Long> = emptyList(),
         content: @Composable () -> Unit, read: (Image) -> T,
     ): T {
-        val scene = onUi { ImageComposeScene(width, height, Density(1f), content = content) }
+        val scene = onUi { ImageComposeScene(width, height, Density(1f), coroutineContext = Dispatchers.Main, content = content) }
         try {
             var img = onUi { scene.render(0) }
             for (t in frames) {
