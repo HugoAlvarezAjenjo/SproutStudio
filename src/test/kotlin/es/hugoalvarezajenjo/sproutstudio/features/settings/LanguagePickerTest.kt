@@ -5,7 +5,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.v2.runComposeUiTest
 import es.hugoalvarezajenjo.sproutstudio.app.AppGraph
 import es.hugoalvarezajenjo.sproutstudio.core.i18n.Language
 import es.hugoalvarezajenjo.sproutstudio.core.i18n.LanguageChoice

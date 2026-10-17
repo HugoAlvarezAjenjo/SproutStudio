@@ -15,7 +15,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.domain.git.DiffSide
 import es.hugoalvarezajenjo.sproutstudio.features.git.DiffView
