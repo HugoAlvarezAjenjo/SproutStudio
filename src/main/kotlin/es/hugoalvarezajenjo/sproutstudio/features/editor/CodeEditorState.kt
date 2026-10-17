@@ -38,13 +38,17 @@ internal class CodeEditorState(val doc: Document, private val paths: PathLister)
     /** Offset a ⌘-press landed on, followed when the button comes up. */
     var pressedLink by mutableStateOf<Int?>(null)
 
+    /** The brackets this editor closed itself, so only those are stepped over. */
+    private val autoPairs = AutoPairs()
+
     /** Apply an edit: [typed] by the user (grouped for undo, reopens completion) or made by a command. */
     fun update(newValue: TextFieldValue, typed: Boolean) {
         if (!typed) {
             doc.value = newValue
+            autoPairs.observe(newValue)
             return
         }
-        val value = AutoPairs.adjust(doc.value, newValue) ?: newValue
+        val value = autoPairs.adjust(doc.value, newValue) ?: newValue
         doc.type(value)
         doc.dropRollbackUndo() // typing after a rollback: its Undo would lose that typing
         hunk = null

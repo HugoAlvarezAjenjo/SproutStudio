@@ -11,7 +11,6 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.TextRange
 import es.hugoalvarezajenjo.sproutstudio.features.document.Document
@@ -64,6 +63,15 @@ class EditorTypingTest {
     }
 
     @Test
+    fun aCloserAlreadyInTheFileIsTypedNotSteppedOver() {
+        val text = edit("foo(bar)", TextRange(7)) { field ->
+            field.performTextInput(")")
+            waitForIdle()
+        }
+        assertEquals("foo(bar))", text)
+    }
+
+    @Test
     fun typingABracketOverASelectionWrapsIt() {
         val initial = "A -> B : hi"
         val text = edit(initial, TextRange(9, 11)) { field ->
@@ -74,9 +82,10 @@ class EditorTypingTest {
     }
 
     @Test
-    fun backspaceInsideAnEmptyPairDeletesBothHalves() {
-        val text = edit("class A {}", TextRange(9)) { field ->
-            field.requestFocus()
+    fun backspaceInsideAPairItJustAddedDeletesBothHalves() {
+        val text = edit("class A ", TextRange(8)) { field ->
+            field.performTextInput("{")
+            waitForIdle()
             field.performKeyInput { pressKey(Key.Backspace) }
             waitForIdle()
         }
