@@ -1,10 +1,9 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
+import es.hugoalvarezajenjo.sproutstudio.Offscreen
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
 
 import androidx.compose.material3.Surface
-import androidx.compose.ui.ImageComposeScene
-import androidx.compose.ui.unit.Density
 import es.hugoalvarezajenjo.sproutstudio.features.palette.CommandPalette
 import es.hugoalvarezajenjo.sproutstudio.features.palette.projectCommands
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
@@ -28,15 +27,10 @@ class UiSnapshotTest {
         name: String, frames: List<Long>, dark: Boolean = true, language: Language = Language.English,
         content: @androidx.compose.runtime.Composable () -> Unit,
     ) {
-        val scene = ImageComposeScene(1320, 840, Density(1f)) {
+        val bytes = Offscreen.render(1320, 840, frames, {
             ProvideLanguage(language) { PumlTheme(dark = dark) { Surface(color = ide.panel) { content() } } }
-        }
-        var img = scene.render(0)
-        // Let async work (renders, debounces) settle across a few frames of real time.
-        for (t in frames) { Thread.sleep(t); img = scene.render(System.nanoTime()) }
-        val bytes = img.encodeToData(EncodedImageFormat.PNG)!!.bytes
+        }) { it.encodeToData(EncodedImageFormat.PNG)!!.bytes }
         File(out, "$name.png").writeBytes(bytes)
-        scene.close()
         Language.English.makeDefault() // the other tests read English
         assertTrue(bytes.size > 10_000)
     }

@@ -1,17 +1,16 @@
 package es.hugoalvarezajenjo.sproutstudio.features.preview
 
+import es.hugoalvarezajenjo.sproutstudio.Offscreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramImage
 import es.hugoalvarezajenjo.sproutstudio.features.preview.DiagramView
@@ -38,15 +37,12 @@ class DiagramClipTest {
         // Zoomed 6x and panned up-left, like a user who zoomed in and dragged around.
         val zoom = ZoomState().apply { scale = 6f; offset = Offset(-400f, -400f); autoFit = false }
 
-        val scene = ImageComposeScene(600, 500, Density(1f)) {
+        val bmp = Offscreen.render(600, 500, content = {
             Column(Modifier.fillMaxSize().background(neighbour)) {
                 Box(Modifier.fillMaxWidth().height(100.dp))            // neighbour strip
                 Box(Modifier.fillMaxSize()) { DiagramView(img, zoom) } // canvas: y >= 100
             }
-        }
-        val shot = scene.render(0)
-        scene.close()
-        val bmp = Bitmap.makeFromImage(shot)
+        }) { Bitmap.makeFromImage(it) }
         // Every pixel of the strip above the canvas must still be the neighbour's colour.
         for (y in 0 until 100 step 5) for (x in 0 until 600 step 10) {
             assertEquals(neighbour.toArgb(), bmp.getColor(x, y), "diagram leaked onto ($x,$y)")

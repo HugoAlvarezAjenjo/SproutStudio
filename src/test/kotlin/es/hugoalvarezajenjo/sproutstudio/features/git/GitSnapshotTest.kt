@@ -1,13 +1,12 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
+import es.hugoalvarezajenjo.sproutstudio.Offscreen
 import es.hugoalvarezajenjo.sproutstudio.TestRepos
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
-import androidx.compose.ui.ImageComposeScene
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.features.git.BranchButton
 import es.hugoalvarezajenjo.sproutstudio.features.git.DiagramDiffView
@@ -39,13 +38,11 @@ class GitSnapshotTest {
     @AfterTest fun cleanup() { TestGraph.graph.layout.sidebarVisible.value = sidebar; TestGraph.graph.layout.editorLayout.value = layout; dir.deleteRecursively() }
 
     private fun shoot(name: String, content: @androidx.compose.runtime.Composable () -> Unit) {
-        val scene = ImageComposeScene(1320, 840, Density(1f)) { PumlTheme(dark = true) { Surface(color = ide.panel) { content() } } }
-        scene.render(0)
-        var img = scene.render(0)
-        for (t in listOf(400L, 800, 800, 800, 400)) { Thread.sleep(t); img = scene.render(System.nanoTime()) }
-        val bytes = img.encodeToData(EncodedImageFormat.PNG)!!.bytes
+        val frames = listOf(0L, 400, 800, 800, 800, 400)
+        val bytes = Offscreen.render(1320, 840, frames, { PumlTheme(dark = true) { Surface(color = ide.panel) { content() } } }) {
+            it.encodeToData(EncodedImageFormat.PNG)!!.bytes
+        }
         File(out, "$name.png").writeBytes(bytes)
-        scene.close()
         assertTrue(bytes.size > 10_000)
     }
 
