@@ -30,10 +30,10 @@ class TabsBarTest {
 
     private fun WorkspaceViewModel.tabNames() = docs.map { it.name }
 
-    private fun ComposeUiTest.show(p: WorkspaceViewModel) {
+    private fun ComposeUiTest.show(p: WorkspaceViewModel, width: Int = 900) {
         setContent {
             PumlTheme(dark = true) {
-                Surface(Modifier.size(900.dp, 60.dp), color = ide.panel) { TabsBar(p, onCloseTab = { p.requestCloseTab(it) }) }
+                Surface(Modifier.size(width.dp, 60.dp), color = ide.panel) { TabsBar(p, onCloseTab = { p.requestCloseTab(it) }) }
             }
         }
         waitForIdle()
@@ -77,6 +77,30 @@ class TabsBarTest {
         }
         assertEquals(listOf("morning.puml", "pizza.puml", "kitchen.puml"), p.tabNames())
         assertEquals("pizza.puml", p.active?.name)
+    }
+
+    @Test
+    fun holdingADraggedTabAtTheEdgeScrollsTheBarToTabsOutOfSight() {
+        val all = names + listOf("architecture.puml", "common/cast.iuml", "common/style.iuml", "common/pizzeria.iuml")
+        val p = TestGraph.workspace().apply { all.forEach { open(File("samples/$it")) } }
+        runComposeUiTest {
+            show(p, width = 420)
+            val stripEnd = onNodeWithTag("tab-strip").fetchSemanticsNode().boundsInRoot.right
+            val pizza = onNodeWithTag("tab-pizza.puml").fetchSemanticsNode().boundsInRoot.center.x
+            // The bar scrolls every frame while the tab is held at the edge, so the test never
+            // goes idle on its own: frames are advanced by hand.
+            mainClock.autoAdvance = false
+            onNodeWithTag("tab-pizza.puml").performMouseInput {
+                moveTo(center); press(MouseButton.Primary)
+                val steps = 20
+                repeat(steps) { moveBy(Offset((stripEnd - 8f - pizza) / steps, 0f)) }
+            }
+            mainClock.advanceTimeBy(3_000) // held at the edge: the bar keeps scrolling
+            onNodeWithTag("tab-pizza.puml").performMouseInput { release(MouseButton.Primary) }
+            mainClock.autoAdvance = true
+            waitForIdle()
+        }
+        assertEquals("pizza.puml", p.tabNames().last())
     }
 
     @Test

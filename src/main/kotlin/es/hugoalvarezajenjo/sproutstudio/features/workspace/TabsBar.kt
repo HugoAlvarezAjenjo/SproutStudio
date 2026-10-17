@@ -12,6 +12,15 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.platform.LocalDensity
 
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import androidx.compose.foundation.ContextMenuArea
@@ -76,9 +85,12 @@ internal fun TabsBar(p: WorkspaceViewModel, onCloseTab: (Document) -> Unit) {
     if (p.docs.isEmpty()) return
     val c = ide
     val drag = remember(p) { TabDrag({ p.docs }, p::moveTab) }
+    val scroll = rememberScrollState()
+    var viewport by remember { mutableIntStateOf(0) }
+    EdgeScrollWhileDragging(drag, scroll) { viewport }
     Column {
         Row(Modifier.fillMaxWidth().height(36.dp).background(c.panel), verticalAlignment = Alignment.CenterVertically) {
-            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState())) {
+            Row(Modifier.weight(1f).fillMaxHeight().onSizeChanged { viewport = it.width }.horizontalScroll(scroll).testTag("tab-strip")) {
                 p.docs.forEachIndexed { i, d ->
                     // Keyed by document, so a tab keeps its drag gesture while it changes places.
                     key(d) {
@@ -149,6 +161,33 @@ private fun EditorTab(d: Document, active: Boolean, drag: TabDrag<Document>, onS
         VLine()
     }
 }
+
+/**
+ * While a tab is dragged near an edge of a bar that has more tabs than fit, scrolls the bar every
+ * frame and carries the tab along, so it can reach tabs that are out of sight.
+ */
+@Composable
+private fun EdgeScrollWhileDragging(drag: TabDrag<Document>, scroll: ScrollState, viewport: () -> Int) {
+    val density = LocalDensity.current
+    val edge = with(density) { EDGE_ZONE.toPx() }
+    val maxStep = with(density) { EDGE_MAX_STEP.toPx() }
+    LaunchedEffect(drag, scroll) {
+        // Runs only while the dragged tab sits in an edge zone, not for every drag.
+        snapshotFlow { drag.edgeScroll(scroll.value, viewport(), edge, maxStep) != 0f }
+            .collectLatest { atEdge ->
+                while (atEdge) {
+                    withFrameNanos { }
+                    val step = drag.edgeScroll(scroll.value, viewport(), edge, maxStep)
+                    if (step == 0f) break
+                    drag.dragBy(scroll.scrollBy(step))
+                }
+            }
+    }
+}
+
+/** How close to an edge a dragged tab starts scrolling the bar, and its top speed per frame. */
+private val EDGE_ZONE = 40.dp
+private val EDGE_MAX_STEP = 12.dp
 
 /** Right-click on a tab. Entries that would do nothing (no tabs to the left...) are left out. */
 private fun tabMenu(p: WorkspaceViewModel, d: Document, onCloseTab: (Document) -> Unit) = buildList {
