@@ -65,6 +65,14 @@ tasks.test {
     // Tests assert English texts, whatever language the machine running them uses.
     systemProperty("user.language", "en")
     systemProperty("user.country", "US")
+    // A failure prints its whole stack (causes and suppressed exceptions too) in the log, so a CI
+    // failure can be read there instead of downloading the report.
+    testLogging {
+        events("failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showCauses = true
+        showStackTraces = true
+    }
 }
 
 // Finder litter in src/main/resources must not end up inside the app jar.
