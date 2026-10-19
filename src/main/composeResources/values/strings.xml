@@ -391,6 +391,8 @@
     <string name="preview_actual_size">Actual size</string>
     <string name="preview_dark_hint">Dark diagram (exports keep original colours) — click for light</string>
     <string name="preview_light_hint">Light diagram — click for dark</string>
+    <string name="preview_theme">Diagram theme: %1$s (written as !theme in the file)</string>
+    <string name="preview_theme_default">Default</string>
     <string name="preview_copy">Copy image to clipboard</string>
     <string name="preview_export">Export…</string>
     <string name="preview_on_its_way">Your diagram is on its way</string>

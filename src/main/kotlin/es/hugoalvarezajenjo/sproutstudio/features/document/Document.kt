@@ -4,6 +4,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.editor.FindState
 import es.hugoalvarezajenjo.sproutstudio.features.editor.FoldState
 import es.hugoalvarezajenjo.sproutstudio.features.editor.NavigationState
 import es.hugoalvarezajenjo.sproutstudio.domain.editing.EditHistory
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.DiagramTheme
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
 import es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles
 import androidx.compose.runtime.Stable
@@ -80,6 +81,17 @@ class Document(
 
     /** ⇧⌘Z: forward again to the text and selection after the last undone step. */
     fun redo() = history.redo()?.let { show(it); historyVersion++ }
+
+    /**
+     * Gives diagram [block] the PlantUML theme [theme] (null = default look) by editing its
+     * `!theme` line: one undo step, with the selection kept on the same text.
+     */
+    fun setDiagramTheme(block: Int, theme: String?) {
+        val v = value
+        val edit = DiagramTheme.set(v.text, block, theme) ?: return
+        value = TextFieldValue(edit.applyTo(v.text), TextRange(edit.shift(v.selection.start), edit.shift(v.selection.end)))
+    }
+
     var savedText by mutableStateOf(initialText)
         private set
 

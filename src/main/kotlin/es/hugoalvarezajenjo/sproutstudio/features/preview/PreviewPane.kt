@@ -115,6 +115,8 @@ fun PreviewPane(
     leadingTools: @Composable RowScope.() -> Unit = {},
     /** Copy/export asked for from elsewhere (the command palette). */
     requests: Flow<PreviewAction> = emptyFlow(),
+    /** Sets the shown diagram's `!theme`; null hides the theme menu (a read-only preview). */
+    onThemeChange: ((String?) -> Unit)? = null,
 ) {
     val c = ide
     val zoom = rememberZoomState()
@@ -176,6 +178,13 @@ fun PreviewPane(
             }
             ToolButton(Icons.Outlined.ImageSearch, tr(Res.string.preview_actual_size)) { preview.image?.let { zoom.actualSize(it.width, it.height) } }
             ToolSeparator()
+            if (onThemeChange != null) {
+                ThemeMenu(
+                    current = preview.theme,
+                    enabled = preview.diagramCount > 0,
+                    onPick = onThemeChange,
+                )
+            }
             ToolButton(
                 if (preview.diagram.dark.value) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
                 if (preview.diagram.dark.value) tr(Res.string.preview_dark_hint)

@@ -3,6 +3,8 @@ package es.hugoalvarezajenjo.sproutstudio.features.preview
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.DiagramTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -68,6 +70,12 @@ class PreviewViewModel(
         private set
 
     val text: String get() = source().text
+
+    /**
+     * The shown diagram's `!theme` (null = default look). Derived state: worked out again only
+     * when the text or [index] change, not on every redraw of the toolbar.
+     */
+    val theme: String? by derivedStateOf { DiagramTheme.current(text, index) }
 
     /** Out-of-range indices are clamped by the next render (which knows how many there are). */
     fun showDiagram(i: Int) {

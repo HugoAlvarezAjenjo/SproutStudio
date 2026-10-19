@@ -57,14 +57,15 @@ object PlantUmlLanguage {
         ),
     )
 
+    /** The themes inside the bundled PlantUML jar (so they work offline), in alphabetical order. */
     val themes = listOf(
         "amiga", "aws-orange", "black-knight", "bluegray", "blueprint", "carbon-gray", "cerulean",
-        "cerulean-outline", "crt-amber", "crt-green", "cyborg", "cyborg-outline", "hacker", "lightgray",
-        "mars", "materia", "materia-outline", "metal", "mimeograph", "minty", "mono", "plain",
-        "reddress-darkblue", "reddress-darkgreen", "reddress-darkorange", "reddress-darkred",
-        "reddress-lightblue", "reddress-lightgreen", "reddress-lightorange", "reddress-lightred",
-        "sandstone", "silver", "sketchy", "sketchy-outline", "spacelab", "superhero", "superhero-outline",
-        "toy", "united", "vibrant", "cloudscape-design",
+        "cerulean-outline", "cloudscape-design", "crt-amber", "crt-green", "cyborg", "cyborg-outline",
+        "hacker", "lightgray", "mars", "materia", "materia-outline", "metal", "mimeograph", "minty",
+        "mono", "plain", "reddress-darkblue", "reddress-darkgreen", "reddress-darkorange",
+        "reddress-darkred", "reddress-lightblue", "reddress-lightgreen", "reddress-lightorange",
+        "reddress-lightred", "sandstone", "silver", "sketchy", "sketchy-outline", "spacelab",
+        "spacelab-white", "sunlust", "superhero", "superhero-outline", "toy", "united", "vibrant",
     )
 
     /** PlantUML's standard named colours, offered after a `#` or a colour-valued skinparam. */

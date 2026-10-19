@@ -392,6 +392,8 @@
     <string name="preview_actual_size">Tamaño real</string>
     <string name="preview_dark_hint">Diagrama oscuro (las exportaciones conservan los colores originales) — clic para claro</string>
     <string name="preview_light_hint">Diagrama claro — clic para oscuro</string>
+    <string name="preview_theme">Tema del diagrama: %1$s (se escribe como !theme en el fichero)</string>
+    <string name="preview_theme_default">Por defecto</string>
     <string name="preview_copy">Copiar imagen al portapapeles</string>
     <string name="preview_export">Exportar…</string>
     <string name="preview_on_its_way">Tu diagrama está en camino</string>

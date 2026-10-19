@@ -186,6 +186,7 @@ private fun EditorAndPreview(p: WorkspaceViewModel, doc: Document, preview: Prev
                     // An error link needs the code: from preview-only, open the editor beside it.
                     onJumpToLine = { p.revealEditor(); doc.jumpTo(it) },
                     requests = doc.previewCommandFlow,
+                    onThemeChange = { doc.setDiagramTheme(preview.index, it) },
                     leadingTools = {
                         Text(tr(Res.string.cat_preview), style = MaterialTheme.typography.labelLarge, color = c.text, modifier = Modifier.padding(start = 6.dp, end = 4.dp))
                     },
