@@ -192,12 +192,9 @@ object CompletionEngine {
     }
 
     private fun directives(text: String): List<Completion> {
-        val open = Regex("""^\s*@start(\w+)""", RegexOption.MULTILINE).findAll(text).count()
-        val close = Regex("""^\s*@end(\w+)""", RegexOption.MULTILINE).findAll(text).count()
-        val ends = if (open > close) {
-            val last = Regex("""^\s*@start(\w+)""", RegexOption.MULTILINE).findAll(text).last().groupValues[1]
-            listOf(Completion("@end$last", "@end$last", CompletionKind.DIRECTIVE, Tag.CLOSE_DIAGRAM))
-        } else emptyList()
+        val ends = DiagramBlocks.unclosed(text)
+            ?.let { listOf(Completion("@end$it", "@end$it", CompletionKind.DIRECTIVE, Tag.CLOSE_DIAGRAM)) }
+            ?: emptyList()
         return ends + snippets + PlantUmlLanguage.diagramStarts.map { Completion(it, it, CompletionKind.DIRECTIVE) }
     }
 

@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.services.render
 
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.DiagramBlocks
 import net.sourceforge.plantuml.ErrorUml
 import net.sourceforge.plantuml.FileFormat
 import net.sourceforge.plantuml.FileFormatOption
@@ -98,7 +99,7 @@ object PlantUmlEngine {
         colorMapper: ColorMapper = ColorMapper.IDENTITY,
     ): RenderResult {
         OfflineGuard.check(source)?.let { v ->
-            return RenderResult(bytes = null, diagramCount = countBlocks(source), index = 0,
+            return RenderResult(bytes = null, diagramCount = DiagramBlocks.of(source).size, index = 0,
                 error = RenderError(v.line, RenderError.Kind.OFFLINE_INCLUDE))
         }
         if (source.isBlank()) return RenderResult(null, 0, 0, null)
@@ -188,7 +189,4 @@ object PlantUmlEngine {
         System.setProperty("plantuml.include.path", dir.absolutePath)
         return SourceStringReader(Defines.createEmpty(), source, Charsets.UTF_8, configLines, SFile.fromFile(dir))
     }
-
-    private val startLine = Regex("""^\s*@start\w+""", RegexOption.MULTILINE)
-    private fun countBlocks(source: String) = startLine.findAll(source).count()
 }
