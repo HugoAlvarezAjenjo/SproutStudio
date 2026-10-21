@@ -48,6 +48,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_commit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_soft_wrap
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_edit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find
@@ -244,6 +245,7 @@ internal fun projectCommands(
     cmd("view.fontBigger", text(Res.string.cmd_font_bigger), text(Res.string.menu_view), enabled = editor.currentFontSize < EditorSettings.MAX_FONT_SIZE) { editor.changeFontSize(1f) }
     cmd("view.fontSmaller", text(Res.string.cmd_font_smaller), text(Res.string.menu_view), enabled = editor.currentFontSize > EditorSettings.MIN_FONT_SIZE) { editor.changeFontSize(-1f) }
     cmd("view.fontReset", text(Res.string.cmd_font_reset), text(Res.string.menu_view), enabled = !editor.fontSize.isDefault) { editor.fontSize.reset() }
+    cmd("view.softWrap", text(Res.string.menu_soft_wrap), text(Res.string.menu_view), if (Os.isMac) "⌥Z" else "Alt+Z") { editor.toggleSoftWrap() }
     cmd("view.diagramDark", if (p.deps.diagram.dark.value) text(Res.string.cmd_light_diagram) else text(Res.string.menu_dark_diagram_preview), text(Res.string.cat_preview)) { p.deps.diagram.toggle() }
 
     // Preview: export goes through the preview pane (it knows which diagram is showing).

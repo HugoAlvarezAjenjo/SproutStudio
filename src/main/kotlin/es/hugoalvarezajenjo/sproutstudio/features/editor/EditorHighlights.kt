@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.TextLayoutResult
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.TextLines
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.IdeColors
 
 /** Find hits beyond this many aren't painted: the list still counts them, the screen can't show them anyway. */
@@ -36,16 +37,22 @@ internal fun DrawScope.drawEditorHighlights(l: TextLayoutResult, toLayout: (Int)
         val top = l.getLineTop(line)
         drawRect(color, Offset(left, top), Size(size.width + extra, l.getLineBottom(line) - top))
     }
+    /** Every row of real 0-based [line]: one row, or several when it wraps. */
+    fun realBand(line: Int, color: Color) {
+        if (line !in h.lineStarts.indices) return
+        val first = l.getLineForOffset(at(h.lineStarts[line]))
+        val endOffset = if (line + 1 < h.lineStarts.size) h.lineStarts[line + 1] - 1 else Int.MAX_VALUE
+        val last = l.getLineForOffset(at(endOffset))
+        for (row in first..maxOf(first, last)) band(row, color)
+    }
     fun fill(r: IntRange, color: Color) {
         val s = at(r.first)
         val e = at(r.last + 1)
         if (e > s) drawPath(l.getPathForRange(s, e), color)
     }
 
-    band(l.getLineForOffset(at(h.caret)), c.currentLine)
-    for (line in h.errorLines) {
-        if (line - 1 in h.lineStarts.indices) band(l.getLineForOffset(at(h.lineStarts[line - 1])), c.errorBg)
-    }
+    realBand(TextLines.of(h.lineStarts, h.caret.coerceAtLeast(0)), c.currentLine)
+    for (line in h.errorLines) realBand(line - 1, c.errorBg)
     for (r in h.usages) fill(r, c.symbolUsage)
     h.link?.let { r ->
         val s = at(r.first)

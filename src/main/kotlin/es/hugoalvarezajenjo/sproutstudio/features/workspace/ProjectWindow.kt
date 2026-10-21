@@ -13,6 +13,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_commit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_soft_wrap
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_theme
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_edit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
@@ -238,6 +239,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 CheckboxItem(tr(Res.string.menu_show_problems), checked = p.problemsExpanded, shortcut = shortcut(Key.Six)) { p.toggleProblems() }
                 CheckboxItem(tr(Res.string.menu_dark_theme), checked = p.deps.theme.dark.value) { p.deps.theme.toggle() }
                 CheckboxItem(tr(Res.string.menu_dark_diagram_preview), checked = p.deps.diagram.dark.value) { p.deps.diagram.toggle() }
+                CheckboxItem(tr(Res.string.menu_soft_wrap), checked = p.deps.editor.softWrap.value, shortcut = KeyShortcut(Key.Z, alt = true)) { p.deps.editor.toggleSoftWrap() }
                 Separator()
                 Item(tr(Res.string.menu_refresh_files), shortcut = KeyShortcut(Key.Y, meta = Os.isMac, ctrl = !Os.isMac, alt = true)) { p.explorer.refreshTree() }
             }

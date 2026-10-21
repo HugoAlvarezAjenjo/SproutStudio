@@ -181,6 +181,9 @@ private fun EditorSection(vm: SettingsViewModel) {
             ToolButton(Icons.Outlined.Add, tr(Res.string.settings_larger), enabled = vm.canGrowFont) { vm.changeFontSize(1f) }
         }
     }
+    SettingRow(tr(Res.string.settings_soft_wrap), tr(Res.string.settings_soft_wrap_hint)) {
+        Toggle(vm.softWrap, tag = "soft-wrap") { vm.setSoftWrap(it) }
+    }
     // A live sample, in the editor's real font, colours and size.
     val sample = remember { Templates.all.first().previewSource.lines().take(6).joinToString("\n") }
     val highlighted = remember(sample, c) { Highlighter.highlight(sample, c.syntax, emptySet(), -1) }

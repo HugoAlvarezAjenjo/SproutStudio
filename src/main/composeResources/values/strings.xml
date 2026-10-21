@@ -18,6 +18,8 @@
     <string name="settings_diagram_preview_hint">Recolour diagrams dark in the preview. Exports keep the original colours.</string>
     <string name="settings_font_size">Font size</string>
     <string name="settings_font_size_hint">Text size in the code editor.</string>
+    <string name="settings_soft_wrap">Soft wrap</string>
+    <string name="settings_soft_wrap_hint">Long lines continue on the next row instead of scrolling sideways. The file is not changed.</string>
     <string name="settings_smaller">Smaller</string>
     <string name="settings_larger">Larger</string>
     <string name="settings_points">%1$d pt</string>
@@ -84,6 +86,7 @@
     <string name="menu_show_problems">Show Problems</string>
     <string name="menu_dark_theme">Dark Theme</string>
     <string name="menu_dark_diagram_preview">Dark Diagram Preview</string>
+    <string name="menu_soft_wrap">Soft Wrap</string>
     <string name="menu_refresh_files">Refresh Files</string>
     <string name="menu_git">Git</string>
     <string name="menu_commit">Commit…</string>

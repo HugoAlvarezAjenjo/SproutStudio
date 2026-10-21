@@ -1,6 +1,8 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
 import es.hugoalvarezajenjo.sproutstudio.Offscreen
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
 
 import androidx.compose.material3.Surface
@@ -79,6 +81,22 @@ class UiSnapshotTest {
         } finally {
             if (TestGraph.graph.diagram.dark.value != wasDark) TestGraph.graph.diagram.toggle() // leave the user's choice as it was
             TestGraph.graph.layout.editorLayout.value = savedLayout
+        }
+    }
+
+    @Test
+    fun editorSoftWrap() {
+        // A long line with the caret on it and an error below: number, current-line band and
+        // error band must cover every row of the wrapped line, and the number shows only once.
+        val long = "Alice -> Bob: " + "a rather long message that keeps going ".repeat(4)
+        val text = "@startuml\n$long\nBob --> Alice: ok\nAlice -> : $long\n@enduml\n"
+        val doc = TestGraph.document(null, text).apply {
+            value = value.copy(selection = androidx.compose.ui.text.TextRange("@startuml\n".length + 20))
+        }
+        shoot("editor-soft-wrap", listOf(200, 400)) {
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.size(560.dp, 360.dp)) {
+                es.hugoalvarezajenjo.sproutstudio.features.editor.CodeEditor(doc, errorLine = null, errorLines = setOf(4), softWrap = true)
+            }
         }
     }
 

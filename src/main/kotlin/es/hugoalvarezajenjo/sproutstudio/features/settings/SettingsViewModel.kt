@@ -26,6 +26,9 @@ class SettingsViewModel(private val deps: WorkspaceDeps) {
     val canGrowFont: Boolean get() = fontSize < EditorSettings.MAX_FONT_SIZE
     fun changeFontSize(delta: Float) = deps.editor.changeFontSize(delta)
 
+    val softWrap: Boolean get() = deps.editor.softWrap.value
+    fun setSoftWrap(on: Boolean) { deps.editor.softWrap.value = on }
+
     val autoSave: Boolean get() = deps.autoSaver.enabled
     /** Open windows flush their own edits when they next lose focus or switch tab. */
     fun setAutoSave(on: Boolean) = deps.autoSaver.setEnabled(on)
@@ -40,13 +43,14 @@ class SettingsViewModel(private val deps: WorkspaceDeps) {
     /** Appearance and editor settings all at their defaults (recents and window layout don't count). */
     val allDefaults: Boolean
         get() = deps.theme.dark.isDefault && deps.language.choice.isDefault && deps.diagram.dark.isDefault &&
-            deps.editor.fontSize.isDefault && deps.autoSaver.isDefault && deps.session.restore.isDefault
+            deps.editor.fontSize.isDefault && deps.editor.softWrap.isDefault && deps.autoSaver.isDefault && deps.session.restore.isDefault
 
     fun resetToDefaults() {
         deps.theme.dark.reset()
         deps.language.choice.reset()
         deps.diagram.dark.reset()
         deps.editor.fontSize.reset()
+        deps.editor.softWrap.reset()
         deps.autoSaver.resetToDefault()
         deps.session.restore.reset()
     }

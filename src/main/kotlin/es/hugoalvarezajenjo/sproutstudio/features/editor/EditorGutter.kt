@@ -149,6 +149,8 @@ internal fun EditorGutter(
                     val y = topPad + l.getLineTop(i)
                     val lineH = l.getLineBottom(i) - l.getLineTop(i)
                     val real = realLine(l, i)
+                    // With soft wrap a real line takes several rows: only its first one is labelled.
+                    val firstRow = i == 0 || realLine(l, i - 1) != real
                     val lineNo = real + 1
                     // ── git change bar: a folded line shows what is hidden inside it ──
                     val lastReal = if (i + 1 < lines) realLine(l, i + 1) - 1 else lineStarts.size - 1
@@ -166,9 +168,9 @@ internal fun EditorGutter(
                         }
                         val w = if (hot) barW * 2.2f else barW
                         drawRect(col, Offset(size.width - w, y), Size(w, lineH))
-                    } else if (lineChanges.deletedAbove(real) || (i == lines - 1 && lineChanges.deletedAbove(real + 1))) {
+                    } else if ((firstRow && lineChanges.deletedAbove(real)) || (i == lines - 1 && lineChanges.deletedAbove(real + 1))) {
                         // Deleted lines: a small grey wedge on the boundary where they were.
-                        val atBottom = !lineChanges.deletedAbove(real)
+                        val atBottom = !(firstRow && lineChanges.deletedAbove(real))
                         val yy = if (atBottom) y + lineH else y
                         val k = if (hotDeleted && hotChange.start == (if (atBottom) real + 1 else real)) 1.7f else 1f
                         val wedge = Path().apply {
@@ -176,6 +178,7 @@ internal fun EditorGutter(
                         }
                         drawPath(wedge, c.gutterDeleted)
                     }
+                    if (!firstRow) continue
                     val isErr = lineNo in errorLines
                     val isCur = lineNo == currentLine
                     if (isErr) drawCircle(c.error, 4f, Offset(8f, y + lineH / 2))

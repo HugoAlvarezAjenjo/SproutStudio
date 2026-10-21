@@ -169,6 +169,7 @@ private fun EditorAndPreview(p: WorkspaceViewModel, doc: Document, preview: Prev
                     onCaretMoved = onCaret,
                     onOpenFile = { p.open(it) },
                     includes = p.includes,
+                    softWrap = p.deps.editor.softWrap.value,
                 )
             }
             if (split) {

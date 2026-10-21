@@ -47,12 +47,13 @@ class SettingsViewModelTest {
         graph.recents.add(dir)
         assertTrue(vm.allDefaults)
         vm.setDarkTheme(false); vm.setDarkDiagram(true); vm.changeFontSize(3f); vm.setAutoSave(false)
-        vm.setRestoreSession(false)
+        vm.setRestoreSession(false); vm.setSoftWrap(true)
         assertFalse(vm.allDefaults)
 
         vm.resetToDefaults()
 
         assertTrue(vm.allDefaults)
+        assertFalse(vm.softWrap, "soft wrap is off by default")
         assertTrue(graph.theme.dark.value)
         assertEquals(EditorSettings.DEFAULT_FONT_SIZE, vm.fontSize)
         assertTrue(graph.autoSaver.enabled)

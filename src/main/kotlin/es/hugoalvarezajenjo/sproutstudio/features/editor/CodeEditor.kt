@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.TransformedText
@@ -82,6 +83,8 @@ fun CodeEditor(
     includes: IncludeReader = IncludeFiles.DISK,
     /** Lists folders, so completion inside `!include path` offers local files. */
     paths: PathLister = IncludePaths,
+    /** Long lines continue on the next row (fitted to the editor's width) instead of scrolling sideways. */
+    softWrap: Boolean = false,
 ) {
     SideEffect { doc.updateGitLines(lineChanges) }
     val state = remember(doc, paths) { CodeEditorState(doc, paths) }
@@ -208,7 +211,8 @@ fun CodeEditor(
                     onChangeClick = state::toggleHunk,
                 )
                 HunkPopup(state, lineChanges, value.text, density, onDone = ::requestFocus)
-                Box(Modifier.weight(1f).horizontalScroll(hScroll)) {
+                // Wrapping: the field is exactly as wide as the editor, so the text breaks at its edge.
+                Box(if (softWrap) Modifier.weight(1f) else Modifier.weight(1f).horizontalScroll(hScroll)) {
                     BasicTextField(
                         value = value,
                         onValueChange = { nv ->
@@ -222,7 +226,9 @@ fun CodeEditor(
                         visualTransformation = transformation,
                         onTextLayout = { geometry.text = it },
                         modifier = Modifier
+                            .then(if (softWrap) Modifier.fillMaxWidth() else Modifier)
                             .defaultMinSize(minWidth = viewportW - EditorMetrics.gutter, minHeight = viewportH)
+                            .testTag("code-editor-field")
                             .focusRequester(focus)
                             .onSizeChanged { geometry.fieldHeightPx = it.height }
                             .padding(
