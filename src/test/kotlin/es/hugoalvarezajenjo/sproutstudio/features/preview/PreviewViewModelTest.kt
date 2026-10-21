@@ -46,7 +46,7 @@ class PreviewViewModelTest {
 
     private fun TestScope.viewModel(): PreviewViewModel {
         val d = StandardTestDispatcher(testScheduler)
-        return PreviewViewModel(render, diagram, es.hugoalvarezajenjo.sproutstudio.platform.DesktopPlatform(), AppDispatchers(d, d, d), debounceMs = 300) {
+        return PreviewViewModel(render, diagram, es.hugoalvarezajenjo.sproutstudio.platform.Platform.current(), AppDispatchers(d, d, d), debounceMs = 300) {
             PreviewViewModel.Source(text.value, null)
         }
     }

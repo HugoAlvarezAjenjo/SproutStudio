@@ -98,7 +98,7 @@ sourceSets.main { resources.srcDir(generateBuildInfo) }
 // Single source of truth: src/main/resources/icon.png (square, ideally 1024x1024).
 // At runtime it is the Dock/window icon. For the packaged app we turn it into an .icns (macOS,
 // with the built-ins `sips` + `iconutil`) or an .ico (Windows, plain Java ImageIO), so no
-// download and no extra tool. Each is built only on its own OS.
+// download and no extra tool. Each is built only on its own OS. Linux uses the PNG directly.
 val iconPng = layout.projectDirectory.file("src/main/resources/icon.png")
 val iconIcns = layout.buildDirectory.file("generated/icon/SproutStudio.icns")
 val iconIco = layout.buildDirectory.file("generated/icon/SproutStudio.ico")
@@ -183,7 +183,7 @@ compose.desktop {
         jvmArgs += "--enable-native-access=ALL-UNNAMED"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "SproutStudio"
             packageVersion = appVersion
             description = "PlantUML IDE"
@@ -229,6 +229,17 @@ compose.desktop {
                 dirChooser = true
                 perUserInstall = true // no administrator rights needed
                 if (iconPng.asFile.exists()) iconFile.set(iconIco)
+            }
+
+            linux {
+                // Debian package names are lowercase; the app and its menu entry keep "SproutStudio".
+                packageName = "sproutstudio"
+                debMaintainer = "Hugo Alvarez Ajenjo <hugo.alvarezajenjo@gmail.com>"
+                appCategory = "devel" // Debian section
+                menuGroup = "Development" // freedesktop menu category
+                shortcut = true
+                // Linux takes the PNG as it is.
+                if (iconPng.asFile.exists()) iconFile.set(iconPng)
             }
         }
     }

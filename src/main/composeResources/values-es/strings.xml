@@ -45,6 +45,7 @@
     <string name="welcome_new_diagram_hint">Empieza con un diagrama en blanco</string>
     <string name="welcome_tip">Consejo: haz doble clic en un archivo .puml en el Finder para verlo al instante.</string>
     <string name="welcome_tip_windows">Consejo: haz doble clic en un archivo .puml en el Explorador de archivos para verlo al instante.</string>
+    <string name="welcome_tip_linux">Consejo: haz doble clic en un archivo .puml en tu gestor de archivos para verlo al instante.</string>
     <string name="welcome_settings">Ajustes</string>
     <string name="welcome_recent_projects">PROYECTOS RECIENTES</string>
     <string name="welcome_no_recents">No hay proyectos recientes</string>
@@ -380,6 +381,7 @@
     </plurals>
     <string name="trash_restore_hint">Puedes recuperarlo de la papelera en el Finder.</string>
     <string name="trash_restore_hint_windows">Puedes recuperarlo de la Papelera de reciclaje.</string>
+    <string name="trash_restore_hint_linux">Puedes recuperarlo de la papelera en tu gestor de archivos.</string>
     <string name="trash_unsaved">Se perderán los cambios sin guardar de %1$s.</string>
     <string name="trash_confirm">Mover a la papelera</string>
     <!-- features/preview/RenderErrorText.kt -->

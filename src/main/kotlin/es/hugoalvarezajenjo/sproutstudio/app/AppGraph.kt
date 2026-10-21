@@ -14,7 +14,6 @@ import es.hugoalvarezajenjo.sproutstudio.features.workspace.SessionSettings
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.AutoSaver
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceDeps
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
-import es.hugoalvarezajenjo.sproutstudio.platform.DesktopPlatform
 import es.hugoalvarezajenjo.sproutstudio.platform.Platform
 import es.hugoalvarezajenjo.sproutstudio.services.files.ProjectFiles
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitService
@@ -32,7 +31,7 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ThemeSettings
 class AppGraph(
     val store: SettingsStore,
     val dispatchers: AppDispatchers = AppDispatchers.Production,
-    val platform: Platform = DesktopPlatform(),
+    val platform: Platform = Platform.current(),
 ) {
     val theme = ThemeSettings(store)
     val diagram = DiagramSettings(store)
@@ -78,7 +77,7 @@ class AppGraph(
             )
         }
 
-        fun forTests(dispatchers: AppDispatchers = AppDispatchers.Production, platform: Platform = DesktopPlatform()) =
+        fun forTests(dispatchers: AppDispatchers = AppDispatchers.Production, platform: Platform = Platform.current()) =
             AppGraph(InMemorySettingsStore(), dispatchers, platform)
     }
 }

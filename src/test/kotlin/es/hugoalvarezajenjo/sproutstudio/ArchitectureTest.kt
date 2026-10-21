@@ -9,6 +9,7 @@ import kotlin.test.fail
  * The architecture rules, checked on the source text (no library needed):
  *
  *  - Layers depend one way: features → services → domain; core and platform are shared.
+ *  - What differs per OS lives in platform (one class per OS), not in ifs across screens.
  *  - domain is plain Kotlin: no Compose (except the TextFieldValue/TextRange value types),
  *    no coroutines, no JGit, no AWT.
  *  - services do IO but never touch UI state: no Compose, no AWT/Swing (that's platform).
@@ -74,6 +75,16 @@ class ArchitectureTest {
         "platform",
         listOf("androidx.compose", "$base.services", "$base.features", "$base.ui", "$base.app"),
     )
+
+    @Test
+    fun osDifferencesLiveInPlatform() {
+        // What an OS does differently is one Platform class per OS, not ifs spread over screens.
+        // Screens may ask only Os.isMac (keyboard style); OS-specific texts sit in OsTexts.
+        val osApis = listOf("Os.family", "apple.awt", "Desktop.getDesktop", "ProcessBuilder", "explorer.exe")
+        val bad = sources.filter { s -> !s.pkg.startsWith("$base.platform") && !s.pkg.startsWith("$base.core.os") }
+            .flatMap { s -> osApis.filter { it in s.text && !(it == "Os.family" && s.file.name == "OsTexts.kt") }.map { "${s.file.name}: $it" } }
+        assertTrue(bad.isEmpty(), "OS-specific code outside platform:\n" + bad.joinToString("\n"))
+    }
 
     @Test
     fun featuresDontReachUpToApp() = assertNoImports("features", listOf("$base.app"))

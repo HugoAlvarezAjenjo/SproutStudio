@@ -1,16 +1,20 @@
 package es.hugoalvarezajenjo.sproutstudio.platform
 
+import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import java.io.File
 
 /**
  * Everything that depends on the desktop the app runs on: native dialogs, the Trash, the
- * file manager, the clipboard. Today [DesktopPlatform] (macOS first, with generic fallbacks);
- * a Windows or Linux version only has to change this layer. Tests use a fake.
+ * file manager, the clipboard, and the hooks the OS calls from outside the app's windows.
+ *
+ * One class per OS ([MacPlatform], [WindowsPlatform], [LinuxPlatform]), each on top of
+ * [AwtPlatform], which does what plain AWT/Swing already does the same everywhere. An OS class
+ * overrides only what is different on that OS, so no code outside this package asks which OS
+ * it is on for behaviour (only for keyboard style and texts, see [Os]). Tests use a fake.
  *
  * Dialogs block until the user answers, like the native ones they wrap.
  */
 interface Platform {
-    val isMac: Boolean
 
     /** "Open a diagram": a file with one of [extensions], or null if cancelled. */
     fun chooseFile(title: String, extensions: Set<String>): File?
@@ -23,10 +27,28 @@ interface Platform {
     /** Moves [f] to the system Trash; false if that's not possible (never deletes for good). */
     fun moveToTrash(f: File): Boolean
 
-    /** Shows [f] in Finder (or its folder in the file manager). */
+    /** Shows [f] in the file manager, selected where the OS allows it. */
     fun reveal(f: File)
 
     fun copyImageToClipboard(png: ByteArray)
 
     fun copyTextToClipboard(text: String)
+
+    /**
+     * Connects [hooks] to the OS before any window exists (macOS: Finder "open file" events, ⌘Q,
+     * the app menu). Most desktops deliver files as program arguments instead, so by default
+     * there is nothing to connect.
+     */
+    fun integrate(hooks: AppHooks) {}
+
+    companion object {
+        /** The [Platform] of the OS this process runs on. */
+        fun current(): Platform = forOs(Os.family)
+
+        fun forOs(family: Os.Family): Platform = when (family) {
+            Os.Family.MAC -> MacPlatform()
+            Os.Family.WINDOWS -> WindowsPlatform()
+            Os.Family.LINUX -> LinuxPlatform()
+        }
+    }
 }

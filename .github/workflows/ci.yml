@@ -17,9 +17,9 @@ permissions:
 jobs:
   test:
     strategy:
-      fail-fast: false   # a Windows failure must not hide the macOS result, or the reverse
+      fail-fast: false   # a failure on one OS must not hide the others' results
       matrix:
-        os: [macos-latest, windows-latest]   # macOS on Apple Silicon (arm64)
+        os: [macos-latest, windows-latest, ubuntu-latest]   # macOS on Apple Silicon (arm64)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     defaults:
@@ -35,8 +35,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # The UI tests need a display; Linux runners have none, so a virtual one (Xvfb).
       - name: Test
-        run: ./gradlew test --no-daemon
+        run: ${{ runner.os == 'Linux' && 'xvfb-run -a ' || '' }}./gradlew test --no-daemon
 
       - name: Upload test report on failure
         if: failure()

@@ -196,7 +196,7 @@ private fun folderMenu(p: WorkspaceViewModel, dir: java.io.File, isRoot: Boolean
     } else {
         add(ContextMenuItem(if (p.explorer.rootCollapsed) text(Res.string.tree_expand) else text(Res.string.tree_collapse)) { p.explorer.toggleRootCollapsed() })
     }
-    add(ContextMenuItem(revealLabel()) { p.deps.platform.reveal(dir) })
+    add(ContextMenuItem(text(OsTexts.reveal)) { p.deps.platform.reveal(dir) })
 }
 
 @Composable
@@ -211,7 +211,7 @@ private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDro
             add(ContextMenuItem(text(Res.string.cmd_new_folder)) { p.explorer.showFileAction(FileAction.NewFolder(dir)) })
             add(ContextMenuItem(text(Res.string.tree_rename)) { p.explorer.showFileAction(FileAction.Rename(f)) })
             add(ContextMenuItem(text(Res.string.tree_trash)) { p.explorer.showFileAction(FileAction.Delete(f)) })
-            add(ContextMenuItem(revealLabel()) { p.deps.platform.reveal(f) })
+            add(ContextMenuItem(text(OsTexts.reveal)) { p.deps.platform.reveal(f) })
             if (p.git.status.head != null) {
                 if (canCompareWithHead(p, f)) add(ContextMenuItem(text(Res.string.menu_compare_with_head)) { p.deps.windows.compareWithHead(p, f) })
                 if (hasCommittedChanges(p, f)) add(ContextMenuItem(text(Res.string.menu_show_diff_with_head)) { p.deps.windows.compareWithHead(p, f, textFirst = true) })

@@ -10,15 +10,17 @@ import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
 import java.awt.datatransfer.UnsupportedFlavorException
 import java.io.File
+import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 import javax.swing.JFileChooser
 
-/** [Platform] on AWT/Swing, with the macOS native dialogs where they exist. */
-class DesktopPlatform : Platform {
+/**
+ * [Platform] on plain AWT/Swing: what works the same on every desktop. The OS classes extend it
+ * and override only what their OS does differently.
+ */
+abstract class AwtPlatform : Platform {
 
-    override val isMac = System.getProperty("os.name").lowercase().contains("mac")
-    private val isWindows = System.getProperty("os.name").lowercase().contains("windows")
-
+    /** AWT's FileDialog is the native one on macOS and Windows, and GTK's on Linux. */
     override fun chooseFile(title: String, extensions: Set<String>): File? {
         val d = FileDialog(null as Frame?, title, FileDialog.LOAD).apply {
             setFilenameFilter { _, name -> name.substringAfterLast('.', "").lowercase() in extensions }
@@ -27,18 +29,8 @@ class DesktopPlatform : Platform {
         return d.file?.let { File(d.directory, it) }
     }
 
-    /** macOS needs the apple.awt.fileDialogForDirectories flag for a native folder picker. */
+    /** FileDialog can't pick folders outside macOS, so Swing's chooser. */
     override fun chooseFolder(title: String): File? {
-        if (isMac) {
-            System.setProperty("apple.awt.fileDialogForDirectories", "true")
-            try {
-                val d = FileDialog(null as Frame?, title, FileDialog.LOAD)
-                d.isVisible = true
-                return d.file?.let { File(d.directory, it) }
-            } finally {
-                System.setProperty("apple.awt.fileDialogForDirectories", "false")
-            }
-        }
         val chooser = JFileChooser().apply { fileSelectionMode = JFileChooser.DIRECTORIES_ONLY; dialogTitle = title }
         return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
     }
@@ -58,15 +50,9 @@ class DesktopPlatform : Platform {
         d.isSupported(Desktop.Action.MOVE_TO_TRASH) && d.moveToTrash(f)
     }.getOrDefault(false)
 
+    /** Opens the folder holding [f] (a folder opens itself), without selecting anything. */
     override fun reveal(f: File) {
-        runCatching {
-            when {
-                isMac -> ProcessBuilder("open", "-R", f.absolutePath).start()
-                // Opens the folder with [f] selected. One argument: explorer parses "/select,<path>" itself.
-                isWindows -> ProcessBuilder("explorer.exe", "/select,${f.absolutePath}").start()
-                else -> Desktop.getDesktop().open(if (f.isDirectory) f else f.absoluteFile.parentFile)
-            }
-        }
+        runCatching { Desktop.getDesktop().open(folderOf(f)) }
     }
 
     override fun copyImageToClipboard(png: ByteArray) {
@@ -78,10 +64,23 @@ class DesktopPlatform : Platform {
         Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
     }
 
+    protected fun folderOf(f: File): File = if (f.isDirectory) f else f.absoluteFile.parentFile
+
     private class ImageSelection(private val image: Image) : Transferable {
         override fun getTransferDataFlavors() = arrayOf(DataFlavor.imageFlavor)
         override fun isDataFlavorSupported(flavor: DataFlavor) = flavor == DataFlavor.imageFlavor
         override fun getTransferData(flavor: DataFlavor): Any =
             if (flavor == DataFlavor.imageFlavor) image else throw UnsupportedFlavorException(flavor)
+    }
+
+    companion object {
+        /**
+         * Runs [cmd] (no shell, so nothing in a path is interpreted) and returns its exit code,
+         * or -1 if it can't start or takes longer than [timeoutSeconds].
+         */
+        fun runCommand(cmd: List<String>, timeoutSeconds: Long = 10): Int = runCatching {
+            val p = ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
+            if (p.waitFor(timeoutSeconds, TimeUnit.SECONDS)) p.exitValue() else { p.destroy(); -1 }
+        }.getOrDefault(-1)
     }
 }

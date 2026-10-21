@@ -7,7 +7,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.tab_close_left
 import es.hugoalvarezajenjo.sproutstudio.resources.tab_close_others
 import es.hugoalvarezajenjo.sproutstudio.resources.tab_close_right
 import es.hugoalvarezajenjo.sproutstudio.resources.tab_copy_path
-import es.hugoalvarezajenjo.sproutstudio.features.explorer.revealLabel
+import es.hugoalvarezajenjo.sproutstudio.features.explorer.OsTexts
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
 
@@ -199,7 +199,7 @@ private fun tabMenu(p: WorkspaceViewModel, d: Document, onCloseTab: (Document) -
     add(ContextMenuItem(text(Res.string.tab_close_all)) { p.closeAllTabs() })
     d.file?.let { f ->
         add(ContextMenuItem(text(Res.string.tab_copy_path)) { p.deps.platform.copyTextToClipboard(f.absolutePath) })
-        add(ContextMenuItem(revealLabel()) { p.deps.platform.reveal(f) })
+        add(ContextMenuItem(text(OsTexts.reveal)) { p.deps.platform.reveal(f) })
     }
 }
 
