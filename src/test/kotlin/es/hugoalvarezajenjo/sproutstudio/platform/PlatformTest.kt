@@ -21,4 +21,18 @@ class PlatformTest {
         assertIs<WindowsPlatform>(Platform.forOs(Os.Family.WINDOWS))
         assertIs<LinuxPlatform>(Platform.forOs(Os.Family.LINUX))
     }
+
+    @Test
+    fun `full screen on macOS leaves the menu bar strip empty only when the window starts at the top`() {
+        val mac = MacPlatform()
+        assertEquals(24, mac.fullScreenTopInset(windowTop = 0, screenTop = 0)) // external monitor
+        assertEquals(24, mac.fullScreenTopInset(windowTop = -1080, screenTop = -1080)) // monitor above the main one
+        assertEquals(0, mac.fullScreenTopInset(windowTop = 38, screenTop = 0)) // notch: macOS already moved it down
+    }
+
+    @Test
+    fun `other desktops keep nothing at the top in full screen`() {
+        assertEquals(0, WindowsPlatform().fullScreenTopInset(0, 0))
+        assertEquals(0, LinuxPlatform().fullScreenTopInset(0, 0))
+    }
 }

@@ -65,9 +65,11 @@ import androidx.compose.runtime.getValue
 
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.outlined.Close
@@ -97,8 +99,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.rememberWindowState
 import es.hugoalvarezajenjo.sproutstudio.features.editor.changeAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.editor.findNext
@@ -147,11 +151,13 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
         append(p.root?.name ?: "SproutStudio")
     }
 
+    val windowState = rememberWindowState(size = DpSize(1320.dp, 840.dp))
+
     Window(
         onCloseRequest = { p.requestClose(p.docs.toList()) { onClose() } },
         title = title,
         icon = AppIcon.painter,
-        state = rememberWindowState(size = DpSize(1320.dp, 840.dp)),
+        state = windowState,
         visible = revealed,
         onPreviewKeyEvent = { e ->
             val isShift = e.key == Key.ShiftLeft || e.key == Key.ShiftRight
@@ -274,8 +280,15 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
             }
         }
 
+        // Full screen: leave empty the strip at the top the OS keeps for itself (macOS menu bar),
+        // or the tab bar's buttons sit where clicks don't arrive. Placement and size are state,
+        // so this is re-read when the window enters or leaves full screen.
+        val topInset = if (windowState.placement == WindowPlacement.Fullscreen && windowState.size.isSpecified) {
+            p.deps.platform.fullScreenTopInset(window.y, window.graphicsConfiguration?.bounds?.y ?: window.y)
+        } else 0
+
         PumlTheme(dark = p.deps.theme.dark.value, editorFontSize = p.deps.editor.currentFontSize) {
-            Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().background(ide.panel).padding(top = topInset.dp)) {
             Surface(color = ide.panel) {
                 if (p.root == null && p.docs.isEmpty()) {
                     Welcome(p)

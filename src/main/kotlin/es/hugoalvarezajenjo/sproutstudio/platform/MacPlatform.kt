@@ -25,6 +25,15 @@ class MacPlatform : AwtPlatform() {
         runCatching { ProcessBuilder("open", "-R", f.absolutePath).start() }
     }
 
+    /**
+     * In full screen, macOS keeps the menu bar's strip at the top of the screen to slide the
+     * menu bar in, and clicks there often don't reach the window. On a screen with a notch
+     * macOS already starts the window below that strip; on other screens (most external
+     * monitors) the window starts at the very top, so the app leaves the strip empty.
+     */
+    override fun fullScreenTopInset(windowTop: Int, screenTop: Int): Int =
+        if (windowTop <= screenTop) MENU_BAR_HEIGHT else 0
+
     override fun integrate(hooks: AppHooks) {
         System.setProperty("apple.awt.application.name", "SproutStudio")
         // Native title bar follows the app theme (read once at startup; AWT can't switch it live).
@@ -52,5 +61,10 @@ class MacPlatform : AwtPlatform() {
         if (desktop.isSupported(Desktop.Action.APP_PREFERENCES)) {
             desktop.setPreferencesHandler { SwingUtilities.invokeLater { hooks.openSettings() } }
         }
+    }
+
+    private companion object {
+        /** Height of the macOS menu bar on a screen without a notch, in points. */
+        const val MENU_BAR_HEIGHT = 24
     }
 }

@@ -41,6 +41,13 @@ interface Platform {
      */
     fun integrate(hooks: AppHooks) {}
 
+    /**
+     * How many points at the top of a full-screen window the OS keeps for itself, so the app
+     * should leave them empty. [windowTop] and [screenTop] are the top edges of the window and
+     * of its screen, in AWT coordinates. By default the OS keeps nothing.
+     */
+    fun fullScreenTopInset(windowTop: Int, screenTop: Int): Int = 0
+
     companion object {
         /** The [Platform] of the OS this process runs on. */
         fun current(): Platform = forOs(Os.family)
