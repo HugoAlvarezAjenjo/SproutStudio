@@ -2,7 +2,11 @@ package es.hugoalvarezajenjo.sproutstudio.platform
 
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import org.junit.jupiter.api.Assumptions.assumeFalse
+import org.junit.jupiter.api.Assumptions.assumeTrue
+import java.awt.GraphicsEnvironment
+import java.awt.Toolkit
 import java.io.File
+import java.lang.reflect.Modifier
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -53,5 +57,33 @@ class LinuxPlatformTest {
     fun `without a FileManager1 service, reveal opens the folder instead`() {
         platform("gdbus" to 1).reveal(file)
         assertEquals(listOf("xdg-open", "/home/ana/My Diagrams"), calls.last())
+    }
+
+    private val hooks = AppHooks(openFiles = {}, openSettings = {}, beforeQuit = {}, dark = false)
+
+    @Test
+    fun `integrate names the windows after the installer's menu entry`() {
+        val classes = mutableListOf<String>()
+        LinuxPlatform(desktopId = "sproutstudio-SproutStudio", setWindowClass = { classes += it }).integrate(hooks)
+        assertEquals(listOf("sproutstudio-SproutStudio"), classes)
+    }
+
+    @Test
+    fun `without a menu entry id, integrate keeps AWT's window class`() {
+        val classes = mutableListOf<String>()
+        LinuxPlatform(desktopId = null, setWindowClass = { classes += it }).integrate(hooks)
+        LinuxPlatform(desktopId = " ", setWindowClass = { classes += it }).integrate(hooks)
+        assertEquals(emptyList(), classes)
+    }
+
+    /** The field setAwtAppClassName writes; if a JDK renames it, the dock icon breaks silently. */
+    @Test
+    fun `the X11 toolkit still keeps the window class where we set it`() {
+        assumeTrue(Os.family == Os.Family.LINUX && !GraphicsEnvironment.isHeadless())
+        val toolkit = Toolkit.getDefaultToolkit()
+        assumeTrue(toolkit.javaClass.name == "sun.awt.X11.XToolkit") // not a native Wayland toolkit
+        val field = toolkit.javaClass.getDeclaredField("awtAppClassName")
+        assertTrue(Modifier.isStatic(field.modifiers))
+        assertEquals(String::class.java, field.type)
     }
 }

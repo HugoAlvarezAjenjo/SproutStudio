@@ -22,6 +22,13 @@ require(Regex("""[1-9]\d*\.\d+\.\d+""").matches(appVersion)) {
 }
 version = appVersion
 
+// The installers' names. On Linux, jpackage names the menu entry "<debian name>-<app name>.desktop",
+// and GNOME/KDE match a window to that entry (dock icon, grouping) by its WM_CLASS. The app gets
+// the same id at run time (see linuxDesktopId below), so the two cannot drift apart.
+val appName = "SproutStudio"
+val linuxPackageName = "sproutstudio" // Debian package names are lowercase
+val linuxDesktopId = "$linuxPackageName-$appName"
+
 kotlin {
     jvmToolchain(21)
 }
@@ -181,10 +188,17 @@ compose.desktop {
         mainClass = "es.hugoalvarezajenjo.sproutstudio.app.MainKt"
         // Skiko loads its native renderer; declare it so newer JDKs do not warn.
         jvmArgs += "--enable-native-access=ALL-UNNAMED"
+        // Linux: the window class must match the menu entry (LinuxPlatform.integrate). Each
+        // installer is built on its own OS, so only the Linux one carries these; elsewhere the
+        // --add-opens would warn that sun.awt.X11 does not exist.
+        if (System.getProperty("os.name").startsWith("Linux")) {
+            jvmArgs += "-Dsproutstudio.desktopId=$linuxDesktopId"
+            jvmArgs += "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED" // no public API sets WM_CLASS
+        }
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "SproutStudio"
+            packageName = appName
             packageVersion = appVersion
             description = "PlantUML IDE"
             vendor = "Hugo Alvarez Ajenjo"
@@ -233,7 +247,7 @@ compose.desktop {
 
             linux {
                 // Debian package names are lowercase; the app and its menu entry keep "SproutStudio".
-                packageName = "sproutstudio"
+                packageName = linuxPackageName
                 debMaintainer = "Hugo Alvarez Ajenjo <hugo.alvarezajenjo@gmail.com>"
                 appCategory = "devel" // Debian section
                 menuGroup = "Development" // freedesktop menu category
