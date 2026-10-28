@@ -1,6 +1,16 @@
 package es.hugoalvarezajenjo.sproutstudio.features.workspace
 
 import es.hugoalvarezajenjo.sproutstudio.Offscreen
+import androidx.compose.foundation.ContextMenuArea
+import androidx.compose.foundation.ContextMenuState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Schema
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.MenuItem
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.menu
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
@@ -178,4 +188,32 @@ class UiSnapshotTest {
             TestGraph.graph.layout.problemsExpanded.value = saved
         }
     }
+
+    /** The themed right-click menu, opened from the start, over the workspace. */
+    private fun contextMenu(name: String, dark: Boolean) {
+        val p = pizzaProject()
+        val state = ContextMenuState().apply { status = ContextMenuState.Status.Open(Rect(120f, 160f, 120f, 160f)) }
+        val items = menu {
+            group { add(MenuItem("Open", Icons.Outlined.Schema)) }
+            group {
+                add(MenuItem("Copy Path"))
+                add(MenuItem("Export", children = listOf(MenuItem("PNG"))))
+                add(MenuItem("Rollback…", isEnabled = false))
+            }
+            group {
+                add(MenuItem("Refresh Files", shortcut = "⌥⌘Y"))
+                add(MenuItem("Move to Trash…", Icons.Outlined.Delete, danger = true))
+            }
+        }
+        shoot(name, listOf(400, 800, 400), dark = dark) {
+            Box {
+                Workspace(p, onSave = {}, onCloseTab = {})
+                ContextMenuArea(items = { items }, state = state) { Box(Modifier.size(1.dp)) }
+            }
+        }
+    }
+
+    @Test fun contextMenuDark() = contextMenu("context-menu-dark", dark = true)
+
+    @Test fun contextMenuLight() = contextMenu("context-menu-light", dark = false)
 }

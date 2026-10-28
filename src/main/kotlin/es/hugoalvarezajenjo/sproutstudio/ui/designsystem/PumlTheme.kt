@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.ui.designsystem
 
+import androidx.compose.foundation.LocalContextMenuRepresentation
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -57,7 +58,11 @@ fun PumlTheme(dark: Boolean = true, editorFontSize: Float = 13f, content: @Compo
     // JetBrains UI type: 13px body, tight weights. (Inter is what IntelliJ ships; we use the system sans.)
     val base = Typography()
     val ui = TextStyle(fontSize = 13.sp, lineHeight = 18.sp)
-    CompositionLocalProvider(LocalIde provides c, LocalEditorTextStyle provides editorTextStyleAt(editorFontSize)) {
+    CompositionLocalProvider(
+        LocalIde provides c,
+        LocalEditorTextStyle provides editorTextStyleAt(editorFontSize),
+        LocalContextMenuRepresentation provides IdeContextMenu,
+    ) {
         MaterialTheme(
             colorScheme = scheme,
             shapes = Shapes(
