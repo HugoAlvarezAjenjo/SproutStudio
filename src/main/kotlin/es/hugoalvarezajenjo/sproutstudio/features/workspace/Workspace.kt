@@ -152,6 +152,7 @@ internal data class StatusInfo(val kind: String, val diagrams: Int, val errorLin
 @Composable
 private fun EditorAndPreview(p: WorkspaceViewModel, doc: Document, preview: PreviewViewModel, onCaret: (Int, Int) -> Unit) {
     val c = ide
+    val editorMenu = remember(p) { EditorMenu(p) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val total = maxWidth
         val density = LocalDensity.current
@@ -170,6 +171,7 @@ private fun EditorAndPreview(p: WorkspaceViewModel, doc: Document, preview: Prev
                     onOpenFile = { p.open(it) },
                     includes = p.includes,
                     softWrap = p.deps.editor.softWrap.value,
+                    contextMenu = { editorMenu.items(doc) },
                 )
             }
             if (split) {

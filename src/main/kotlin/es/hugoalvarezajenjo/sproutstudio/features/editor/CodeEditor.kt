@@ -30,6 +30,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.TextRange
+import androidx.compose.foundation.ContextMenuItem
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.text.LocalTextContextMenu
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
@@ -68,6 +72,7 @@ import kotlinx.coroutines.launch
  * [followLinks], painting in [drawEditorHighlights] and [EditorGutter]. What they share lives in
  * [CodeEditorState] (per document) and [EditorLayout] (where the text sits).
  */
+@OptIn(ExperimentalFoundationApi::class) // LocalTextContextMenu
 @Composable
 fun CodeEditor(
     doc: Document,
@@ -86,6 +91,8 @@ fun CodeEditor(
     paths: PathLister = IncludePaths,
     /** Long lines continue on the next row (fitted to the editor's width) instead of scrolling sideways. */
     softWrap: Boolean = false,
+    /** Entries the screen adds to the right-click menu, above Cut/Copy/Paste; built when it opens. */
+    contextMenu: () -> List<ContextMenuItem> = { emptyList() },
 ) {
     SideEffect { doc.updateGitLines(lineChanges) }
     val state = remember(doc, paths) { CodeEditorState(doc, paths) }
@@ -96,6 +103,8 @@ fun CodeEditor(
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+    val currentContextMenu by rememberUpdatedState(contextMenu)
+    val textMenu = remember { EditorTextMenu { currentContextMenu() } }
     fun requestFocus() { runCatching { focus.requestFocus() } }
 
     val c = ide
@@ -220,6 +229,7 @@ fun CodeEditor(
                 HunkPopup(state, lineChanges, value.text, density, onDone = ::requestFocus)
                 // Wrapping: the field is exactly as wide as the editor, so the text breaks at its edge.
                 Box(if (softWrap) Modifier.weight(1f) else Modifier.weight(1f).horizontalScroll(hScroll)) {
+                    CompositionLocalProvider(LocalTextContextMenu provides textMenu) {
                     BasicTextField(
                         value = value,
                         onValueChange = { nv ->
@@ -256,8 +266,14 @@ fun CodeEditor(
                                 )
                                 drawEditorHighlights(l, ::toT, c, h)
                             }
+                            .moveCaretOnRightClick(
+                                offsetAt = { geometry.nearestOffsetAt(it, doc.text.length) },
+                                selection = { doc.value.selection },
+                                select = { state.update(doc.value.copy(selection = TextRange(it)), typed = false) },
+                            )
                             .onPreviewKeyEvent { state.handleKey(it, find, ::closeFind, ::linkAt) },
                     )
+                    }
 
                     // ── completion popup and usages list, anchored at the caret ──
                     geometry.text?.let { l ->

@@ -354,6 +354,10 @@
     <string name="tree_open_terminal">Open in Terminal</string>
     <string name="tree_add_to_gitignore">Add to .gitignore</string>
     <string name="tree_export">Export</string>
+    <string name="edit_cut">Cut</string>
+    <string name="edit_copy">Copy</string>
+    <string name="edit_paste">Paste</string>
+    <string name="edit_select_all">Select All</string>
     <string name="tree_refresh">Refresh (%1$s)</string>
     <string name="tree_hide">Hide (%1$s)</string>
     <string name="tree_no_diagrams">No diagrams in this folder</string>
