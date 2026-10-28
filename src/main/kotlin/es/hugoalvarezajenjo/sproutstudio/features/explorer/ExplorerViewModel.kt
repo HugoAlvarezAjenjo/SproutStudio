@@ -85,6 +85,28 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
         refreshTreeBlocking()
     }
 
+    /** Opens [dir] and every folder below it. */
+    fun expandAllUnder(dir: File) {
+        files.foldersUnder(dir.absoluteFile).forEach { if (it !in expanded) expanded.add(it) }
+        if (dir.absoluteFile == root?.absoluteFile) expandRoot()
+        refreshTreeBlocking()
+    }
+
+    /** Closes [dir] and every folder below it (the root's row stays open: it's [rootCollapsed]). */
+    fun collapseAllUnder(dir: File) {
+        val d = dir.absoluteFile
+        expanded.removeAll { it.absoluteFile == d || it.absoluteFile.startsWith(d) }
+        refreshTreeBlocking()
+    }
+
+    /** [f]'s path from the project folder, with `/` on every OS ("docs/a.puml"); null outside it. */
+    fun relativePath(f: File): String? {
+        val r = root?.absoluteFile ?: return null
+        val a = f.absoluteFile
+        if (a != r && !a.startsWith(r)) return null
+        return a.relativeTo(r).invariantSeparatorsPath.ifEmpty { "." }
+    }
+
     /**
      * Rebuild the tree for a direct navigation action (open a folder, toggle a row, Collapse All):
      * one walk the user is waiting on, so it's done inline. The repeated case — a refresh after
@@ -168,6 +190,16 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
 
     /** Whether dropping [target] on [destDir] would do something (for the drop highlight). */
     fun canMove(target: File, destDir: File): Boolean = files.canMove(target, destDir)
+
+    /** A copy of the diagram [target] next to it, opened in a tab. */
+    suspend fun duplicate(target: File): Result<File> = runCatching {
+        // The copy takes what the editor shows, unsaved edits included.
+        ws.deps.autoSaver.flush(ws.docs.toList())
+        val copy = withContext(ws.deps.dispatchers.io) { files.duplicate(target) }
+        refreshTreeNow()
+        ws.open(copy)
+        copy
+    }
 
     /** Moves [target] to the Trash and closes its tabs (or every tab under it, for a folder). */
     suspend fun delete(target: File): Result<Unit> = runCatching {

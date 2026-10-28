@@ -349,6 +349,11 @@
     <string name="tree_project">Proyecto</string>
     <string name="tree_new_diagram">Nuevo diagrama…</string>
     <string name="tree_collapse_all">Plegar todo</string>
+    <string name="tree_copy_relative_path">Copiar ruta relativa</string>
+    <string name="tree_duplicate">Duplicar</string>
+    <string name="tree_expand_all">Desplegar todo</string>
+    <string name="tree_open_terminal">Abrir en el terminal</string>
+    <string name="tree_add_to_gitignore">Añadir a .gitignore</string>
     <string name="tree_refresh">Actualizar (%1$s)</string>
     <string name="tree_hide">Ocultar (%1$s)</string>
     <string name="tree_no_diagrams">No hay diagramas en esta carpeta</string>

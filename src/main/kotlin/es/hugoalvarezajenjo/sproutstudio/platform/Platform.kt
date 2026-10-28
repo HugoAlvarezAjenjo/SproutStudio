@@ -30,6 +30,9 @@ interface Platform {
     /** Shows [f] in the file manager, selected where the OS allows it. */
     fun reveal(f: File)
 
+    /** Opens the system terminal in [dir]. */
+    fun openTerminal(dir: File)
+
     fun copyImageToClipboard(png: ByteArray)
 
     fun copyTextToClipboard(text: String)

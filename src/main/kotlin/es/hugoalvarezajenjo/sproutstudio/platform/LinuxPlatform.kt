@@ -8,12 +8,14 @@ import kotlin.concurrent.thread
  * Linux (GNOME, KDE, Xfce, Cinnamon...): the JDK has no Trash and can't select a file in the
  * file manager here, so both go through the freedesktop tools every desktop ships.
  *
- * [run] executes a command and returns its exit code; [background] runs work off the UI thread;
- * [setWindowClass] names the windows for the desktop. All are parameters so tests can check them
- * without starting anything.
+ * [run] executes a command and returns its exit code; [start] launches one in a folder without
+ * waiting (false if it isn't installed); [background] runs work off the UI thread; [setWindowClass]
+ * names the windows for the desktop. All are parameters so tests can check them without starting
+ * anything.
  */
 class LinuxPlatform(
     private val run: (List<String>) -> Int = { AwtPlatform.runCommand(it) },
+    private val start: (List<String>, File) -> Boolean = { cmd, dir -> AwtPlatform.startCommand(cmd, dir) },
     private val background: (() -> Unit) -> Unit = { thread(isDaemon = true, name = "reveal") { it() } },
     private val desktopId: String? = System.getProperty(DESKTOP_ID_PROPERTY),
     private val setWindowClass: (String) -> Unit = ::setAwtAppClassName,
@@ -50,12 +52,23 @@ class LinuxPlatform(
         if (!shown) run(listOf("xdg-open", folderOf(f).absolutePath))
     }
 
+    /**
+     * There's no one terminal on Linux: Debian and Ubuntu name the user's choice
+     * `x-terminal-emulator`; elsewhere, the first desktop terminal that is installed.
+     */
+    override fun openTerminal(dir: File) {
+        TERMINALS.firstOrNull { start(listOf(it), dir) }
+    }
+
     /** A GVariant string literal: single quotes, with backslashes and quotes escaped. */
     private fun gvariantString(s: String) = "'" + s.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
     companion object {
         /** Set by build.gradle.kts to the installer's menu entry id, e.g. "sproutstudio-SproutStudio". */
         const val DESKTOP_ID_PROPERTY = "sproutstudio.desktopId"
+
+        /** Tried in order by [openTerminal]. */
+        val TERMINALS = listOf("x-terminal-emulator", "gnome-terminal", "konsole", "xfce4-terminal", "mate-terminal", "xterm")
 
         /**
          * There is no public API for WM_CLASS: X11's toolkit keeps it in a static field, read when

@@ -25,6 +25,11 @@ class MacPlatform : AwtPlatform() {
         runCatching { ProcessBuilder("open", "-R", f.absolutePath).start() }
     }
 
+    /** Terminal.app, opened on the folder (it starts a shell there). */
+    override fun openTerminal(dir: File) {
+        runCatching { ProcessBuilder("open", "-a", "Terminal", dir.absolutePath).start() }
+    }
+
     /**
      * In full screen, macOS keeps the menu bar's strip at the top of the screen to slide the
      * menu bar in, and clicks there often don't reach the window. On a screen with a notch

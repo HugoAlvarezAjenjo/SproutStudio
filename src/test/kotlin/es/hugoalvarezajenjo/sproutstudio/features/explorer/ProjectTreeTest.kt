@@ -1,12 +1,15 @@
 package es.hugoalvarezajenjo.sproutstudio.features.explorer
 
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
+import es.hugoalvarezajenjo.sproutstudio.TestRepos
+import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.MouseButton
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.onNodeWithTag
@@ -200,5 +203,78 @@ class ProjectTreeTest {
         val f = File(dir, "new-diagram.puml")
         waitUntil(timeoutMillis = 5_000) { f.exists() }
         assertEquals("", f.readText())
+    }
+
+    private fun androidx.compose.ui.test.ComposeUiTest.rightClick(tag: String) {
+        onNodeWithTag(tag).performMouseInput { moveTo(center); press(MouseButton.Secondary); release(MouseButton.Secondary) }
+        waitForIdle()
+    }
+
+    @Test fun fileMenuOutsideARepositoryHasNoGitEntries() = runComposeUiTest {
+        val p = TestGraph.workspace().apply { openRoot(dir) }
+        setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
+        rightClick("tree-row-a.puml")
+        listOf("Open", "Duplicate", "Copy Path", "Copy Relative Path", "Rename…", "Move to Trash…").forEach {
+            assertEquals(1, count("menu-item:$it", this), it)
+        }
+        listOf("Show History", "Rollback…", "Add to .gitignore").forEach { assertEquals(0, count("menu-item:$it", this), it) }
+    }
+
+    @Test fun duplicateCopiesTheDiagramAndOpensIt() = runComposeUiTest {
+        val p = TestGraph.workspace().apply { openRoot(dir) }
+        setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
+        rightClick("tree-row-a.puml")
+        onNodeWithTag("menu-item:Duplicate").performClick()
+        val copy = File(dir, "a-copy.puml")
+        waitUntil(timeoutMillis = 5_000) { p.active?.file?.absoluteFile == copy }
+        assertEquals(File(dir, "a.puml").readText(), copy.readText())
+        assertEquals(1, count("tree-row-a-copy.puml", this))
+    }
+
+    @Test fun expandAllOpensEveryFolderBelowAndCollapseAllClosesThem() = runComposeUiTest {
+        File(dir, "docs/deep").mkdirs(); File(dir, "docs/deep/c.puml").writeText("@startuml\n@enduml\n")
+        val p = TestGraph.workspace().apply { openRoot(dir) }
+        setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
+        rightClick("tree-row-docs")
+        onNodeWithTag("menu-item:Expand All").performClick()
+        waitForIdle()
+        assertEquals(1, count("tree-row-c.puml", this))
+        rightClick("tree-row-docs")
+        onNodeWithTag("menu-item:Collapse All").performClick()
+        waitForIdle()
+        assertEquals(0, count("tree-row-b.puml", this))
+        assertEquals(1, count("tree-row-a.puml", this)) // outside docs: untouched
+    }
+
+    @Test fun relativePathsUseSlashesFromTheProjectFolder() {
+        val p = TestGraph.workspace().apply { openRoot(dir) }
+        assertEquals("docs/b.puml", p.explorer.relativePath(File(dir, "docs/b.puml")))
+        assertEquals(".", p.explorer.relativePath(dir))
+        assertNull(p.explorer.relativePath(dir.parentFile))
+    }
+
+    @Test fun inARepositoryAChangedFileOffersRollbackAndAFolderCanBeIgnored() {
+        JGitService().init(dir).close()
+        TestRepos.configure(dir, "T", "t@e")
+        JGitService().find(dir)!!.use { it.commit(listOf(File(dir, "a.puml")), "one") }
+        File(dir, "a.puml").appendText("' changed\n")
+        val p = TestGraph.workspace().apply { openRoot(dir) }
+        runComposeUiTest {
+            setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
+            waitUntil(timeoutMillis = 10_000) { p.git.status.head != null && p.git.changeOf(File(dir, "a.puml")) != null }
+            rightClick("tree-row-a.puml")
+            listOf("Show History", "Rollback…", "Add to .gitignore").forEach { assertEquals(1, count("menu-item:$it", this), it) }
+            onNodeWithTag("menu-item:Rollback…").performClick()
+            waitForIdle()
+            assertEquals(0, count("context-menu", this))
+            onNode(androidx.compose.ui.test.hasText("Cancel")).performClick() // the confirmation, not done yet
+            waitForIdle()
+            rightClick("tree-row-docs")
+            onNodeWithTag("menu-item:Add to .gitignore").performClick()
+            waitUntil(timeoutMillis = 10_000) { p.git.isIgnored(File(dir, "docs")) }
+        }
+        assertEquals("/docs/\n", File(dir, ".gitignore").readText())
+        assertTrue(File(dir, "a.puml").readText().contains("changed")) // the rollback was cancelled
+        p.git.close()
     }
 }

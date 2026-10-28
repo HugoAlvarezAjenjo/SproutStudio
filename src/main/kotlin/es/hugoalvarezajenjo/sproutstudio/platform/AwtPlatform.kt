@@ -82,5 +82,10 @@ abstract class AwtPlatform : Platform {
             val p = ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
             if (p.waitFor(timeoutSeconds, TimeUnit.SECONDS)) p.exitValue() else { p.destroy(); -1 }
         }.getOrDefault(-1)
+
+        /** Starts [cmd] in [dir] and returns at once; false if it can't start (not installed). */
+        fun startCommand(cmd: List<String>, dir: File): Boolean = runCatching {
+            ProcessBuilder(cmd).directory(dir).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
+        }.isSuccess
     }
 }

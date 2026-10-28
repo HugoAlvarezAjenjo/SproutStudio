@@ -13,6 +13,7 @@ import es.hugoalvarezajenjo.sproutstudio.services.git.CommitInfo
 import es.hugoalvarezajenjo.sproutstudio.services.git.FileChange
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitAuthor
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitError
+import es.hugoalvarezajenjo.sproutstudio.services.git.GitIgnore
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitException
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitRepository
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitService
@@ -299,6 +300,10 @@ class GitViewModel(
     suspend fun dropStash(index: Int) = op { it.dropStash(index) } != null
     suspend fun createBranch(name: String) = op { it.createBranch(name) } != null
     suspend fun deleteBranch(name: String) = op { it.deleteBranch(name) } != null
+
+    /** Adds [f] to the repository's `.gitignore`; false if it's outside the repository or already there. */
+    suspend fun ignore(f: File): Boolean =
+        op { r -> r.relPath(f)?.let { GitIgnore.add(r.workTree, it, f.isDirectory) } ?: false } ?: false
 
     /** Runs a repository change; on failure sets [error] and returns null. Always re-reads the status. */
     private suspend fun <T : Any> op(block: (GitRepository) -> T): T? {

@@ -2,7 +2,6 @@ package es.hugoalvarezajenjo.sproutstudio.features.git
 
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.dialog_cancel
-import es.hugoalvarezajenjo.sproutstudio.resources.editor_rollback
 import es.hugoalvarezajenjo.sproutstudio.resources.git_add_gitignore
 import es.hugoalvarezajenjo.sproutstudio.resources.git_add_gitignore_hint
 import es.hugoalvarezajenjo.sproutstudio.resources.git_amend
@@ -31,10 +30,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.git_open
 import es.hugoalvarezajenjo.sproutstudio.resources.git_pop
 import es.hugoalvarezajenjo.sproutstudio.resources.git_pop_hint
 import es.hugoalvarezajenjo.sproutstudio.resources.git_refresh
-import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_added
 import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_menu
-import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_modified
-import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_title
 import es.hugoalvarezajenjo.sproutstudio.resources.git_show_diff
 import es.hugoalvarezajenjo.sproutstudio.resources.git_show_history
 import es.hugoalvarezajenjo.sproutstudio.resources.git_stash
@@ -273,23 +269,7 @@ internal fun CommitPanel(p: WorkspaceViewModel) {
         }
     }
 
-    confirmRollback?.let { ch ->
-        AlertDialog(
-            onDismissRequest = { confirmRollback = null },
-            containerColor = ide.popup,
-            shape = RoundedCornerShape(10.dp),
-            title = { Text(tr(Res.string.git_rollback_title, ch.file.name), style = MaterialTheme.typography.titleMedium) },
-            text = {
-                Text(
-                    if (ch.type == ChangeType.ADDED) tr(Res.string.git_rollback_added)
-                    else tr(Res.string.git_rollback_modified),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            confirmButton = { TextButton(onClick = { confirmRollback = null; p.gitFlow.rollback(ch) }) { Text(tr(Res.string.editor_rollback), color = ide.error) } },
-            dismissButton = { TextButton(onClick = { confirmRollback = null }) { Text(tr(Res.string.dialog_cancel)) } },
-        )
-    }
+    confirmRollback?.let { ch -> RollbackDialog(p, ch, onDismiss = { confirmRollback = null }) }
 }
 
 /** "Changes  3 files" with a tri-state checkbox for the whole group. */

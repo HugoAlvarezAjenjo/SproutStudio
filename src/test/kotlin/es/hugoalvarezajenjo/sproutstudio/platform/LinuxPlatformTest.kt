@@ -86,4 +86,15 @@ class LinuxPlatformTest {
         assertTrue(Modifier.isStatic(field.modifiers))
         assertEquals(String::class.java, field.type)
     }
+
+    @Test
+    fun `the terminal is the first one installed, started in the folder`() {
+        val started = mutableListOf<Pair<List<String>, File>>()
+        val installed = setOf("konsole", "xterm")
+        val dir = File("/home/ana/My Diagrams")
+        LinuxPlatform(start = { cmd, d -> started += cmd to d; cmd.first() in installed }).openTerminal(dir)
+        // Tried in order until one starts, then no more.
+        assertEquals(listOf("x-terminal-emulator", "gnome-terminal", "konsole"), started.map { it.first.single() })
+        assertTrue(started.all { it.second == dir })
+    }
 }

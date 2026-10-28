@@ -348,6 +348,11 @@
     <string name="tree_project">Project</string>
     <string name="tree_new_diagram">New Diagram…</string>
     <string name="tree_collapse_all">Collapse All</string>
+    <string name="tree_copy_relative_path">Copy Relative Path</string>
+    <string name="tree_duplicate">Duplicate</string>
+    <string name="tree_expand_all">Expand All</string>
+    <string name="tree_open_terminal">Open in Terminal</string>
+    <string name="tree_add_to_gitignore">Add to .gitignore</string>
     <string name="tree_refresh">Refresh (%1$s)</string>
     <string name="tree_hide">Hide (%1$s)</string>
     <string name="tree_no_diagrams">No diagrams in this folder</string>

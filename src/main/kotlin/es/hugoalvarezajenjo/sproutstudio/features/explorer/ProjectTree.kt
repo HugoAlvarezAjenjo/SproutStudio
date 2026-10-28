@@ -3,25 +3,15 @@ package es.hugoalvarezajenjo.sproutstudio.features.explorer
 import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_folder
-import es.hugoalvarezajenjo.sproutstudio.resources.git_open
-import es.hugoalvarezajenjo.sproutstudio.resources.git_show_history
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_diff_with_head
-import es.hugoalvarezajenjo.sproutstudio.resources.tree_collapse
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_collapse_all
-import es.hugoalvarezajenjo.sproutstudio.resources.tree_expand
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_hide
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_new_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_no_diagrams
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_project
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_refresh
-import es.hugoalvarezajenjo.sproutstudio.resources.tree_rename
-import es.hugoalvarezajenjo.sproutstudio.resources.tree_trash
-import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
 
 import androidx.compose.foundation.ContextMenuArea
-import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.runtime.setValue
@@ -87,9 +77,9 @@ import es.hugoalvarezajenjo.sproutstudio.features.explorer.TreeDrag
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.describe
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.fileError
 import es.hugoalvarezajenjo.sproutstudio.features.explorer.treeDrag
-import es.hugoalvarezajenjo.sproutstudio.features.git.canCompareWithHead
-import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
+import es.hugoalvarezajenjo.sproutstudio.features.git.RollbackDialog
 import es.hugoalvarezajenjo.sproutstudio.features.git.vcsColor
+import es.hugoalvarezajenjo.sproutstudio.services.git.FileChange
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.Dot
@@ -108,6 +98,8 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
     val onDrop: (java.io.File, java.io.File) -> Unit = { what, where ->
         p.scope.launch { p.explorer.move(what, where).exceptionOrNull()?.let { message = it.fileError.describe() } }
     }
+    var rollback by remember { mutableStateOf<FileChange?>(null) }
+    val menus = remember(p) { TreeMenus(p, onRollback = { rollback = it }, onError = { message = it }) }
     var origin by remember { mutableStateOf(Offset.Zero) }
     // zIndex: the drag label may run past the panel, over the editor.
     Box(Modifier.width(p.sidebarWidth.dp).fillMaxHeight().zIndex(if (drag.source != null) 2f else 0f).onGloballyPositioned { origin = it.positionInWindow() }) {
@@ -125,7 +117,7 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
             ToolButton(Icons.Outlined.Remove, tr(Res.string.tree_hide, shortcutHint("1"))) { p.showSidebar(false) }
         }
         // Root row: a folder like any other, so it collapses too.
-        ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
+        ContextMenuArea(items = { menus.forFolder(root, isRoot = true) }) {
             ListRow(
                 onClick = { p.explorer.toggleRootCollapsed() }, height = 26, startPadding = 6,
                 modifier = Modifier.treeDrag(drag, "root", root, file = null, onDrop).dropHighlight(drag.target == root.absoluteFile),
@@ -145,11 +137,11 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
                 Text(tr(Res.string.tree_no_diagrams), fontSize = 12.sp, color = c.textMuted, modifier = Modifier.padding(start = 34.dp, top = 6.dp))
             }
             LazyColumn(Modifier.weight(1f, fill = false).padding(horizontal = 4.dp)) {
-                items(p.explorer.tree, key = { it.file.absolutePath }) { node -> TreeRow(p, node, drag, onDrop) }
+                items(p.explorer.tree, key = { it.file.absolutePath }) { node -> TreeRow(p, node, menus, drag, onDrop) }
             }
         }
         // The empty space below the tree: right-click creates in the project folder.
-        ContextMenuArea(items = { folderMenu(p, root, isRoot = true) }) {
+        ContextMenuArea(items = { menus.forFolder(root, isRoot = true) }) {
             Box(Modifier.weight(1f).fillMaxWidth().treeDrag(drag, "empty", root, file = null, onDrop))
         }
         message?.let {
@@ -173,6 +165,7 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
     }
     }
     FileActionDialog(p)
+    rollback?.let { ch -> RollbackDialog(p, ch, onDismiss = { rollback = null }) }
 }
 
 /** Accent outline on the folder row a drag would drop into. */
@@ -187,38 +180,13 @@ private fun targetDir(p: WorkspaceViewModel): java.io.File? {
     return if (dir != null && (dir == root || dir.startsWith(root))) dir else root
 }
 
-private fun folderMenu(p: WorkspaceViewModel, dir: java.io.File, isRoot: Boolean) = buildList {
-    add(ContextMenuItem(text(Res.string.tree_new_diagram)) { p.explorer.showFileAction(FileAction.NewDiagram(dir)) })
-    add(ContextMenuItem(text(Res.string.cmd_new_folder)) { p.explorer.showFileAction(FileAction.NewFolder(dir)) })
-    if (!isRoot) {
-        add(ContextMenuItem(text(Res.string.tree_rename)) { p.explorer.showFileAction(FileAction.Rename(dir)) })
-        add(ContextMenuItem(text(Res.string.tree_trash)) { p.explorer.showFileAction(FileAction.Delete(dir)) })
-    } else {
-        add(ContextMenuItem(if (p.explorer.rootCollapsed) text(Res.string.tree_expand) else text(Res.string.tree_collapse)) { p.explorer.toggleRootCollapsed() })
-    }
-    add(ContextMenuItem(text(OsTexts.reveal)) { p.deps.platform.reveal(dir) })
-}
-
 @Composable
-private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, drag: TreeDrag, onDrop: (java.io.File, java.io.File) -> Unit) {
+private fun TreeRow(p: WorkspaceViewModel, node: TreeNode, menus: TreeMenus, drag: TreeDrag, onDrop: (java.io.File, java.io.File) -> Unit) {
     val f = node.file
     DisposableEffect(f) { onDispose { drag.forget(f.absolutePath) } }
-    ContextMenuArea(items = {
-        if (node.isDir) folderMenu(p, f, isRoot = false) else buildList {
-            val dir = f.absoluteFile.parentFile
-            add(ContextMenuItem(text(Res.string.git_open)) { p.open(f) })
-            add(ContextMenuItem(text(Res.string.tree_new_diagram)) { p.explorer.showFileAction(FileAction.NewDiagram(dir)) })
-            add(ContextMenuItem(text(Res.string.cmd_new_folder)) { p.explorer.showFileAction(FileAction.NewFolder(dir)) })
-            add(ContextMenuItem(text(Res.string.tree_rename)) { p.explorer.showFileAction(FileAction.Rename(f)) })
-            add(ContextMenuItem(text(Res.string.tree_trash)) { p.explorer.showFileAction(FileAction.Delete(f)) })
-            add(ContextMenuItem(text(OsTexts.reveal)) { p.deps.platform.reveal(f) })
-            if (p.git.status.head != null) {
-                if (canCompareWithHead(p, f)) add(ContextMenuItem(text(Res.string.menu_compare_with_head)) { p.deps.windows.compareWithHead(p, f) })
-                if (hasCommittedChanges(p, f)) add(ContextMenuItem(text(Res.string.menu_show_diff_with_head)) { p.deps.windows.compareWithHead(p, f, textFirst = true) })
-                add(ContextMenuItem(text(Res.string.git_show_history)) { p.deps.windows.showHistory(p, f) })
-            }
-        }
-    }) { TreeRowContent(p, node, drag, onDrop) }
+    ContextMenuArea(items = { if (node.isDir) menus.forFolder(f, isRoot = false) else menus.forFile(f) }) {
+        TreeRowContent(p, node, drag, onDrop)
+    }
 }
 
 @Composable

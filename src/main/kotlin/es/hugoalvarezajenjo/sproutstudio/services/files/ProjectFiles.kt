@@ -83,6 +83,28 @@ class ProjectFiles(private val trash: (File) -> Boolean) {
             .onFailure { throw FileOpException(FileError.Failed(it.message ?: it.javaClass.simpleName)) }
     }
 
+    /** A copy of the file [f] next to it, named like Finder does: "a-copy.puml", "a-copy-2.puml"… */
+    fun duplicate(f: File): File {
+        val from = f.absoluteFile
+        val ext = from.extension.takeIf { it.isNotEmpty() }?.let { ".$it" } ?: ""
+        val to = File(from.parentFile, freeName(from.parentFile, "${from.nameWithoutExtension}-copy", ext))
+        runCatching { Files.copy(from.toPath(), to.toPath()) }
+            .onFailure { throw FileOpException(FileError.Failed(it.message ?: it.javaClass.simpleName)) }
+        return to
+    }
+
+    /** [dir] and every folder below it that the tree shows (the same ones [tree] walks into). */
+    fun foldersUnder(dir: File): List<File> {
+        val out = ArrayList<File>()
+        fun walk(d: File, depth: Int) {
+            if (depth > 8) return
+            out += d
+            d.listFiles().orEmpty().filter { it.isDirectory && !it.name.startsWith(".") && it.name !in IGNORED }.forEach { walk(it, depth + 1) }
+        }
+        walk(dir, 0)
+        return out
+    }
+
     fun moveToTrash(root: File?, target: File) {
         val f = target.absoluteFile
         if (f == root?.absoluteFile) throw FileOpException(FileError.ProjectFolder)
