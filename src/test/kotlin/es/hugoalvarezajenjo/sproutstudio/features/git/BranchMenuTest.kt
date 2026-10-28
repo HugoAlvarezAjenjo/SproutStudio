@@ -116,6 +116,8 @@ class BranchMenuTest {
             onNodeWithTag("branch:feature").performClick()
             waitUntil(timeoutMillis = 15_000) { p.git.status.branch == "feature" }
             waitUntil(timeoutMillis = 15_000) { p.active?.text == "feature\n" }
+            // The popup closes once open tabs have re-read the disk, after the branch changes.
+            waitUntil(timeoutMillis = 15_000) { onAllNodesWithTag("branch-popup").fetchSemanticsNodes().isEmpty() }
 
             waitUntil(timeoutMillis = 15_000) { onAllNodesWithTag("branch-button").fetchSemanticsNodes().isNotEmpty() }
             onNodeWithTag("branch-button").performClick()
