@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+Right-click menus that match the app and do more.
+
+### Menus
+- **Every right-click menu follows the app theme**, the text fields' Cut/Copy/Paste included, with icons,
+  shortcuts, separators between groups and destructive entries in red. Arrow keys, Enter, → and ←/Esc
+  work as in a native menu.
+- **Editor:** a menu of its own. Go to Declaration, Find Usages and Rename Symbol on a symbol; Comment,
+  Reformat Code, Fold and Unfold; Find, Replace and Find in Files; Rollback Lines on a change, Compare
+  with HEAD and Show History; Copy Diagram Image and Export; then Cut, Copy, Paste and Select All.
+  Right-click moves the caret to the clicked spot, unless it lands inside the selection.
+- **Project tree:**
+  - Files: Duplicate, Copy Relative Path (for `!include`), Rollback… and Add to .gitignore.
+  - Export submenu: copy the image or export to SVG, PNG or PDF without opening the file. An open tab's
+    unsaved text is what gets exported.
+  - Folders: Expand All and Collapse All below that folder, Open in Terminal, and Add to .gitignore.
+  - The project folder: Refresh Files and Open in Terminal.
+  - Git entries only appear in a repository.
+- **Tabs and the Commit panel:** the same look, with icons and groups. Rollback sits apart at the end.
+
+### Fixes
+- Dragging a selection above or below the editor scrolls the text and keeps selecting. Before, the
+  selection stopped at the visible lines.
+
 ## 1.3.0
 
 SproutStudio on Linux, a theme menu for diagrams and soft wrap.
