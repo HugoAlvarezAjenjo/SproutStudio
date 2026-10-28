@@ -22,7 +22,6 @@ import es.hugoalvarezajenjo.sproutstudio.resources.preview_nothing
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_nothing_to_export
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_on_its_way
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_previous_diagram
-import es.hugoalvarezajenjo.sproutstudio.resources.preview_remote_include
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_rendering
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_saved
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_syntax_prefix
@@ -91,7 +90,6 @@ import es.hugoalvarezajenjo.sproutstudio.features.preview.describe
 import es.hugoalvarezajenjo.sproutstudio.features.preview.label
 import es.hugoalvarezajenjo.sproutstudio.features.document.PreviewAction
 import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
-import es.hugoalvarezajenjo.sproutstudio.services.render.OfflineIncludeException
 import es.hugoalvarezajenjo.sproutstudio.services.render.RenderError
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.HLine
@@ -234,7 +232,7 @@ fun PreviewPane(
 private fun chooseExportTarget(preview: PreviewViewModel, baseDir: File?, format: ExportFormat, baseName: String): File? {
     val dir = baseDir ?: File(System.getProperty("user.home"))
     val f = preview.chooseExportTarget(text(Res.string.preview_export_title, format.label()), "$baseName.${format.extension}", dir) ?: return null
-    return if (f.name.endsWith(".${format.extension}")) f else File(f.parentFile, "${f.name}.${format.extension}")
+    return format.withExtension(f)
 }
 
 @Composable private fun PreviewNotice.describe(): String = when (this) {
@@ -243,11 +241,6 @@ private fun chooseExportTarget(preview: PreviewViewModel, baseDir: File?, format
     is PreviewNotice.Saved -> tr(Res.string.preview_saved, file.name)
     is PreviewNotice.ExportFailed -> tr(Res.string.preview_export_failed, exportFailure(cause))
     PreviewNotice.NothingToExport -> tr(Res.string.preview_nothing_to_export)
-}
-
-@Composable private fun exportFailure(t: Throwable): String = when (t) {
-    is OfflineIncludeException -> tr(Res.string.preview_remote_include, t.line)
-    else -> t.message ?: t.javaClass.simpleName
 }
 
 @Composable

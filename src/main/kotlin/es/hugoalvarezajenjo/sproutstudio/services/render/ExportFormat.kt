@@ -7,4 +7,9 @@ enum class ExportFormat(val extension: String, internal val plantUml: FileFormat
     SVG("svg", FileFormat.SVG),
     PNG("png", FileFormat.PNG),
     PDF("pdf", FileFormat.PDF),
+    ;
+
+    /** [f] with this format's extension, added when the save dialog's answer dropped it. */
+    fun withExtension(f: java.io.File): java.io.File =
+        if (f.name.endsWith(".$extension")) f else java.io.File(f.parentFile, "${f.name}.$extension")
 }

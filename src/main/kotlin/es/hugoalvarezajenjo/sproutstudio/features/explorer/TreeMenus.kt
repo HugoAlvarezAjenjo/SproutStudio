@@ -10,8 +10,10 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Difference
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.FileCopy
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.UnfoldLess
@@ -23,6 +25,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.git.canRollback
 import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_copy_image
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_folder
 import es.hugoalvarezajenjo.sproutstudio.resources.git_open
 import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_menu
@@ -30,17 +33,26 @@ import es.hugoalvarezajenjo.sproutstudio.resources.git_show_history
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_refresh_files
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_diff_with_head
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_copied
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_copy_failed
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_export_failed
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_export_title
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_saved
 import es.hugoalvarezajenjo.sproutstudio.resources.tab_copy_path
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_add_to_gitignore
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_collapse_all
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_copy_relative_path
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_duplicate
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_expand_all
+import es.hugoalvarezajenjo.sproutstudio.resources.tree_export
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_new_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_open_terminal
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_rename
 import es.hugoalvarezajenjo.sproutstudio.resources.tree_trash
+import es.hugoalvarezajenjo.sproutstudio.features.preview.exportFailure
+import es.hugoalvarezajenjo.sproutstudio.features.preview.label
 import es.hugoalvarezajenjo.sproutstudio.services.git.FileChange
+import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.MenuItem
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.menu
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
@@ -50,12 +62,12 @@ import kotlinx.coroutines.launch
 /**
  * The project tree's right-click menus. Entries that would do nothing are left out (git ones
  * outside a repository, Rollback on an unchanged file) rather than shown disabled.
- * [onRollback] asks for confirmation first; [onError] shows a failed operation under the tree.
+ * [onRollback] asks for confirmation first; [onMessage] shows how an operation went, under the tree.
  */
 internal class TreeMenus(
     private val p: WorkspaceViewModel,
     private val onRollback: (FileChange) -> Unit,
-    private val onError: (String) -> Unit,
+    private val onMessage: (TreeMessage) -> Unit,
 ) {
     private val explorer get() = p.explorer
     private val platform get() = p.deps.platform
@@ -68,6 +80,7 @@ internal class TreeMenus(
             copyPaths(f)
             add(MenuItem(text(Res.string.tree_duplicate), Icons.Outlined.FileCopy) { duplicate(f) })
         }
+        group { add(export(f)) }
         group { git(f) }
         group { manage(f) }
     }
@@ -129,6 +142,32 @@ internal class TreeMenus(
     }
 
     private fun duplicate(f: File) {
-        p.scope.launch { explorer.duplicate(f).exceptionOrNull()?.let { onError(it.fileError.describe()) } }
+        p.scope.launch { explorer.duplicate(f).exceptionOrNull()?.let { onMessage(TreeMessage(it.fileError.describe())) } }
+    }
+
+    /** Copy and export of the file's first diagram, as the preview toolbar does for the open one. */
+    private fun export(f: File) = MenuItem(
+        text(Res.string.tree_export), Icons.Outlined.FileDownload,
+        children = listOf(
+            MenuItem(text(Res.string.cmd_copy_image), Icons.Outlined.Image) {
+                p.scope.launch {
+                    val r = explorer.copyDiagramImage(f)
+                    onMessage(r.exceptionOrNull()?.let { TreeMessage(text(Res.string.preview_copy_failed, exportFailure(it))) } ?: TreeMessage(text(Res.string.preview_copied), error = false))
+                }
+            },
+        ) + ExportFormat.entries.map { format -> MenuItem(format.label()) { exportAs(f, format) } },
+    )
+
+    private fun exportAs(f: File, format: ExportFormat) {
+        val dir = f.absoluteFile.parentFile
+        val chosen = platform.chooseSaveTarget(text(Res.string.preview_export_title, format.label()), "${f.nameWithoutExtension}.${format.extension}", dir) ?: return
+        val target = format.withExtension(chosen)
+        p.scope.launch {
+            val r = explorer.exportDiagram(f, format, target)
+            onMessage(r.exceptionOrNull()?.let { TreeMessage(text(Res.string.preview_export_failed, exportFailure(it))) } ?: TreeMessage(text(Res.string.preview_saved, target.name), error = false))
+        }
     }
 }
+
+/** A line under the tree after an operation: what failed, or what was done. */
+internal data class TreeMessage(val text: String, val error: Boolean = true)

@@ -93,13 +93,13 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
     val c = ide
     val root = p.root ?: return
     val drag = remember(p) { TreeDrag { what, where -> p.explorer.canMove(what, where) } }
-    var message by remember { mutableStateOf<String?>(null) }
+    var message by remember { mutableStateOf<TreeMessage?>(null) }
     LaunchedEffect(message) { if (message != null) { kotlinx.coroutines.delay(4000); message = null } }
     val onDrop: (java.io.File, java.io.File) -> Unit = { what, where ->
-        p.scope.launch { p.explorer.move(what, where).exceptionOrNull()?.let { message = it.fileError.describe() } }
+        p.scope.launch { p.explorer.move(what, where).exceptionOrNull()?.let { message = TreeMessage(it.fileError.describe()) } }
     }
     var rollback by remember { mutableStateOf<FileChange?>(null) }
-    val menus = remember(p) { TreeMenus(p, onRollback = { rollback = it }, onError = { message = it }) }
+    val menus = remember(p) { TreeMenus(p, onRollback = { rollback = it }, onMessage = { message = it }) }
     var origin by remember { mutableStateOf(Offset.Zero) }
     // zIndex: the drag label may run past the panel, over the editor.
     Box(Modifier.width(p.sidebarWidth.dp).fillMaxHeight().zIndex(if (drag.source != null) 2f else 0f).onGloballyPositioned { origin = it.positionInWindow() }) {
@@ -145,7 +145,10 @@ internal fun ProjectTree(p: WorkspaceViewModel) {
             Box(Modifier.weight(1f).fillMaxWidth().treeDrag(drag, "empty", root, file = null, onDrop))
         }
         message?.let {
-            Text(it, color = c.error, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().background(c.errorBg).padding(horizontal = 12.dp, vertical = 6.dp).testTag("tree-message"))
+            Text(
+                it.text, color = if (it.error) c.error else c.text, fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth().background(if (it.error) c.errorBg else c.hover).padding(horizontal = 12.dp, vertical = 6.dp).testTag("tree-message"),
+            )
         }
     }
     // What's being dragged, following the pointer.

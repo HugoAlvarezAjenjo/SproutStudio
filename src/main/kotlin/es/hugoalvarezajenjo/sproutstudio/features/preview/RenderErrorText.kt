@@ -4,6 +4,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.export_pdf
 import es.hugoalvarezajenjo.sproutstudio.resources.export_png
 import es.hugoalvarezajenjo.sproutstudio.resources.export_svg
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_remote_include
 import es.hugoalvarezajenjo.sproutstudio.resources.render_failed
 import es.hugoalvarezajenjo.sproutstudio.resources.render_no_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.render_offline
@@ -11,6 +12,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.render_syntax_error
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
 
 import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
+import es.hugoalvarezajenjo.sproutstudio.services.render.OfflineIncludeException
 import es.hugoalvarezajenjo.sproutstudio.services.render.Problem
 import es.hugoalvarezajenjo.sproutstudio.services.render.RenderError
 
@@ -38,4 +40,10 @@ fun ExportFormat.label(): String = when (this) {
     ExportFormat.SVG -> text(Res.string.export_svg)
     ExportFormat.PNG -> text(Res.string.export_png)
     ExportFormat.PDF -> text(Res.string.export_pdf)
+}
+
+/** Why a copy or export failed, in the user's words. */
+fun exportFailure(t: Throwable): String = when (t) {
+    is OfflineIncludeException -> text(Res.string.preview_remote_include, t.line)
+    else -> t.message ?: t.javaClass.simpleName
 }

@@ -11,6 +11,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.files.FileError
 import es.hugoalvarezajenjo.sproutstudio.services.files.FileOpException
 import es.hugoalvarezajenjo.sproutstudio.services.files.TreeNode
+import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
 import java.io.File
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -190,6 +191,23 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
 
     /** Whether dropping [target] on [destDir] would do something (for the drop highlight). */
     fun canMove(target: File, destDir: File): Boolean = files.canMove(target, destDir)
+
+    /**
+     * Writes the first diagram of [f] to [target], as the preview's Export does. An open tab's
+     * text is used (unsaved edits included), so the file needn't be open or saved.
+     */
+    suspend fun exportDiagram(f: File, format: ExportFormat, target: File): Result<File> = runCatching {
+        ws.deps.render.export(sourceOf(f), f.absoluteFile.parentFile, 0, format, target)
+        target
+    }
+
+    /** Copies the first diagram of [f] to the clipboard as an image. */
+    suspend fun copyDiagramImage(f: File): Result<Unit> = runCatching {
+        ws.deps.platform.copyImageToClipboard(ws.deps.render.png(sourceOf(f), f.absoluteFile.parentFile, 0))
+    }
+
+    private suspend fun sourceOf(f: File): String =
+        ws.docs.firstOrNull { it.file?.absoluteFile == f.absoluteFile }?.text ?: store.read(f)
 
     /** A copy of the diagram [target] next to it, opened in a tab. */
     suspend fun duplicate(target: File): Result<File> = runCatching {

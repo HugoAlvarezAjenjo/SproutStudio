@@ -3,6 +3,7 @@ package es.hugoalvarezajenjo.sproutstudio.features.explorer
 import es.hugoalvarezajenjo.sproutstudio.TestGraph
 import es.hugoalvarezajenjo.sproutstudio.TestRepos
 import es.hugoalvarezajenjo.sproutstudio.services.git.JGitService
+import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
@@ -276,5 +277,33 @@ class ProjectTreeTest {
         assertEquals("/docs/\n", File(dir, ".gitignore").readText())
         assertTrue(File(dir, "a.puml").readText().contains("changed")) // the rollback was cancelled
         p.git.close()
+    }
+
+    @Test fun exportSubmenuOffersCopyAndEveryFormat() = runComposeUiTest {
+        val p = TestGraph.workspace().apply { openRoot(dir) }
+        setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
+        rightClick("tree-row-a.puml")
+        onNodeWithTag("menu-item:Export").performMouseInput { moveTo(center) }
+        waitForIdle()
+        listOf("Copy Diagram Image", "SVG (vector)", "PNG (image)", "PDF (vector)").forEach { assertEquals(1, count("menu-item:$it", this), it) }
+        rightClick("tree-row-docs")
+        assertEquals(0, count("menu-item:Export", this)) // folders have no diagram to export
+    }
+
+    @Test fun exportWritesTheFileThatIsNotOpen() = kotlinx.coroutines.runBlocking {
+        val p = TestGraph.workspace().apply { openRoot(dir) }
+        val out = File(dir, "out.svg")
+        assertTrue(p.explorer.exportDiagram(File(dir, "a.puml"), ExportFormat.SVG, out).isSuccess)
+        assertTrue(out.readText().contains("<svg"))
+    }
+
+    @Test fun exportUsesTheUnsavedTextOfAnOpenTab() = kotlinx.coroutines.runBlocking {
+        val a = File(dir, "a.puml")
+        val p = TestGraph.workspace().apply { openRoot(dir); open(a) }
+        p.active!!.value = p.active!!.value.copy(text = "@startuml\nUnsaved -> Edit\n@enduml\n")
+        val out = File(dir, "out.svg")
+        p.explorer.exportDiagram(a, ExportFormat.SVG, out).getOrThrow()
+        assertTrue(out.readText().contains("Unsaved"))
+        assertFalse(a.readText().contains("Unsaved")) // nothing was saved
     }
 }
