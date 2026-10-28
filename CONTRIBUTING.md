@@ -15,7 +15,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)   # macOS
 ```
 
 The app icon is `src/main/resources/icon.png` (square, 1024×1024 ideally). Builds convert it to `.icns`
-on macOS and `.ico` on Windows.
+on macOS and `.ico` on Windows; Linux uses the PNG as is.
 
 ## Architecture
 
@@ -91,14 +91,14 @@ When CI fails, the log prints the full stack, causes included. The HTML report i
 
 ## Releases
 
-CI (`.github/workflows/ci.yml`) runs the tests on macOS and Windows on every push and pull request; it
-publishes nothing.
+CI (`.github/workflows/ci.yml`) runs the tests on macOS, Windows and Ubuntu (under Xvfb) on every push
+and pull request; it publishes nothing.
 
 To publish a version:
 
 1. Move the "Unreleased" section of `CHANGELOG.md` to the new version and set the default version in
    `build.gradle.kts`.
-2. Push `main` and wait for CI to pass on both systems.
+2. Push `main` and wait for CI to pass on all three systems.
 3. Tag and push the tag:
 
    ```bash
@@ -106,11 +106,11 @@ To publish a version:
    git push origin v1.3.0
    ```
 
-`.github/workflows/release.yml` then tests on macOS and Windows (a failure on one doesn't cancel the
-other), builds `SproutStudio-1.3.0.dmg` (Apple Silicon) and `SproutStudio-1.3.0.msi` (x64) with the
-version taken from the tag, and attaches both to one GitHub Release. Nothing is published unless both
-builds pass. The release notes are that version's section of `CHANGELOG.md`, or GitHub's generated notes
-if it has none.
+`.github/workflows/release.yml` then tests on macOS, Windows and Linux (a failure on one doesn't cancel
+the others), builds `SproutStudio-1.3.0.dmg` (Apple Silicon), `SproutStudio-1.3.0.msi` (x64), the `.deb`
+and `SproutStudio-1.3.0-linux-x64.tar.gz` with the version taken from the tag, and attaches them all to
+one GitHub Release. Nothing is published unless every build passes. The release notes are that version's
+section of `CHANGELOG.md`, or GitHub's generated notes if it has none.
 
 Versions must be `MAJOR.MINOR.PATCH` with MAJOR ≥ 1 (a macOS packaging rule). Local builds use the
 default version; override it with `-PappVersion=1.3.0`.

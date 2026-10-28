@@ -17,6 +17,7 @@
   <img alt="JGit" src="https://img.shields.io/badge/JGit-7.8-F05032?logo=git&logoColor=white">
   <img alt="macOS" src="https://img.shields.io/badge/platform-macOS-000000?logo=apple&logoColor=white">
   <img alt="Windows" src="https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white">
+  <img alt="Linux" src="https://img.shields.io/badge/platform-Linux-FCC624?logo=linux&logoColor=black">
 </p>
 
 <p align=center>
@@ -27,10 +28,10 @@
 
 - **Quick Preview**: double-click a `.puml` and see the diagram at once; it refreshes when the file changes. ([more](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/Getting-Started))
 - **Project mode**: file tree, tabs, smart editor and live preview in one window. ([more](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/Tabs-and-Project-Tree))
-- **Smart editor**: completion that knows the diagram type, auto-closing brackets, smart indent, folding, find & replace, real undo. ([more](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/Editor))
+- **Smart editor**: completion that knows the diagram type, auto-closing brackets, smart indent, folding, soft wrap, find & replace, real undo. ([more](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/Editor))
 - **Navigation and refactoring**: Go to Declaration, Find Usages, Rename and Reformat, across `!include`s. ([more](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/Navigation-and-Refactoring))
 - **C4, AWS and Azure, offline**: PlantUML's standard library ships inside the app. ([more](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/Libraries))
-- **Preview and export**: zoom, dark diagrams, SVG/PNG/PDF or copy to the clipboard. ([more](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/Preview-and-Export))
+- **Preview and export**: zoom, diagram themes, dark diagrams, SVG/PNG/PDF or copy to the clipboard. ([more](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/Preview-and-Export))
 - **Git built in**: change bars, commit, branches, stash, history and diagram diffs, local only. ([more](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/Git))
 - **100% offline and self-contained**: no Graphviz, no server, no network calls; the app ships its own Java runtime. ([FAQ](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/FAQ))
 
@@ -38,7 +39,7 @@ Everything else, including all the [keyboard shortcuts](https://github.com/HugoA
 
 ## Download
 
-Get the `.dmg` (macOS, Apple Silicon) or `.msi` (Windows, x64) from the
+Get the `.dmg` (macOS, Apple Silicon), `.msi` (Windows, x64) or `.deb` / `.tar.gz` (Linux, x64) from the
 [latest release](https://github.com/HugoAlvarezAjenjo/SproutStudio/releases/latest). The installers are
 not signed, so the first launch needs right-click → Open on macOS or More info → Run anyway on Windows.
 See [Installation](https://github.com/HugoAlvarezAjenjo/SproutStudio/wiki/Installation).

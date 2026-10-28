@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.3.0
+
+SproutStudio on Linux, a theme menu for diagrams and soft wrap.
+
+### Linux
+- **`.deb` package** for Ubuntu, Kubuntu and other Debian-based systems, with a menu entry, icon and
+  `.puml` file association, plus a portable `.tar.gz` for distributions without dpkg.
+- The dock or panel shows the SproutStudio icon and groups the window with its menu entry.
+- Move to Trash uses the desktop's trash, and Open Containing Folder opens the file manager with the file
+  selected (Nautilus, Dolphin, Nemo, Thunar).
+- Shortcuts use Ctrl and Alt, as on Windows. CI runs the tests on Ubuntu, and releases publish the `.deb`
+  and the `.tar.gz`.
+
+### Preview
+- **Diagram theme menu:** the palette button in the preview toolbar lists PlantUML's bundled themes and
+  writes, replaces or removes the shown diagram's `!theme` line, as one undo step.
+- Completion of `!theme` names now lists every theme PlantUML ships (adds `spacelab-white` and `sunlust`).
+
+### Editor
+- **Soft wrap** (View → Soft Wrap, ⌥Z / Alt+Z, also in Settings): long lines continue on the next row
+  instead of scrolling sideways. The file is not changed. Line numbers and fold chevrons go on the first
+  row of each line; the current-line highlight covers all its rows.
+
+### Fixes
+- macOS: in full screen on an external monitor, the tab bar and the layout buttons respond to clicks
+  again. They sat under the strip macOS keeps for the menu bar.
+- Files with a `@startuml` inside another diagram, or a block without `@end…`, are split into diagrams
+  the same way PlantUML does, so "1 of N", completion and the theme menu all point at the right one.
+
 ## 1.2.0
 
 SproutStudio on Windows, and an editor that types like VS Code.
