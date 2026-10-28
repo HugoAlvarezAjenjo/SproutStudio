@@ -10,26 +10,13 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_close_project
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_close_tab
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_code
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_commit
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_soft_wrap
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_theme
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_edit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_find
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_in_files
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_action
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_next
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_previous
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_all
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_block
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_usages
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_rename_symbol
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_go_to_declaration
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_reformat_code
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_back
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_forward
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_git
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_help
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_diagram
@@ -39,23 +26,17 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_open_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_open_folder
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_refresh_files
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_refresh_git_status
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_replace
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_rollback_lines
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_save
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_save_as
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_save_automatically
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_settings
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_commit_panel
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_diff_with_head
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_history
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_problems
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_project_panel
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_templates_panel
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_stash_changes
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_undo_last_commit
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_unfold_all
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_unfold_block
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_view
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
 
@@ -72,11 +53,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Commit
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -92,6 +68,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.KeyShortcut
+import androidx.compose.ui.window.MenuScope
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.Action
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
@@ -104,16 +82,9 @@ import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.rememberWindowState
-import es.hugoalvarezajenjo.sproutstudio.features.editor.changeAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.editor.findNext
 import es.hugoalvarezajenjo.sproutstudio.features.editor.foldAll
-import es.hugoalvarezajenjo.sproutstudio.features.editor.foldAtCaret
-import es.hugoalvarezajenjo.sproutstudio.features.editor.rollbackAtCaret
-import es.hugoalvarezajenjo.sproutstudio.features.editor.selectedText
 import es.hugoalvarezajenjo.sproutstudio.features.editor.unfoldAll
-import es.hugoalvarezajenjo.sproutstudio.features.editor.unfoldAtCaret
-import es.hugoalvarezajenjo.sproutstudio.features.git.canCompareWithHead
-import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
 import es.hugoalvarezajenjo.sproutstudio.features.palette.CommandPalette
 import es.hugoalvarezajenjo.sproutstudio.features.palette.DoubleShiftDetector
 import es.hugoalvarezajenjo.sproutstudio.features.palette.projectCommands
@@ -207,27 +178,16 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 }
             }
             Menu(tr(Res.string.menu_edit)) {
-                val d = p.active
-                Item(tr(Res.string.menu_find), shortcut = shortcut(Key.F), enabled = d != null) { d?.let { p.revealEditor(); it.find.open(replace = false, seed = it.selectedText()) } }
-                Item(tr(Res.string.menu_replace), shortcut = shortcut(Key.R), enabled = d != null) { d?.let { p.revealEditor(); it.find.open(replace = true, seed = it.selectedText()) } }
-                Item(tr(Res.string.menu_find_next), shortcut = shortcut(Key.G), enabled = d != null) { p.revealEditor(); d?.findNext(true) }
-                Item(tr(Res.string.menu_find_previous), shortcut = shortcut(Key.G, shift = true), enabled = d != null) { p.revealEditor(); d?.findNext(false) }
-                Item(tr(Res.string.menu_find_in_files), shortcut = shortcut(Key.F, shift = true), enabled = p.root != null) { p.findInFiles() }
+                val a = p.actions
+                Item(a.find); Item(a.replace); Item(a.findNext); Item(a.findPrevious); Item(a.findInFiles)
             }
             Menu(tr(Res.string.menu_code)) {
-                val d = p.active
-                Item(tr(Res.string.menu_fold_block), shortcut = shortcut(Key.Minus), enabled = d != null) { p.revealEditor(); d?.foldAtCaret() }
-                Item(tr(Res.string.menu_unfold_block), shortcut = shortcut(Key.Equals), enabled = d != null) { p.revealEditor(); d?.unfoldAtCaret() }
-                Item(tr(Res.string.menu_fold_all), shortcut = shortcut(Key.Minus, shift = true), enabled = d != null) { p.revealEditor(); d?.foldAll() }
-                Item(tr(Res.string.menu_unfold_all), shortcut = shortcut(Key.Equals, shift = true), enabled = d != null) { p.revealEditor(); d?.unfoldAll() }
+                val a = p.actions
+                Item(a.foldBlock); Item(a.unfoldBlock); Item(a.foldAll); Item(a.unfoldAll)
                 Separator()
-                Item(tr(Res.string.menu_reformat_code), shortcut = shortcut(Key.L, alt = true), enabled = d != null) { p.reformatCode() }
+                Item(a.reformat)
                 Separator()
-                Item(tr(Res.string.menu_go_to_declaration), shortcut = shortcut(Key.B), enabled = d != null) { p.goToDeclaration() }
-                Item(tr(Res.string.menu_find_usages), shortcut = KeyShortcut(Key.F7, alt = true), enabled = d != null) { p.findUsages() }
-                Item(tr(Res.string.menu_rename_symbol), shortcut = KeyShortcut(Key.F6, shift = true), enabled = d != null) { p.renameSymbol() }
-                Item(tr(Res.string.menu_navigate_back), shortcut = shortcut(Key.DirectionLeft, alt = true), enabled = d?.nav?.canGoBack == true) { p.navigateBack() }
-                Item(tr(Res.string.menu_navigate_forward), shortcut = shortcut(Key.DirectionRight, alt = true), enabled = d?.nav?.canGoForward == true) { p.navigateForward() }
+                Item(a.goToDeclaration); Item(a.findUsages); Item(a.renameSymbol); Item(a.navigateBack); Item(a.navigateForward)
             }
             Menu(tr(Res.string.menu_view)) {
                 EditorLayout.entries.forEach { l ->
@@ -252,20 +212,8 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
             Menu(tr(Res.string.menu_git)) {
                 val g = p.git
                 Item(tr(Res.string.menu_commit), shortcut = shortcut(Key.K), enabled = p.root != null) { p.focusCommit() }
-                Item(tr(Res.string.menu_compare_with_head), enabled = canCompareWithHead(p, p.active?.file)) {
-                    p.active?.file?.let { p.deps.windows.compareWithHead(p, it) }
-                }
-                Item(
-                    tr(Res.string.menu_rollback_lines),
-                    shortcut = KeyShortcut(Key.Z, meta = Os.isMac, ctrl = !Os.isMac, alt = true),
-                    enabled = p.active?.changeAtCaret() != null,
-                ) { p.revealEditor(); p.active?.rollbackAtCaret() }
-                Item(tr(Res.string.menu_show_diff_with_head), enabled = hasCommittedChanges(p, p.active?.file)) {
-                    p.active?.file?.let { p.deps.windows.compareWithHead(p, it, textFirst = true) }
-                }
-                Item(tr(Res.string.menu_show_history), enabled = g.status.head != null && p.active?.file != null) {
-                    p.active?.file?.let { p.deps.windows.showHistory(p, it) }
-                }
+                val a = p.actions
+                Item(a.compareWithHead); Item(a.rollbackLines); Item(a.showDiff); Item(a.showHistory)
                 Separator()
                 Item(tr(Res.string.menu_undo_last_commit), enabled = (g.lastCommit?.parents ?: 0) > 0) {
                     p.gitFlow.undoLastCommit(showCommitPanel = true)
@@ -354,3 +302,8 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
 // ─────────────────────────────────────────────────────────────────────────────
 // Workspace: project panel | tabs + editor | preview
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** [action] as a menu bar entry: its words (following a language change live), shortcut and state. */
+@Composable
+private fun MenuScope.Item(action: Action) =
+    Item(tr(action.title), shortcut = action.shortcut?.keyShortcut, enabled = action.enabled, onClick = action.run)

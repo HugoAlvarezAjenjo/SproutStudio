@@ -5,12 +5,6 @@ import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_insert
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_symbol
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_usages
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_rename_symbol
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_go_to_declaration
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_reformat_code
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_back
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_navigate_forward
 import es.hugoalvarezajenjo.sproutstudio.resources.cat_recent_project
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_autosave_off
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_autosave_on
@@ -38,25 +32,17 @@ import es.hugoalvarezajenjo.sproutstudio.resources.cmd_light_theme
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_diagram_in_folder
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_folder
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_rename_file
-import es.hugoalvarezajenjo.sproutstudio.resources.cmd_toggle_comment
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_toggle_block_comment
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_trash_file
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_close_project
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_close_tab
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_code
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_commit
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_soft_wrap
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_edit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_find
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_in_files
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_next
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_find_previous
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_all
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_fold_block
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_git
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_from_template
@@ -64,21 +50,15 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_new_window
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_open_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_open_folder
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_refresh_files
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_replace
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_rollback_lines
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_save
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_save_as
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_settings
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_commit_panel
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_diff_with_head
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_history
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_problems
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_project_panel
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_stash_changes
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_undo_last_commit
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_unfold_all
-import es.hugoalvarezajenjo.sproutstudio.resources.menu_unfold_block
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_view
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
 
@@ -97,18 +77,12 @@ import es.hugoalvarezajenjo.sproutstudio.features.editor.navigateTo
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Templates
 import es.hugoalvarezajenjo.sproutstudio.features.document.PreviewAction
 import es.hugoalvarezajenjo.sproutstudio.features.editor.EditorSettings
-import es.hugoalvarezajenjo.sproutstudio.features.editor.changeAtCaret
 import es.hugoalvarezajenjo.sproutstudio.features.editor.findNext
 import es.hugoalvarezajenjo.sproutstudio.features.editor.foldAll
-import es.hugoalvarezajenjo.sproutstudio.features.editor.foldAtCaret
-import es.hugoalvarezajenjo.sproutstudio.features.editor.rollbackAtCaret
-import es.hugoalvarezajenjo.sproutstudio.features.editor.selectedText
 import es.hugoalvarezajenjo.sproutstudio.features.editor.unfoldAll
-import es.hugoalvarezajenjo.sproutstudio.features.editor.unfoldAtCaret
-import es.hugoalvarezajenjo.sproutstudio.features.git.canCompareWithHead
-import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.EditorLayout
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.Action
 
 /**
  * Everything the command palette can do in a project window: the menu actions, templates,
@@ -130,6 +104,8 @@ internal fun projectCommands(
         id: String, title: String, category: String, shortcut: String? = null,
         enabled: Boolean = true, restoresFocus: Boolean = true, run: () -> Unit,
     ) { out += Command(id, title, category, shortcut, enabled, restoresFocus, run = run) }
+    val a = p.actions
+    fun action(x: Action, category: String) = cmd(x.id, text(x.title), category, x.shortcut?.hint, x.enabled, x.restoresFocus, x.run)
 
     // File
     cmd("file.new", text(Res.string.menu_new_diagram), text(Res.string.menu_file), shortcutHint("N")) { p.newDocument() }
@@ -157,18 +133,12 @@ internal fun projectCommands(
     // Edit
     cmd("edit.undo", text(Res.string.cmd_undo), text(Res.string.menu_edit), shortcutHint("Z"), enabled = d?.canUndo == true) { p.revealEditor(); d?.undo() }
     cmd("edit.redo", text(Res.string.cmd_redo), text(Res.string.menu_edit), shortcutHint("Z", shift = true), enabled = d?.canRedo == true) { p.revealEditor(); d?.redo() }
-    cmd("edit.find", text(Res.string.menu_find), text(Res.string.menu_edit), shortcutHint("F"), enabled = has, restoresFocus = false) {
-        d?.let { p.revealEditor(); it.find.open(replace = false, seed = it.selectedText()) }
-    }
-    cmd("edit.replace", text(Res.string.menu_replace), text(Res.string.menu_edit), shortcutHint("R"), enabled = has, restoresFocus = false) {
-        d?.let { p.revealEditor(); it.find.open(replace = true, seed = it.selectedText()) }
-    }
-    cmd("edit.findNext", text(Res.string.menu_find_next), text(Res.string.menu_edit), shortcutHint("G"), enabled = has) { p.revealEditor(); d?.findNext(true) }
-    cmd("edit.findPrev", text(Res.string.menu_find_previous), text(Res.string.menu_edit), shortcutHint("G", shift = true), enabled = has) { p.revealEditor(); d?.findNext(false) }
-    cmd("edit.findInFiles", text(Res.string.menu_find_in_files), text(Res.string.menu_edit), shortcutHint("F", shift = true), enabled = p.root != null, restoresFocus = false) { p.findInFiles() }
-    cmd("edit.comment", text(Res.string.cmd_toggle_comment), text(Res.string.menu_edit), shortcutHint("/"), enabled = has) {
-        d?.let { p.revealEditor(); it.value = EditOps.toggleComment(it.value) }
-    }
+    action(a.find, text(Res.string.menu_edit))
+    action(a.replace, text(Res.string.menu_edit))
+    action(a.findNext, text(Res.string.menu_edit))
+    action(a.findPrevious, text(Res.string.menu_edit))
+    action(a.findInFiles, text(Res.string.menu_edit))
+    action(a.toggleComment, text(Res.string.menu_edit))
     cmd("edit.blockComment", text(Res.string.cmd_toggle_block_comment), text(Res.string.menu_edit), shortcutHint("/", alt = true), enabled = has) {
         d?.let { p.revealEditor(); it.value = BlockComment.toggle(it.value) }
     }
@@ -183,19 +153,19 @@ internal fun projectCommands(
     }
 
     // Code
-    cmd("code.fold", text(Res.string.menu_fold_block), text(Res.string.menu_code), shortcutHint("-"), enabled = has) { p.revealEditor(); d?.foldAtCaret() }
-    cmd("code.unfold", text(Res.string.menu_unfold_block), text(Res.string.menu_code), shortcutHint("="), enabled = has) { p.revealEditor(); d?.unfoldAtCaret() }
-    cmd("code.foldAll", text(Res.string.menu_fold_all), text(Res.string.menu_code), shortcutHint("-", shift = true), enabled = has) { p.revealEditor(); d?.foldAll() }
-    cmd("code.unfoldAll", text(Res.string.menu_unfold_all), text(Res.string.menu_code), shortcutHint("=", shift = true), enabled = has) { p.revealEditor(); d?.unfoldAll() }
+    action(a.foldBlock, text(Res.string.menu_code))
+    action(a.unfoldBlock, text(Res.string.menu_code))
+    action(a.foldAll, text(Res.string.menu_code))
+    action(a.unfoldAll, text(Res.string.menu_code))
 
-    cmd("code.reformat", text(Res.string.menu_reformat_code), text(Res.string.menu_code), shortcutHint("L", alt = true), enabled = has) { p.reformatCode() }
+    action(a.reformat, text(Res.string.menu_code))
 
     // Code → Navigate
-    cmd("code.declaration", text(Res.string.menu_go_to_declaration), text(Res.string.menu_code), shortcutHint("B"), enabled = has) { p.goToDeclaration() }
-    cmd("code.usages", text(Res.string.menu_find_usages), text(Res.string.menu_code), shortcutHint("F7", alt = true, command = false), enabled = has) { p.findUsages() }
-    cmd("code.rename", text(Res.string.menu_rename_symbol), text(Res.string.menu_code), shortcutHint("F6", shift = true, command = false), enabled = has) { p.renameSymbol() }
-    cmd("code.back", text(Res.string.menu_navigate_back), text(Res.string.menu_code), shortcutHint("←", alt = true), enabled = d?.nav?.canGoBack == true) { p.navigateBack() }
-    cmd("code.forward", text(Res.string.menu_navigate_forward), text(Res.string.menu_code), shortcutHint("→", alt = true), enabled = d?.nav?.canGoForward == true) { p.navigateForward() }
+    action(a.goToDeclaration, text(Res.string.menu_code))
+    action(a.findUsages, text(Res.string.menu_code))
+    action(a.renameSymbol, text(Res.string.menu_code))
+    action(a.navigateBack, text(Res.string.menu_code))
+    action(a.navigateForward, text(Res.string.menu_code))
 
     // View
     EditorLayout.entries.forEach { l ->
@@ -213,18 +183,10 @@ internal fun projectCommands(
         }
         // Git
         cmd("git.commit", text(Res.string.menu_commit), text(Res.string.menu_git), shortcutHint("K"), restoresFocus = false) { p.focusCommit() }
-        cmd("git.compare", text(Res.string.menu_compare_with_head), text(Res.string.menu_git), enabled = canCompareWithHead(p, d?.file)) {
-            d?.file?.let { p.deps.windows.compareWithHead(p, it) }
-        }
-        cmd("git.rollbackLines", text(Res.string.menu_rollback_lines), text(Res.string.menu_git), shortcutHint("Z", alt = true), enabled = d?.let { it.changeAtCaret() } != null) {
-            p.revealEditor(); d?.let { it.rollbackAtCaret() }
-        }
-        cmd("git.diff", text(Res.string.menu_show_diff_with_head), text(Res.string.menu_git), enabled = hasCommittedChanges(p, d?.file)) {
-            d?.file?.let { p.deps.windows.compareWithHead(p, it, textFirst = true) }
-        }
-        cmd("git.history", text(Res.string.menu_show_history), text(Res.string.menu_git), enabled = p.git.status.head != null && d?.file != null) {
-            d?.file?.let { p.deps.windows.showHistory(p, it) }
-        }
+        action(a.compareWithHead, text(Res.string.menu_git))
+        action(a.rollbackLines, text(Res.string.menu_git))
+        action(a.showDiff, text(Res.string.menu_git))
+        action(a.showHistory, text(Res.string.menu_git))
         cmd("git.undo", text(Res.string.menu_undo_last_commit), text(Res.string.menu_git), enabled = (p.git.lastCommit?.parents ?: 0) > 0, restoresFocus = false) {
             p.gitFlow.undoLastCommit(showCommitPanel = true)
         }

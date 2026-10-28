@@ -161,6 +161,9 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
     /** Git operations that also touch the tabs and the tree. */
     val gitFlow = GitWorkflow(this)
 
+    /** What the menus, the palette and the editor's right-click menu can do; each action defined once. */
+    val actions = WorkspaceActions(this)
+
     /** The tabs to reopen with this project next time (Settings → Restore session). */
     private val session = WorkspaceSession(this, deps.session)
     private var sessionJob: Job? = null
