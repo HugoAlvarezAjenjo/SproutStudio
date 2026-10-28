@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
@@ -187,6 +188,12 @@ fun CodeEditor(
     }
     fun offsetAt(pos: Offset) = geometry.offsetAt(pos, doc.text.length)
     fun linkAt(pos: Offset) = geometry.linkAt(pos, doc, currentIncludes)
+    /** A drag-selection that scrolled: the selection now runs from its anchor to [pos]. */
+    fun extendSelection(pos: Offset) {
+        val to = geometry.nearestOffsetAt(pos, doc.text.length) ?: return
+        val sel = doc.value.selection
+        if (sel.end != to) state.update(doc.value.copy(selection = TextRange(sel.start, to)), typed = false)
+    }
     fun follow(offset: Int) {
         // A frame later: after anything the field itself did with the click.
         scope.launch {
@@ -236,6 +243,12 @@ fun CodeEditor(
                                 top = EditorMetrics.textTop, bottom = EditorMetrics.textBottom,
                             )
                             .followLinks(state, ::offsetAt, ::linkAt, ::follow)
+                            .scrollWhileSelecting(
+                                vScroll, hScroll,
+                                contentOrigin = { with(density) { Offset(EditorMetrics.textStart.toPx(), EditorMetrics.textTop.toPx()) } },
+                                viewportHeight = { geometry.viewportPx },
+                                extend = ::extendSelection,
+                            )
                             .drawBehind {
                                 val l = geometry.text ?: return@drawBehind
                                 val h = EditorHighlights(

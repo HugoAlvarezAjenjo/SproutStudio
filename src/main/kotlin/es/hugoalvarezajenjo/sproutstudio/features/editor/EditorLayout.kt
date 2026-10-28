@@ -33,10 +33,15 @@ internal class EditorLayout {
     /** Real text offset under [pos] (field content coordinates), if it is on a line at all. */
     fun offsetAt(pos: Offset, length: Int): Int? {
         val l = text ?: return null
-        val t = l.getOffsetForPosition(pos)
-        val line = l.getLineForOffset(t)
+        val line = l.getLineForOffset(l.getOffsetForPosition(pos))
         if (pos.y < l.getLineTop(line) || pos.y > l.getLineBottom(line)) return null
-        return mapping.transformedToOriginal(t).coerceIn(0, length)
+        return nearestOffsetAt(pos, length)
+    }
+
+    /** Real text offset nearest to [pos] (field content coordinates), even off the text. */
+    fun nearestOffsetAt(pos: Offset, length: Int): Int? {
+        val l = text ?: return null
+        return mapping.transformedToOriginal(l.getOffsetForPosition(pos)).coerceIn(0, length)
     }
 
     /** The span a ⌘-click at [pos] would follow, when the pointer is really over it. */
