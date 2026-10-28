@@ -22,7 +22,6 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.platform.LocalDensity
 
-import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -230,4 +229,4 @@ internal val EditorLayout.shortcutKey: Key
     get() = when (this) { EditorLayout.EDITOR -> Key.One; EditorLayout.SPLIT -> Key.Two; EditorLayout.PREVIEW -> Key.Three }
 
 private val EditorLayout.shortcutHint: String
-    get() = (if (Os.isMac) "⌥⌘" else "Ctrl+Alt+") + (ordinal + 1)
+    get() = shortcutHint("${ordinal + 1}", alt = true)

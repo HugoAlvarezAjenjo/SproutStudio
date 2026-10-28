@@ -88,7 +88,6 @@ import es.hugoalvarezajenjo.sproutstudio.features.workspace.chooseFolder
 
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.openDiagramDialog
 
-import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.BlockComment
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
@@ -176,11 +175,10 @@ internal fun projectCommands(
     cmd("edit.duplicate", text(Res.string.cmd_duplicate_line), text(Res.string.menu_edit), shortcutHint("D"), enabled = has) {
         d?.let { p.revealEditor(); it.value = EditOps.duplicateLines(it.value) }
     }
-    val altKey = if (Os.isMac) "⌥" else "Alt+"
-    cmd("edit.moveLineUp", text(Res.string.cmd_move_line_up), text(Res.string.menu_edit), "$altKey↑", enabled = has) {
+    cmd("edit.moveLineUp", text(Res.string.cmd_move_line_up), text(Res.string.menu_edit), shortcutHint("↑", alt = true, command = false), enabled = has) {
         d?.let { p.revealEditor(); it.value = MoveLines.up(it.value) }
     }
-    cmd("edit.moveLineDown", text(Res.string.cmd_move_line_down), text(Res.string.menu_edit), "$altKey↓", enabled = has) {
+    cmd("edit.moveLineDown", text(Res.string.cmd_move_line_down), text(Res.string.menu_edit), shortcutHint("↓", alt = true, command = false), enabled = has) {
         d?.let { p.revealEditor(); it.value = MoveLines.down(it.value) }
     }
 
@@ -193,12 +191,11 @@ internal fun projectCommands(
     cmd("code.reformat", text(Res.string.menu_reformat_code), text(Res.string.menu_code), shortcutHint("L", alt = true), enabled = has) { p.reformatCode() }
 
     // Code → Navigate
-    val altCmd = if (Os.isMac) "⌥⌘" else "Ctrl+Alt+"
     cmd("code.declaration", text(Res.string.menu_go_to_declaration), text(Res.string.menu_code), shortcutHint("B"), enabled = has) { p.goToDeclaration() }
-    cmd("code.usages", text(Res.string.menu_find_usages), text(Res.string.menu_code), if (Os.isMac) "⌥F7" else "Alt+F7", enabled = has) { p.findUsages() }
-    cmd("code.rename", text(Res.string.menu_rename_symbol), text(Res.string.menu_code), if (Os.isMac) "⇧F6" else "Shift+F6", enabled = has) { p.renameSymbol() }
-    cmd("code.back", text(Res.string.menu_navigate_back), text(Res.string.menu_code), "$altCmd←", enabled = d?.nav?.canGoBack == true) { p.navigateBack() }
-    cmd("code.forward", text(Res.string.menu_navigate_forward), text(Res.string.menu_code), "$altCmd→", enabled = d?.nav?.canGoForward == true) { p.navigateForward() }
+    cmd("code.usages", text(Res.string.menu_find_usages), text(Res.string.menu_code), shortcutHint("F7", alt = true, command = false), enabled = has) { p.findUsages() }
+    cmd("code.rename", text(Res.string.menu_rename_symbol), text(Res.string.menu_code), shortcutHint("F6", shift = true, command = false), enabled = has) { p.renameSymbol() }
+    cmd("code.back", text(Res.string.menu_navigate_back), text(Res.string.menu_code), shortcutHint("←", alt = true), enabled = d?.nav?.canGoBack == true) { p.navigateBack() }
+    cmd("code.forward", text(Res.string.menu_navigate_forward), text(Res.string.menu_code), shortcutHint("→", alt = true), enabled = d?.nav?.canGoForward == true) { p.navigateForward() }
 
     // View
     EditorLayout.entries.forEach { l ->
@@ -240,12 +237,12 @@ internal fun projectCommands(
         }
     }
     cmd("view.theme", if (p.deps.theme.dark.value) text(Res.string.cmd_light_theme) else text(Res.string.cmd_dark_theme), text(Res.string.menu_view)) { p.deps.theme.toggle() }
-    cmd("app.settings", text(Res.string.menu_settings), "SproutStudio", if (Os.isMac) "⌘," else "Ctrl+,", restoresFocus = false) { p.deps.windows.openSettings() }
+    cmd("app.settings", text(Res.string.menu_settings), "SproutStudio", shortcutHint(","), restoresFocus = false) { p.deps.windows.openSettings() }
     val editor = p.deps.editor
     cmd("view.fontBigger", text(Res.string.cmd_font_bigger), text(Res.string.menu_view), enabled = editor.currentFontSize < EditorSettings.MAX_FONT_SIZE) { editor.changeFontSize(1f) }
     cmd("view.fontSmaller", text(Res.string.cmd_font_smaller), text(Res.string.menu_view), enabled = editor.currentFontSize > EditorSettings.MIN_FONT_SIZE) { editor.changeFontSize(-1f) }
     cmd("view.fontReset", text(Res.string.cmd_font_reset), text(Res.string.menu_view), enabled = !editor.fontSize.isDefault) { editor.fontSize.reset() }
-    cmd("view.softWrap", text(Res.string.menu_soft_wrap), text(Res.string.menu_view), if (Os.isMac) "⌥Z" else "Alt+Z") { editor.toggleSoftWrap() }
+    cmd("view.softWrap", text(Res.string.menu_soft_wrap), text(Res.string.menu_view), shortcutHint("Z", alt = true, command = false)) { editor.toggleSoftWrap() }
     cmd("view.diagramDark", if (p.deps.diagram.dark.value) text(Res.string.cmd_light_diagram) else text(Res.string.menu_dark_diagram_preview), text(Res.string.cat_preview)) { p.deps.diagram.toggle() }
 
     // Preview: export goes through the preview pane (it knows which diagram is showing).

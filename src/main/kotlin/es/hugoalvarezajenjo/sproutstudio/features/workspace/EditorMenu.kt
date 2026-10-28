@@ -14,7 +14,6 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material.icons.outlined.UnfoldLess
 import androidx.compose.material.icons.outlined.UnfoldMore
-import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.EditOps
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Navigation
@@ -61,8 +60,8 @@ internal class EditorMenu(private val p: WorkspaceViewModel) {
         group {
             if (onSymbol) {
                 add(MenuItem(text(Res.string.menu_go_to_declaration), shortcut = shortcutHint("B")) { p.goToDeclaration() })
-                add(MenuItem(text(Res.string.menu_find_usages), Icons.Outlined.Search, shortcut = key("F7", alt = true)) { p.findUsages() })
-                add(MenuItem(text(Res.string.menu_rename_symbol), Icons.Outlined.DriveFileRenameOutline, shortcut = key("F6", shift = true)) { p.renameSymbol() })
+                add(MenuItem(text(Res.string.menu_find_usages), Icons.Outlined.Search, shortcut = shortcutHint("F7", alt = true, command = false)) { p.findUsages() })
+                add(MenuItem(text(Res.string.menu_rename_symbol), Icons.Outlined.DriveFileRenameOutline, shortcut = shortcutHint("F6", shift = true, command = false)) { p.renameSymbol() })
             }
         }
         group {
@@ -105,9 +104,4 @@ internal class EditorMenu(private val p: WorkspaceViewModel) {
         ExportFormat.PNG -> PreviewAction.EXPORT_PNG
         ExportFormat.PDF -> PreviewAction.EXPORT_PDF
     }
-
-    /** A shortcut without ⌘/Ctrl, written the way the OS writes it (⌥F7 on macOS, Alt+F7 elsewhere). */
-    private fun key(k: String, alt: Boolean = false, shift: Boolean = false): String =
-        if (Os.isMac) buildString { if (alt) append('⌥'); if (shift) append('⇧'); append(k) }
-        else buildString { if (alt) append("Alt+"); if (shift) append("Shift+"); append(k) }
 }
