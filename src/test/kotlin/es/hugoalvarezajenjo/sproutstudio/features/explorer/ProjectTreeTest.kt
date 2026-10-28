@@ -187,8 +187,9 @@ class ProjectTreeTest {
                 org.jetbrains.skia.Image.makeFromBitmap(img.asSkiaBitmap()).encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)!!.bytes)
         }
         onNodeWithTag("name-confirm").performClick()
-        waitForIdle()
         val f = File(dir, "login.puml")
+        // The write runs on the IO dispatcher, which waitForIdle doesn't wait for.
+        waitUntil(timeoutMillis = 5_000) { f.exists() }
         assertTrue(f.readText().startsWith("@startuml\nactor User"), f.readText())
     }
 
@@ -196,7 +197,8 @@ class ProjectTreeTest {
         val p = TestGraph.workspace().apply { openRoot(dir); explorer.showFileAction(FileAction.NewDiagram(dir)) }
         setContent { PumlTheme(dark = true) { Surface(Modifier.size(1100.dp, 760.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
         onNodeWithTag("name-confirm").performClick()
-        waitForIdle()
-        assertEquals("", File(dir, "new-diagram.puml").readText())
+        val f = File(dir, "new-diagram.puml")
+        waitUntil(timeoutMillis = 5_000) { f.exists() }
+        assertEquals("", f.readText())
     }
 }
