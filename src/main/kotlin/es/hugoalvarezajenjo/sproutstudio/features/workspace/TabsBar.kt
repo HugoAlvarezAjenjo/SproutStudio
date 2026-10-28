@@ -24,7 +24,6 @@ import androidx.compose.ui.platform.LocalDensity
 
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import androidx.compose.foundation.ContextMenuArea
-import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -44,6 +43,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.FolderOpen
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.MenuItem
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.menu
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Image
@@ -190,16 +193,20 @@ private val EDGE_ZONE = 40.dp
 private val EDGE_MAX_STEP = 12.dp
 
 /** Right-click on a tab. Entries that would do nothing (no tabs to the left...) are left out. */
-private fun tabMenu(p: WorkspaceViewModel, d: Document, onCloseTab: (Document) -> Unit) = buildList {
+private fun tabMenu(p: WorkspaceViewModel, d: Document, onCloseTab: (Document) -> Unit) = menu {
     val i = p.docs.indexOf(d)
-    add(ContextMenuItem(text(Res.string.common_close)) { onCloseTab(d) })
-    if (p.docs.size > 1) add(ContextMenuItem(text(Res.string.tab_close_others)) { p.closeOtherTabs(d) })
-    if (i > 0) add(ContextMenuItem(text(Res.string.tab_close_left)) { p.closeTabsToTheLeft(d) })
-    if (i < p.docs.lastIndex) add(ContextMenuItem(text(Res.string.tab_close_right)) { p.closeTabsToTheRight(d) })
-    add(ContextMenuItem(text(Res.string.tab_close_all)) { p.closeAllTabs() })
+    group {
+        add(MenuItem(text(Res.string.common_close), Icons.Outlined.Close, shortcut = shortcutHint("W")) { onCloseTab(d) })
+        if (p.docs.size > 1) add(MenuItem(text(Res.string.tab_close_others)) { p.closeOtherTabs(d) })
+        if (i > 0) add(MenuItem(text(Res.string.tab_close_left)) { p.closeTabsToTheLeft(d) })
+        if (i < p.docs.lastIndex) add(MenuItem(text(Res.string.tab_close_right)) { p.closeTabsToTheRight(d) })
+        add(MenuItem(text(Res.string.tab_close_all)) { p.closeAllTabs() })
+    }
     d.file?.let { f ->
-        add(ContextMenuItem(text(Res.string.tab_copy_path)) { p.deps.platform.copyTextToClipboard(f.absolutePath) })
-        add(ContextMenuItem(text(OsTexts.reveal)) { p.deps.platform.reveal(f) })
+        group {
+            add(MenuItem(text(Res.string.tab_copy_path), Icons.Outlined.ContentCopy) { p.deps.platform.copyTextToClipboard(f.absolutePath) })
+            add(MenuItem(text(OsTexts.reveal), Icons.Outlined.FolderOpen) { p.deps.platform.reveal(f) })
+        }
     }
 }
 

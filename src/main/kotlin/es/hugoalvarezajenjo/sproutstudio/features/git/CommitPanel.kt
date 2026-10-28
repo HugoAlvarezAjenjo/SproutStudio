@@ -44,6 +44,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.git_undo_last_hint
 import es.hugoalvarezajenjo.sproutstudio.resources.git_unversioned
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
 
 import androidx.compose.material3.Surface
@@ -55,7 +56,6 @@ import es.hugoalvarezajenjo.sproutstudio.services.git.StashInfo
 import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
 
 import androidx.compose.foundation.ContextMenuArea
-import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -81,6 +81,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Difference
+import androidx.compose.material.icons.outlined.History
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.MenuItem
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.menu
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.CheckBox
@@ -302,12 +306,14 @@ private fun ChangeRow(p: WorkspaceViewModel, ch: FileChange, onRollback: ((FileC
     val hovered by interaction.collectIsHoveredAsState()
     val isActive = p.active?.file?.let { git.changeOf(it)?.path } == ch.path
     val hasHead = ch.type == ChangeType.MODIFIED || ch.type == ChangeType.DELETED
-    val menu = buildList {
-        if (canOpen) add(ContextMenuItem(tr(Res.string.git_open)) { p.open(ch.file) })
-        if (canCompare) add(ContextMenuItem(tr(Res.string.menu_compare_with_head)) { p.deps.windows.compareWithHead(p, ch.file) })
-        if (hasHead) add(ContextMenuItem(tr(Res.string.git_show_diff)) { p.deps.windows.compareWithHead(p, ch.file, textFirst = true) })
-        if (hasHead) add(ContextMenuItem(tr(Res.string.git_show_history)) { p.deps.windows.showHistory(p, ch.file) })
-        if (onRollback != null) add(ContextMenuItem(tr(Res.string.git_rollback_menu)) { onRollback(ch) })
+    val menu = menu {
+        group { if (canOpen) add(MenuItem(text(Res.string.git_open)) { p.open(ch.file) }) }
+        group {
+            if (canCompare) add(MenuItem(text(Res.string.menu_compare_with_head), Icons.Outlined.Difference) { p.deps.windows.compareWithHead(p, ch.file) })
+            if (hasHead) add(MenuItem(text(Res.string.git_show_diff)) { p.deps.windows.compareWithHead(p, ch.file, textFirst = true) })
+            if (hasHead) add(MenuItem(text(Res.string.git_show_history), Icons.Outlined.History) { p.deps.windows.showHistory(p, ch.file) })
+        }
+        group { if (onRollback != null) add(MenuItem(text(Res.string.git_rollback_menu), Icons.AutoMirrored.Outlined.Undo) { onRollback(ch) }) }
     }
     ContextMenuArea(items = { menu }) {
         Row(
