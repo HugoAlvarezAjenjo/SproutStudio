@@ -1,7 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.git
 
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
-import es.hugoalvarezajenjo.sproutstudio.resources.dialog_cancel
 import es.hugoalvarezajenjo.sproutstudio.resources.git_add_gitignore
 import es.hugoalvarezajenjo.sproutstudio.resources.git_add_gitignore_hint
 import es.hugoalvarezajenjo.sproutstudio.resources.git_amend
@@ -11,10 +10,6 @@ import es.hugoalvarezajenjo.sproutstudio.resources.git_changes
 import es.hugoalvarezajenjo.sproutstudio.resources.git_commit
 import es.hugoalvarezajenjo.sproutstudio.resources.git_commit_message
 import es.hugoalvarezajenjo.sproutstudio.resources.git_commit_tooltip
-import es.hugoalvarezajenjo.sproutstudio.resources.git_drop
-import es.hugoalvarezajenjo.sproutstudio.resources.git_drop_hint
-import es.hugoalvarezajenjo.sproutstudio.resources.git_drop_text
-import es.hugoalvarezajenjo.sproutstudio.resources.git_drop_title
 import es.hugoalvarezajenjo.sproutstudio.resources.git_files
 import es.hugoalvarezajenjo.sproutstudio.resources.git_hide_panel
 import es.hugoalvarezajenjo.sproutstudio.resources.git_include_all
@@ -27,34 +22,20 @@ import es.hugoalvarezajenjo.sproutstudio.resources.git_no_repo
 import es.hugoalvarezajenjo.sproutstudio.resources.git_no_repo_hint
 import es.hugoalvarezajenjo.sproutstudio.resources.git_no_user
 import es.hugoalvarezajenjo.sproutstudio.resources.git_open
-import es.hugoalvarezajenjo.sproutstudio.resources.git_pop
-import es.hugoalvarezajenjo.sproutstudio.resources.git_pop_hint
 import es.hugoalvarezajenjo.sproutstudio.resources.git_refresh
 import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_menu
 import es.hugoalvarezajenjo.sproutstudio.resources.git_show_diff
 import es.hugoalvarezajenjo.sproutstudio.resources.git_show_history
-import es.hugoalvarezajenjo.sproutstudio.resources.git_stash
 import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_changes
 import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_count
-import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_description
-import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_hint
-import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_saved
-import es.hugoalvarezajenjo.sproutstudio.resources.git_stash_title
 import es.hugoalvarezajenjo.sproutstudio.resources.git_undo_last_hint
 import es.hugoalvarezajenjo.sproutstudio.resources.git_unversioned
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_compare_with_head
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.text
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.tr
-
-import androidx.compose.material3.Surface
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import es.hugoalvarezajenjo.sproutstudio.services.git.GitAuthor
-import es.hugoalvarezajenjo.sproutstudio.services.git.StashInfo
 import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
-
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -96,11 +77,9 @@ import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Schema
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -136,7 +115,6 @@ import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.HLine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
-import java.io.File
 
 /**
  * IntelliJ's Commit tool window (⌘0): what changed since the last commit, checkboxes to pick
@@ -394,102 +372,6 @@ private fun AuthorLine(p: WorkspaceViewModel) {
             if (a.implicit) tr(Res.string.git_no_user, a.name) else "${a.name} <${a.email}>",
             fontSize = 12.sp, color = if (a.implicit) c.warning else c.textMuted,
             maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/** True when [f] is committed and differs from that version (a text diff is meaningful). */
-internal fun hasCommittedChanges(p: WorkspaceViewModel, f: File?): Boolean =
-    f != null && p.git.changeOf(f)?.type.let { it == ChangeType.MODIFIED || it == ChangeType.DELETED }
-
-/** Opens [f] next to its committed version. */
-internal fun canCompareWithHead(p: WorkspaceViewModel, f: File?): Boolean =
-    f != null && f.isDiagram() && p.git.changeOf(f)?.type == ChangeType.MODIFIED
-
-/**
- * Stash: put your uncommitted changes aside (to switch branch or try something else) and bring
- * them back later. Opens below the Commit panel's stash button.
- */
-@Composable
-private fun StashPopup(p: WorkspaceViewModel, onDismiss: () -> Unit) {
-    val c = ide
-    val git = p.git
-    var message by remember { mutableStateOf("") }
-    var confirmDrop by remember { mutableStateOf<StashInfo?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { git.clearError() }
-
-    fun run(op: suspend () -> Boolean) {
-        busy = true
-        // Disk changes under open tabs: same care as switching branches.
-        p.gitFlow.changeWorkingTree(op) { busy = false }
-    }
-
-    Popup(
-        alignment = Alignment.TopStart,
-        offset = IntOffset(0, 34),
-        onDismissRequest = onDismiss,
-        properties = PopupProperties(focusable = true),
-    ) {
-        Surface(
-            shape = RoundedCornerShape(8.dp), color = c.popup, shadowElevation = 12.dp,
-            modifier = Modifier.width(320.dp).border(1.dp, c.popupBorder, RoundedCornerShape(8.dp)).testTag("stash-popup"),
-        ) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(tr(Res.string.git_stash_title), style = MaterialTheme.typography.labelLarge, color = c.text)
-                Text(tr(Res.string.git_stash_hint), fontSize = 12.sp, color = c.textMuted)
-                Box(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(c.editor)
-                        .border(1.dp, c.popupBorder, RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 6.dp),
-                ) {
-                    if (message.isEmpty()) Text(tr(Res.string.git_stash_description), fontSize = 13.sp, color = c.textDisabled)
-                    BasicTextField(
-                        message, { message = it }, singleLine = true,
-                        textStyle = TextStyle(fontSize = 13.sp, color = c.text), cursorBrush = SolidColor(c.text),
-                        modifier = Modifier.fillMaxWidth().testTag("stash-message"),
-                    )
-                }
-                Row {
-                    Spacer(Modifier.weight(1f))
-                    ToolButton(
-                        null, label = tr(Res.string.git_stash), primary = true,
-                        enabled = !busy && git.status.head != null && git.status.changes.any { it.type != ChangeType.UNVERSIONED },
-                    ) { run { git.stash(message).also { if (it) message = "" } } }
-                }
-                if (git.stashes.isNotEmpty()) {
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(c.popupBorder))
-                    Text(tr(Res.string.git_stash_saved), fontSize = 11.sp, color = c.textMuted)
-                    LazyColumn(Modifier.heightIn(max = 220.dp)) {
-                        items(git.stashes, key = { "${it.index}:${it.timeMillis}" }) { st ->
-                            Row(
-                                Modifier.fillMaxWidth().height(30.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(st.message.removePrefix("On ").substringAfter(": ", st.message), fontSize = 13.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(relativeTime(st.timeMillis), fontSize = 11.sp, color = c.textMuted)
-                                }
-                                ToolButton(null, tooltip = tr(Res.string.git_pop_hint), label = tr(Res.string.git_pop), enabled = !busy) { run { git.popStash(st.index) } }
-                                ToolButton(null, tooltip = tr(Res.string.git_drop_hint), label = tr(Res.string.git_drop), enabled = !busy) { confirmDrop = st }
-                            }
-                        }
-                    }
-                }
-                git.error?.let { Text(it.describe(), color = c.error, fontSize = 12.sp) }
-            }
-        }
-    }
-
-    confirmDrop?.let { st ->
-        AlertDialog(
-            onDismissRequest = { confirmDrop = null },
-            containerColor = ide.popup,
-            shape = RoundedCornerShape(10.dp),
-            title = { Text(tr(Res.string.git_drop_title), style = MaterialTheme.typography.titleMedium) },
-            text = { Text(tr(Res.string.git_drop_text), style = MaterialTheme.typography.bodyMedium) },
-            confirmButton = { TextButton(onClick = { confirmDrop = null; run { git.dropStash(st.index) } }) { Text(tr(Res.string.git_drop), color = ide.error) } },
-            dismissButton = { TextButton(onClick = { confirmDrop = null }) { Text(tr(Res.string.dialog_cancel)) } },
         )
     }
 }
