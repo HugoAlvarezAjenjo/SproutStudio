@@ -1,14 +1,19 @@
 # Changelog
 
-## Unreleased
+## 1.4.0
 
-An Outline panel, and menus that match the app and do more.
+An Outline panel, menus that match the app and do more, and one window on Windows and Linux.
 
 ### Outline
 - **A new Outline panel** (⌘7, Ctrl+7 on Windows and Linux) lists what the open file declares: participants,
   classes, packages, procedures. Classes sit inside the packages that hold them, and each level folds.
 - A file with several diagrams gets one section per diagram, headed with its number and `title`.
 - Clicking an entry selects its name in the editor (Back returns), and the entry at the caret is highlighted.
+
+### Windows and Linux
+- **One running app:** double-clicking a `.puml` while SproutStudio is open opens it in that app instead of
+  starting another one. If the file is already open, or you launch the app again, its window comes to the
+  front. macOS already worked this way.
 
 ### Menus
 - **Every right-click menu follows the app theme**, the text fields' Cut/Copy/Paste included, with icons,
