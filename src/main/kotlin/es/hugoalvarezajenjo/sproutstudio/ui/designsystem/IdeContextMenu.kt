@@ -23,8 +23,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -86,8 +89,9 @@ object IdeContextMenu : ContextMenuRepresentation {
     }
 }
 
+/** The menu itself, shared by the right-click menu and [IdeDropdownMenu]. Scrolls when taller than the window. */
 @Composable
-private fun MenuPanel(items: List<ContextMenuItem>, onPicked: () -> Unit, onBack: (() -> Unit)?) {
+internal fun MenuPanel(items: List<ContextMenuItem>, onPicked: () -> Unit, onBack: (() -> Unit)?) {
     val c = ide
     val focus = LocalFocusManager.current
     val first = remember { FocusRequester() }
@@ -99,7 +103,8 @@ private fun MenuPanel(items: List<ContextMenuItem>, onPicked: () -> Unit, onBack
         modifier = Modifier.border(1.dp, c.popupBorder, RoundedCornerShape(8.dp)).testTag("context-menu"),
     ) {
         Column(
-            Modifier.width(IntrinsicSize.Max).widthIn(min = 180.dp, max = 360.dp).padding(4.dp)
+            Modifier.width(IntrinsicSize.Max).widthIn(min = 180.dp, max = 360.dp)
+                .verticalScroll(rememberScrollState()).padding(4.dp)
                 .onPreviewKeyEvent { e ->
                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                     when (e.key) {
@@ -175,7 +180,8 @@ private fun MenuRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
-            rich?.icon?.let { Icon(it, null, tint = if (rich.danger && enabled) c.error else if (enabled) c.textMuted else c.textDisabled, modifier = Modifier.size(16.dp)) }
+            if (rich?.checked == true) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.size(16.dp))
+            else rich?.icon?.let { Icon(it, null, tint = if (rich.danger && enabled) c.error else if (enabled) c.textMuted else c.textDisabled, modifier = Modifier.size(16.dp)) }
         }
         Text(item.label, color = fg, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f))
         rich?.shortcut?.let { Text(it, color = c.textMuted, fontSize = 12.sp, maxLines = 1) }

@@ -67,8 +67,6 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -93,6 +91,8 @@ import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
 import es.hugoalvarezajenjo.sproutstudio.services.render.RenderError
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.EmptyState
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.HLine
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.IdeDropdownMenu
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.MenuItem
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolButton
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ToolSeparator
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ide
@@ -195,13 +195,8 @@ fun PreviewPane(
             }
             Box {
                 ToolButton(Icons.Outlined.FileDownload, tr(Res.string.preview_export), enabled = preview.image != null) { exportMenu = true }
-                DropdownMenu(exportMenu, onDismissRequest = { exportMenu = false }) {
-                    ExportFormat.entries.forEach { f ->
-                        DropdownMenuItem(text = { Text(f.label(), style = MaterialTheme.typography.bodyMedium) }, onClick = {
-                            exportMenu = false
-                            export(f)
-                        })
-                    }
+                IdeDropdownMenu(exportMenu, onDismissRequest = { exportMenu = false }) {
+                    ExportFormat.entries.map { f -> MenuItem(f.label()) { export(f) } }
                 }
             }
         }

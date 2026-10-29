@@ -10,6 +10,9 @@ import androidx.compose.material.icons.outlined.Schema
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.MenuItem
+import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.IdeDropdownMenu
+import es.hugoalvarezajenjo.sproutstudio.features.preview.themeMenu
+import androidx.compose.foundation.layout.padding
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.menu
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
@@ -216,4 +219,13 @@ class UiSnapshotTest {
     @Test fun contextMenuDark() = contextMenu("context-menu-dark", dark = true)
 
     @Test fun contextMenuLight() = contextMenu("context-menu-light", dark = false)
+
+    /** The preview's theme dropdown, open with a theme in use, at the bottom of a short box. */
+    @Test fun themeDropdown() = shoot("theme-dropdown", listOf(400, 400)) {
+        Box(Modifier.size(1320.dp, 840.dp)) {
+            Box(Modifier.padding(start = 600.dp, top = 40.dp)) {
+                IdeDropdownMenu(true, onDismissRequest = {}) { themeMenu("cerulean") {} }
+            }
+        }
+    }
 }
