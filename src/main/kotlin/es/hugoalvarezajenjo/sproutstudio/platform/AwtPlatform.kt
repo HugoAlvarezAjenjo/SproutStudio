@@ -64,6 +64,24 @@ abstract class AwtPlatform : Platform {
         Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
     }
 
+    /**
+     * Where [bringToFront] looks. The OS classes that need it (Windows, Linux) install it in
+     * `integrate`; macOS never calls [bringToFront] and touches the toolkit only when it must.
+     */
+    protected val activeWindows = ActiveWindowTracker()
+
+    /**
+     * The window the user was last in, to the front (restored if minimised). The window manager
+     * may only flash it in the taskbar instead when another app has the focus (it limits
+     * stealing the focus); that still points the user at it.
+     */
+    override fun bringToFront() {
+        val w = activeWindows.frontmost() ?: return
+        if (w is Frame && w.extendedState and Frame.ICONIFIED != 0) w.extendedState = w.extendedState and Frame.ICONIFIED.inv()
+        w.toFront()
+        w.requestFocus()
+    }
+
     protected fun folderOf(f: File): File = if (f.isDirectory) f else f.absoluteFile.parentFile
 
     private class ImageSelection(private val image: Image) : Transferable {

@@ -2,6 +2,7 @@ package es.hugoalvarezajenjo.sproutstudio.platform
 
 import es.hugoalvarezajenjo.sproutstudio.core.os.Os
 import java.io.File
+import java.nio.file.Path
 
 /**
  * Everything that depends on the desktop the app runs on: native dialogs, the Trash, the
@@ -43,6 +44,15 @@ interface Platform {
      * there is nothing to connect.
      */
     fun integrate(hooks: AppHooks) {}
+
+    /**
+     * Private per-user folder for [SingleInstance], or null when the OS already keeps the app
+     * to one instance (macOS: a double-click reaches the running app as an "open file" event).
+     */
+    fun instanceDir(): Path? = null
+
+    /** Brings the app's frontmost window forward, when another launch handed us its files. */
+    fun bringToFront() {}
 
     /**
      * How many points at the top of a full-screen window the OS keeps for itself, so the app

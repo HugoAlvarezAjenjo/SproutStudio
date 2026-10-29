@@ -23,6 +23,9 @@ fun main(args: Array<String>) {
     PlantUmlEngine.configureOffline()
     val graph = AppGraph.default
     val windows = graph.windows
+    val launchFiles = args.map(::File).filter { it.exists() }
+    // Windows, Linux: if the app already runs, it opens these files and this launch ends.
+    if (!becomeRunningInstance(graph, launchFiles)) return
     // OS hooks (macOS: Finder "open file" events, ⌘Q, the app menu) before the UI starts, so a
     // cold-start double-click is not lost.
     graph.platform.integrate(
@@ -43,7 +46,7 @@ fun main(args: Array<String>) {
     // Run on the UI thread, like the OS "open file" hook, so the two can't interleave
     // (a file landing between the isEmpty() check and openBootWelcome() gave two windows).
     SwingUtilities.invokeAndWait {
-        args.map(::File).filter { it.exists() }.forEach { windows.openFile(it) }
+        launchFiles.forEach { windows.openFile(it) }
         // Compose ends the application if its first composition has no window, so a plain launch
         // composes the welcome window right away, but hidden (see WindowManager.openBootWelcome).
         if (windows.windows.isEmpty()) windows.openBootWelcome()

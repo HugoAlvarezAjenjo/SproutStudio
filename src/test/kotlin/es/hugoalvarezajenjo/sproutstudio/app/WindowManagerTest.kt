@@ -55,6 +55,36 @@ class WindowManagerTest {
         assertTrue((wm.windows.single() as AppWindow.Project).revealed)
     }
 
+    // ── Another launch (Windows, Linux) hands its files to the running app ──
+
+    private var broughtToFront = 0
+
+    private fun anotherLaunch(vararg files: File) = wm.openFromAnotherLaunch(files.toList()) { broughtToFront++ }
+
+    @Test
+    fun anotherLaunchWithAFileOpensItsPreviewHere() {
+        wm.openFolder(Files.createTempDirectory("sprout-p").toFile())
+        anotherLaunch(pizza)
+        assertEquals(pizza, wm.windows.filterIsInstance<AppWindow.QuickPreview>().single().file)
+        assertEquals(0, broughtToFront) // the new window already comes up in front
+    }
+
+    @Test
+    fun anotherLaunchOfAnOpenFileBringsTheAppForward() {
+        wm.openFile(pizza)
+        anotherLaunch(pizza)
+        assertEquals(1, wm.windows.size)
+        assertEquals(1, broughtToFront)
+    }
+
+    @Test
+    fun anotherLaunchWithNoFilesBringsTheAppForward() {
+        wm.openFile(pizza)
+        anotherLaunch()
+        assertEquals(1, wm.windows.size)
+        assertEquals(1, broughtToFront)
+    }
+
     // ── Restore session: the projects open at the last quit come back on a plain launch ──
 
     private val a = Files.createTempDirectory("sprout-a").toFile().absoluteFile

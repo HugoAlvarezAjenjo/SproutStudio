@@ -77,6 +77,17 @@ class WindowManager(
         }
     }
 
+    /**
+     * Another launch (Windows, Linux: a double-click while the app runs) handed us its [files].
+     * If that opens no new window (the file was already open, or the launch had none), the user
+     * still expects the app to appear, so [bringToFront] runs.
+     */
+    fun openFromAnotherLaunch(files: List<File>, bringToFront: () -> Unit) {
+        val before = windows.toList()
+        files.forEach(::openFile)
+        if (windows.none { it !in before }) bringToFront()
+    }
+
     override fun openFolder(dir: File) {
         val d = dir.absoluteFile
         projects.firstOrNull { it.state.root == d }?.let { return }

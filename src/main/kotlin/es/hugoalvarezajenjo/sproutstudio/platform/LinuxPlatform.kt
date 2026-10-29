@@ -2,6 +2,7 @@ package es.hugoalvarezajenjo.sproutstudio.platform
 
 import java.awt.Toolkit
 import java.io.File
+import java.nio.file.Path
 import kotlin.concurrent.thread
 
 /**
@@ -10,7 +11,7 @@ import kotlin.concurrent.thread
  *
  * [run] executes a command and returns its exit code; [start] launches one in a folder without
  * waiting (false if it isn't installed); [background] runs work off the UI thread; [setWindowClass]
- * names the windows for the desktop. All are parameters so tests can check them without starting
+ * names the windows for the desktop; [env] and [home] say where [instanceDir] goes. All are parameters so tests can check them without starting
  * anything.
  */
 class LinuxPlatform(
@@ -19,6 +20,8 @@ class LinuxPlatform(
     private val background: (() -> Unit) -> Unit = { thread(isDaemon = true, name = "reveal") { it() } },
     private val desktopId: String? = System.getProperty(DESKTOP_ID_PROPERTY),
     private val setWindowClass: (String) -> Unit = ::setAwtAppClassName,
+    private val env: (String) -> String? = System::getenv,
+    private val home: String = System.getProperty("user.home"),
 ) : AwtPlatform() {
 
     /**
@@ -28,7 +31,9 @@ class LinuxPlatform(
      * builds set the id (build.gradle.kts); without it the AWT default stays.
      */
     override fun integrate(hooks: AppHooks) {
+        // The window class first: it must be set before the toolkit makes any window.
         desktopId?.takeIf { it.isNotBlank() }?.let(setWindowClass)
+        activeWindows.install()
     }
 
     /** `gio trash` (GLib, present on every mainstream desktop) uses the freedesktop Trash. */
@@ -59,6 +64,14 @@ class LinuxPlatform(
     override fun openTerminal(dir: File) {
         TERMINALS.firstOrNull { start(listOf(it), dir) }
     }
+
+    /**
+     * `$XDG_RUNTIME_DIR` is the per-user folder made for sockets (only the user can open it, and
+     * it empties on logout). Without one, a private folder in the user's cache.
+     */
+    override fun instanceDir(): Path =
+        env("XDG_RUNTIME_DIR")?.takeIf { it.isNotBlank() }?.let { Path.of(it, "sproutstudio") }
+            ?: Path.of(home, ".cache", "sproutstudio")
 
     /** A GVariant string literal: single quotes, with backslashes and quotes escaped. */
     private fun gvariantString(s: String) = "'" + s.replace("\\", "\\\\").replace("'", "\\'") + "'"
