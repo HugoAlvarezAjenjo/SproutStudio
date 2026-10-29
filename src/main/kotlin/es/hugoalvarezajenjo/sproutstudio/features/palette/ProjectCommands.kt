@@ -178,7 +178,7 @@ internal fun projectCommands(
             p.showSidebar(!p.sidebarVisible)
         }
         cmd("view.refresh", text(Res.string.menu_refresh_files), text(Res.string.menu_view), shortcutHint("Y", alt = true)) { p.explorer.refreshTree() }
-        cmd("view.commitPanel", if (p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT) text(Res.string.cmd_hide_commit_panel) else text(Res.string.menu_show_commit_panel), text(Res.string.menu_view), shortcutHint("0")) {
+        cmd("view.commitPanel", if (p.isShowing(SidebarTool.COMMIT)) text(Res.string.cmd_hide_commit_panel) else text(Res.string.menu_show_commit_panel), text(Res.string.menu_view), shortcutHint("0")) {
             p.toggleTool(SidebarTool.COMMIT)
         }
         // Git

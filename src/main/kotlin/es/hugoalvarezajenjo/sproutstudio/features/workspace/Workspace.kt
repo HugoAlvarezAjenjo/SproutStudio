@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.vector.ImageVector
+import org.jetbrains.compose.resources.StringResource
 import androidx.compose.material.icons.outlined.Commit
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Folder
@@ -209,31 +211,26 @@ private fun ToolStripe(p: WorkspaceViewModel) {
         Modifier.width(40.dp).fillMaxHeight().background(ide.panel).padding(top = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        val project = p.sidebarVisible && p.sidebarTool == SidebarTool.PROJECT
-        val search = p.sidebarVisible && p.sidebarTool == SidebarTool.SEARCH
-        val commit = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT
-        ToolButton(
-            Icons.Outlined.Folder,
-            if (project) tr(Res.string.tool_hide_project, shortcutHint("1")) else tr(Res.string.tool_show_project, shortcutHint("1")),
-            selected = project,
-        ) { p.toggleTool(SidebarTool.PROJECT) }
-        ToolButton(
-            Icons.Outlined.Search,
-            if (search) tr(Res.string.tool_hide_find_in_files, shortcutHint("F", shift = true)) else tr(Res.string.tool_find_in_files, shortcutHint("F", shift = true)),
-            selected = search,
-        ) { if (search) p.showSidebar(false) else p.findInFiles() }
-        ToolButton(
-            Icons.Outlined.Commit,
-            if (commit) tr(Res.string.tool_hide_commit, shortcutHint("0")) else tr(Res.string.tool_commit, shortcutHint("0")),
-            selected = commit,
-        ) { p.toggleTool(SidebarTool.COMMIT) }
-        val templates = p.sidebarVisible && p.sidebarTool == SidebarTool.TEMPLATES
-        ToolButton(
-            Icons.Outlined.Dashboard,
-            if (templates) tr(Res.string.tool_hide_templates) else tr(Res.string.tool_templates),
-            selected = templates,
-        ) { p.toggleTool(SidebarTool.TEMPLATES) }
+        val search = p.isShowing(SidebarTool.SEARCH)
+        StripeButton(p, SidebarTool.PROJECT, Icons.Outlined.Folder, Res.string.tool_show_project, Res.string.tool_hide_project, shortcutHint("1"))
+        // Find in Files opens seeded with the selection, so it doesn't just toggle.
+        StripeButton(p, SidebarTool.SEARCH, Icons.Outlined.Search, Res.string.tool_find_in_files, Res.string.tool_hide_find_in_files, shortcutHint("F", shift = true)) {
+            if (search) p.showSidebar(false) else p.findInFiles()
+        }
+        StripeButton(p, SidebarTool.COMMIT, Icons.Outlined.Commit, Res.string.tool_commit, Res.string.tool_hide_commit, shortcutHint("0"))
+        StripeButton(p, SidebarTool.TEMPLATES, Icons.Outlined.Dashboard, Res.string.tool_templates, Res.string.tool_hide_templates, shortcut = null)
     }
+}
+
+/** One stripe button: shows [tool] or hides it; the tooltip says which, with [shortcut] if it has one. */
+@Composable
+private fun StripeButton(
+    p: WorkspaceViewModel, tool: SidebarTool, icon: ImageVector, show: StringResource, hide: StringResource, shortcut: String?,
+    onClick: () -> Unit = { p.toggleTool(tool) },
+) {
+    val showing = p.isShowing(tool)
+    val res = if (showing) hide else show
+    ToolButton(icon, if (shortcut != null) tr(res, shortcut) else tr(res), selected = showing, onClick = onClick)
 }
 
 /** Drag to resize the Project panel, double-click to collapse it. */

@@ -199,9 +199,9 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 }
                 CheckboxItem(tr(Res.string.menu_show_preview), checked = p.previewVisible, shortcut = shortcut(Key.P)) { p.togglePreview() }
                 Separator()
-                CheckboxItem(tr(Res.string.menu_show_project_panel), checked = p.sidebarVisible && p.sidebarTool == SidebarTool.PROJECT, shortcut = shortcut(Key.One)) { p.toggleTool(SidebarTool.PROJECT) }
-                CheckboxItem(tr(Res.string.menu_show_commit_panel), checked = p.sidebarVisible && p.sidebarTool == SidebarTool.COMMIT, shortcut = shortcut(Key.Zero)) { p.toggleTool(SidebarTool.COMMIT) }
-                CheckboxItem(tr(Res.string.menu_show_templates_panel), checked = p.sidebarVisible && p.sidebarTool == SidebarTool.TEMPLATES) { p.toggleTool(SidebarTool.TEMPLATES) }
+                CheckboxItem(tr(Res.string.menu_show_project_panel), checked = p.isShowing(SidebarTool.PROJECT), shortcut = shortcut(Key.One)) { p.toggleTool(SidebarTool.PROJECT) }
+                CheckboxItem(tr(Res.string.menu_show_commit_panel), checked = p.isShowing(SidebarTool.COMMIT), shortcut = shortcut(Key.Zero)) { p.toggleTool(SidebarTool.COMMIT) }
+                CheckboxItem(tr(Res.string.menu_show_templates_panel), checked = p.isShowing(SidebarTool.TEMPLATES)) { p.toggleTool(SidebarTool.TEMPLATES) }
                 CheckboxItem(tr(Res.string.menu_show_problems), checked = p.problemsExpanded, shortcut = shortcut(Key.Six)) { p.toggleProblems() }
                 CheckboxItem(tr(Res.string.menu_dark_theme), checked = p.deps.theme.dark.value) { p.deps.theme.toggle() }
                 CheckboxItem(tr(Res.string.menu_dark_diagram_preview), checked = p.deps.diagram.dark.value) { p.deps.diagram.toggle() }

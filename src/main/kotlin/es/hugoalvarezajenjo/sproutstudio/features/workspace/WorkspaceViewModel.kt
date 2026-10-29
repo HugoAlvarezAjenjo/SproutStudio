@@ -112,6 +112,9 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         showSidebar(true)
     }
 
+    /** Whether the left panel is open on [tool]: the stripe button and the View menu tick. */
+    fun isShowing(tool: SidebarTool): Boolean = sidebarVisible && sidebarTool == tool
+
     /** ⌘K / "Commit…" asks the Commit panel to put the caret in the message. */
     private val commitFocus = Channel<Unit>(Channel.CONFLATED)
     val commitFocusRequests: Flow<Unit> = commitFocus.receiveAsFlow()
