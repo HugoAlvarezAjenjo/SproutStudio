@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-Right-click menus that match the app and do more.
+An Outline panel, and menus that match the app and do more.
+
+### Outline
+- **A new Outline panel** (⌘7, Ctrl+7 on Windows and Linux) lists what the open file declares: participants,
+  classes, packages, procedures. Classes sit inside the packages that hold them, and each level folds.
+- A file with several diagrams gets one section per diagram, headed with its number and `title`.
+- Clicking an entry selects its name in the editor (Back returns), and the entry at the caret is highlighted.
 
 ### Menus
 - **Every right-click menu follows the app theme**, the text fields' Cut/Copy/Paste included, with icons,
@@ -20,6 +26,8 @@ Right-click menus that match the app and do more.
   - The project folder: Refresh Files and Open in Terminal.
   - Git entries only appear in a repository.
 - **Tabs and the Commit panel:** the same look, with icons and groups. Rollback sits apart at the end.
+- **Preview toolbar:** the theme picker and the Export button open the same menus. The theme picker
+  ticks the theme in use and scrolls through the full list.
 
 ### Fixes
 - Dragging a selection above or below the editor scrolls the text and keeps selecting. Before, the
