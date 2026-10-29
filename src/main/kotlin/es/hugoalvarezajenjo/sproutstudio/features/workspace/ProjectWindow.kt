@@ -31,6 +31,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_save_as
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_save_automatically
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_settings
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_commit_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_outline_panel
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_problems
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_project_panel
@@ -201,6 +202,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 Separator()
                 CheckboxItem(tr(Res.string.menu_show_project_panel), checked = p.isShowing(SidebarTool.PROJECT), shortcut = shortcut(Key.One)) { p.toggleTool(SidebarTool.PROJECT) }
                 CheckboxItem(tr(Res.string.menu_show_commit_panel), checked = p.isShowing(SidebarTool.COMMIT), shortcut = shortcut(Key.Zero)) { p.toggleTool(SidebarTool.COMMIT) }
+                CheckboxItem(tr(Res.string.menu_show_outline_panel), checked = p.isShowing(SidebarTool.OUTLINE), shortcut = shortcut(Key.Seven)) { p.toggleTool(SidebarTool.OUTLINE) }
                 CheckboxItem(tr(Res.string.menu_show_templates_panel), checked = p.isShowing(SidebarTool.TEMPLATES)) { p.toggleTool(SidebarTool.TEMPLATES) }
                 CheckboxItem(tr(Res.string.menu_show_problems), checked = p.problemsExpanded, shortcut = shortcut(Key.Six)) { p.toggleProblems() }
                 CheckboxItem(tr(Res.string.menu_dark_theme), checked = p.deps.theme.dark.value) { p.deps.theme.toggle() }

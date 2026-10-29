@@ -85,6 +85,7 @@
     <string name="menu_show_project_panel">Mostrar panel de proyecto</string>
     <string name="menu_show_commit_panel">Mostrar panel de commit</string>
     <string name="menu_show_templates_panel">Mostrar panel de plantillas</string>
+    <string name="menu_show_outline_panel">Mostrar panel de esquema</string>
     <string name="menu_show_problems">Mostrar problemas</string>
     <string name="menu_dark_theme">Tema oscuro</string>
     <string name="menu_dark_diagram_preview">Vista previa del diagrama oscura</string>
@@ -133,6 +134,7 @@
     <string name="cmd_hide_problems">Ocultar problemas</string>
     <string name="cmd_hide_project_panel">Ocultar panel de proyecto</string>
     <string name="cmd_hide_commit_panel">Ocultar panel de commit</string>
+    <string name="cmd_hide_outline_panel">Ocultar panel de esquema</string>
     <string name="cmd_light_theme">Cambiar a tema claro</string>
     <string name="cmd_dark_theme">Cambiar a tema oscuro</string>
     <string name="cmd_font_bigger">Aumentar tamaño de letra del editor</string>
@@ -173,6 +175,13 @@
     <string name="tool_hide_commit">Ocultar commit (%1$s)</string>
     <string name="tool_commit">Commit (%1$s)</string>
     <string name="tool_hide_templates">Ocultar plantillas</string>
+    <string name="tool_outline">Esquema (%1$s)</string>
+    <string name="tool_hide_outline">Ocultar esquema (%1$s)</string>
+    <string name="outline_title">Esquema</string>
+    <string name="outline_empty">Nada que mostrar</string>
+    <string name="outline_empty_hint">Aquí salen los participantes, clases y paquetes que declares.</string>
+    <string name="outline_diagram">Diagrama %1$d</string>
+    <string name="outline_outside">Fuera de los diagramas</string>
     <string name="tool_templates">Plantillas</string>
     <!-- features/workspace/WorkspaceDialogs.kt -->
     <string name="dialog_open_diagram">Abrir un diagrama</string>

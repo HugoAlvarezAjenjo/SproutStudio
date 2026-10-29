@@ -84,6 +84,7 @@
     <string name="menu_show_project_panel">Show Project Panel</string>
     <string name="menu_show_commit_panel">Show Commit Panel</string>
     <string name="menu_show_templates_panel">Show Templates Panel</string>
+    <string name="menu_show_outline_panel">Show Outline Panel</string>
     <string name="menu_show_problems">Show Problems</string>
     <string name="menu_dark_theme">Dark Theme</string>
     <string name="menu_dark_diagram_preview">Dark Diagram Preview</string>
@@ -132,6 +133,7 @@
     <string name="cmd_hide_problems">Hide Problems</string>
     <string name="cmd_hide_project_panel">Hide Project Panel</string>
     <string name="cmd_hide_commit_panel">Hide Commit Panel</string>
+    <string name="cmd_hide_outline_panel">Hide Outline Panel</string>
     <string name="cmd_light_theme">Switch to Light Theme</string>
     <string name="cmd_dark_theme">Switch to Dark Theme</string>
     <string name="cmd_font_bigger">Increase Editor Font Size</string>
@@ -172,6 +174,13 @@
     <string name="tool_hide_commit">Hide Commit (%1$s)</string>
     <string name="tool_commit">Commit (%1$s)</string>
     <string name="tool_hide_templates">Hide Templates</string>
+    <string name="tool_outline">Outline (%1$s)</string>
+    <string name="tool_hide_outline">Hide Outline (%1$s)</string>
+    <string name="outline_title">Outline</string>
+    <string name="outline_empty">Nothing to outline</string>
+    <string name="outline_empty_hint">Participants, classes and packages you declare show up here.</string>
+    <string name="outline_diagram">Diagram %1$d</string>
+    <string name="outline_outside">Outside any diagram</string>
     <string name="tool_templates">Templates</string>
     <!-- features/workspace/WorkspaceDialogs.kt -->
     <string name="dialog_open_diagram">Open a diagram</string>

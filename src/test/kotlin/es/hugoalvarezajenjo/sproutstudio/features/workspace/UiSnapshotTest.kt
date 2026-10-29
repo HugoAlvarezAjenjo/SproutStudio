@@ -78,6 +78,13 @@ class UiSnapshotTest {
     }
 
     @Test
+    fun workspaceOutline() {
+        // pizza.puml has two diagrams, so the panel shows a header for each.
+        val p = pizzaProject().apply { showTool(SidebarTool.OUTLINE) }
+        shoot("workspace-outline", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }
+    }
+
+    @Test
     fun workspaceWideSidebar() {
         val p = pizzaProject().apply { resizeSidebar(380f) }
         shoot("workspace-wide-sidebar", listOf(400, 800, 800, 400)) { Workspace(p, onSave = {}, onCloseTab = {}) }

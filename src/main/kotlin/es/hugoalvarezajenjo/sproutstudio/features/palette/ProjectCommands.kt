@@ -22,6 +22,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.cmd_font_bigger
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_font_reset
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_font_smaller
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_hide_commit_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.cmd_hide_outline_panel
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_hide_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_hide_problems
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_hide_project_panel
@@ -54,6 +55,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_save
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_save_as
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_settings
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_commit_panel
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_outline_panel
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_preview
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_problems
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_show_project_panel
@@ -180,6 +182,9 @@ internal fun projectCommands(
         cmd("view.refresh", text(Res.string.menu_refresh_files), text(Res.string.menu_view), shortcutHint("Y", alt = true)) { p.explorer.refreshTree() }
         cmd("view.commitPanel", if (p.isShowing(SidebarTool.COMMIT)) text(Res.string.cmd_hide_commit_panel) else text(Res.string.menu_show_commit_panel), text(Res.string.menu_view), shortcutHint("0")) {
             p.toggleTool(SidebarTool.COMMIT)
+        }
+        cmd("view.outlinePanel", if (p.isShowing(SidebarTool.OUTLINE)) text(Res.string.cmd_hide_outline_panel) else text(Res.string.menu_show_outline_panel), text(Res.string.menu_view), shortcutHint("7")) {
+            p.toggleTool(SidebarTool.OUTLINE)
         }
         // Git
         cmd("git.commit", text(Res.string.menu_commit), text(Res.string.menu_git), shortcutHint("K"), restoresFocus = false) { p.focusCommit() }

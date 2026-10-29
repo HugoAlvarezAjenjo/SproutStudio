@@ -8,6 +8,8 @@ import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_find_in_files
 import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_commit
 import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_project
 import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_templates
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_hide_outline
+import es.hugoalvarezajenjo.sproutstudio.resources.tool_outline
 import es.hugoalvarezajenjo.sproutstudio.resources.tool_show_project
 import es.hugoalvarezajenjo.sproutstudio.resources.tool_templates
 import es.hugoalvarezajenjo.sproutstudio.resources.workspace_no_file
@@ -31,8 +33,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.jetbrains.compose.resources.StringResource
+import es.hugoalvarezajenjo.sproutstudio.features.outline.OutlinePanel
 import androidx.compose.material.icons.outlined.Commit
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Folder
@@ -99,6 +103,10 @@ internal fun Workspace(p: WorkspaceViewModel, onSave: (Document) -> Unit, onClos
                         SidebarTool.TEMPLATES -> TemplateSidebar(p.deps.thumbnails, onPick = { p.insertTemplate(it) })
                         SidebarTool.PROJECT -> ProjectTree(p)
                         SidebarTool.SEARCH -> SearchPanel(p)
+                        SidebarTool.OUTLINE -> OutlinePanel(
+                            p.active, p.sidebarWidth.dp, hideShortcut = shortcutHint("7"),
+                            onReveal = p::revealEditor, onHide = { p.showSidebar(false) },
+                        )
                     }
                     SidebarSplitter(p)
                 }
@@ -218,6 +226,7 @@ private fun ToolStripe(p: WorkspaceViewModel) {
             if (search) p.showSidebar(false) else p.findInFiles()
         }
         StripeButton(p, SidebarTool.COMMIT, Icons.Outlined.Commit, Res.string.tool_commit, Res.string.tool_hide_commit, shortcutHint("0"))
+        StripeButton(p, SidebarTool.OUTLINE, Icons.AutoMirrored.Outlined.ListAlt, Res.string.tool_outline, Res.string.tool_hide_outline, shortcutHint("7"))
         StripeButton(p, SidebarTool.TEMPLATES, Icons.Outlined.Dashboard, Res.string.tool_templates, Res.string.tool_hide_templates, shortcut = null)
     }
 }
