@@ -15,15 +15,19 @@ import es.hugoalvarezajenjo.sproutstudio.services.render.PlantUmlEngine
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.AppIcon
 import es.hugoalvarezajenjo.sproutstudio.ui.designsystem.ProvideLanguage
 import kotlinx.coroutines.delay
-import java.io.File
 import javax.swing.SwingUtilities
+import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
+    val cmd = CommandLine.parse(args.toList())
+    // From a terminal (--export, --help): no window, no running instance, just an exit code.
+    if (cmd !is CommandLine.Gui) exitProcess(runInTerminal(cmd))
+
     // Offline lockdown before any PlantUML class reads its configuration.
     PlantUmlEngine.configureOffline()
     val graph = AppGraph.default
     val windows = graph.windows
-    val launchFiles = args.map(::File).filter { it.exists() }
+    val launchFiles = cmd.paths.filter { it.exists() }
     // Windows, Linux: if the app already runs, it opens these files and this launch ends.
     if (!becomeRunningInstance(graph, launchFiles)) return
     // OS hooks (macOS: Finder "open file" events, ⌘Q, the app menu) before the UI starts, so a
@@ -81,6 +85,18 @@ fun main(args: Array<String>) {
                 }
             }
         }
+    }
+}
+
+/** `--export` and `--help`: runs with no AWT window (no Dock icon on macOS) and returns the exit code. */
+private fun runInTerminal(cmd: CommandLine): Int {
+    System.setProperty("java.awt.headless", "true") // before configureOffline, which keeps a set value
+    PlantUmlEngine.configureOffline()
+    return when (cmd) {
+        is CommandLine.Export -> BatchExport().run(cmd)
+        CommandLine.Help -> { println(CommandLine.USAGE); BatchExport.EXIT_OK }
+        is CommandLine.Invalid -> { System.err.println("sproutstudio: ${cmd.message}\n\n${CommandLine.USAGE}"); BatchExport.EXIT_USAGE }
+        is CommandLine.Gui -> error("the app is not started from here")
     }
 }
 
