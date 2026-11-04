@@ -4,6 +4,7 @@ import es.hugoalvarezajenjo.sproutstudio.platform.CommandInstaller.AdminResult
 import es.hugoalvarezajenjo.sproutstudio.platform.CommandInstaller.Result
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
@@ -31,11 +32,12 @@ class CommandInstallerTest {
         dir.deleteRecursively()
     }
 
-    private fun installer(app: Path = this.app) = CommandInstaller(app, target) { script, to ->
-        adminCalls += Files.readString(script)
-        assertEquals(target, to)
-        adminAnswer
-    }
+    private fun installer(app: Path = this.app, unavailable: Result? = null) =
+        CommandInstaller(target, ShellCommand.macScript(app), asAdmin = { script, to ->
+            adminCalls += Files.readString(script)
+            assertEquals(target, to)
+            adminAnswer
+        }, unavailable = unavailable)
 
     private fun assumePosix() = assumeTrue("posix" in dir.toPath().fileSystem.supportedFileAttributeViews(), "POSIX file permissions")
 
@@ -80,9 +82,17 @@ class CommandInstallerTest {
     }
 
     @Test
-    fun `an app run from a translocated copy asks to be moved first`() {
-        val translocated = Path.of("/private/var/folders/x/AppTranslocation/1234/d/SproutStudio.app")
-        assertEquals(Result.AppNotInstalled, installer(translocated).install())
+    fun `an admin step that can't even start is a failure, not an exception`() {
+        assumePosix()
+        Files.createDirectories(bin)
+        bin.toFile().setWritable(false)
+        val noOsascript = CommandInstaller(target, "script", { _, _ -> throw IOException("Cannot run program \"osascript\"") })
+        assertEquals(Result.Failed("Cannot run program \"osascript\""), noOsascript.install())
+    }
+
+    @Test
+    fun `a reason known in advance is the answer, and nothing is written`() {
+        assertEquals(Result.AppNotInstalled, installer(unavailable = Result.AppNotInstalled).install())
         assertTrue(!Files.exists(target) && adminCalls.isEmpty())
     }
 }

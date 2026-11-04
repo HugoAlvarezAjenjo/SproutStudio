@@ -22,10 +22,18 @@ class MacPlatform : AwtPlatform() {
         }
     }
 
-    /** Only from the packaged app: the script calls the .app bundle this process runs from. */
+    /**
+     * Only from the packaged app: the script calls the .app bundle this process runs from, in
+     * /usr/local/bin, which is on the PATH by default.
+     */
     override val commandInstaller: CommandInstaller? by lazy {
-        appBundle(ProcessHandle.current().info().command().orElse(null))?.let {
-            CommandInstaller(it, Path.of("/usr/local/bin", ShellCommand.NAME), CommandInstaller::macAdmin)
+        appBundle(ProcessHandle.current().info().command().orElse(null))?.let { app ->
+            CommandInstaller(
+                target = Path.of("/usr/local/bin", ShellCommand.NAME),
+                script = ShellCommand.macScript(app),
+                asAdmin = ::installAsAdmin,
+                unavailable = CommandInstaller.Result.AppNotInstalled.takeIf { isTranslocated(app) },
+            )
         }
     }
 
@@ -84,6 +92,34 @@ class MacPlatform : AwtPlatform() {
         fun appBundle(launcher: String?): Path? {
             val bundle = launcher?.let { Path.of(it).parent?.parent?.parent } ?: return null
             return bundle.takeIf { it.fileName?.toString()?.endsWith(".app") == true }
+        }
+
+        /**
+         * An app opened from where it was downloaded runs from a random read-only copy (App
+         * Translocation) that is gone after it quits: a command pointing there would break.
+         */
+        fun isTranslocated(app: Path): Boolean = "/AppTranslocation/" in app.toString()
+
+        /**
+         * `install` run through `osascript … with administrator privileges` (the system password
+         * dialog). The paths go in as arguments and AppleScript quotes them, so nothing from a path
+         * is read as a command.
+         */
+        fun installAsAdmin(script: Path, target: Path): CommandInstaller.AdminResult {
+            val p = ProcessBuilder(
+                "osascript",
+                "-e", "on run argv",
+                "-e", "do shell script \"mkdir -p \" & quoted form of (item 1 of argv) & \" && install -m 755 \" & " +
+                    "quoted form of (item 2 of argv) & \" \" & quoted form of (item 3 of argv) with administrator privileges",
+                "-e", "end run",
+                target.parent.toString(), script.toString(), target.toString(),
+            ).redirectErrorStream(true).start()
+            val out = p.inputStream.bufferedReader().readText()
+            return when {
+                p.waitFor() == 0 -> CommandInstaller.AdminResult.DONE
+                "-128" in out -> CommandInstaller.AdminResult.CANCELLED // "User canceled."
+                else -> CommandInstaller.AdminResult.FAILED
+            }
         }
     }
 }

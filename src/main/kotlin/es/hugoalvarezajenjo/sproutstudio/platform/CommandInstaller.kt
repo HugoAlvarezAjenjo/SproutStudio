@@ -8,16 +8,18 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.PosixFilePermissions
 
 /**
- * Installs the `sproutstudio` command ([ShellCommand]) at [target], calling the app at [app].
+ * Installs the `sproutstudio` command: writes [script] at [target], executable.
  *
- * Writes it directly when the user may (Homebrew makes /usr/local/bin theirs); otherwise
- * [asAdmin] copies it there with administrator rights (the system password dialog). A file at
- * [target] that we didn't write is never replaced.
+ * Writes it directly when the user may; otherwise [asAdmin] copies it there with administrator
+ * rights. A file at [target] that we didn't write ([ShellCommand.isOurs]) is never replaced. What
+ * the script says and how admin rights are asked for are the OS class's business, not this one's.
  */
 class CommandInstaller(
-    private val app: Path,
     val target: Path,
+    private val script: String,
     private val asAdmin: (script: Path, target: Path) -> AdminResult,
+    /** Known before trying: why installing from here can't work (macOS: [Result.AppNotInstalled]). */
+    private val unavailable: Result? = null,
 ) {
     enum class AdminResult { DONE, CANCELLED, FAILED }
 
@@ -32,23 +34,28 @@ class CommandInstaller(
     }
 
     fun install(): Result {
-        if (TRANSLOCATED in app.toString()) return Result.AppNotInstalled
+        unavailable?.let { return it }
         if (Files.exists(target) && !ShellCommand.isOurs(runCatching { Files.readString(target) }.getOrDefault(""))) {
             return Result.NotOurs(target)
         }
-        val script = ShellCommand.macScript(app)
         return try {
-            writeExecutable(target, script)
+            writeExecutable()
             Result.Installed(target)
         } catch (_: AccessDeniedException) {
             // Also a missing /usr/local/bin that the user can't create.
-            withAdmin(script)
+            try {
+                withAdmin()
+            } catch (e: IOException) {
+                failed(e) // no temporary file, or no admin tool to run
+            }
         } catch (e: IOException) {
-            Result.Failed(e.message ?: e.javaClass.simpleName)
+            failed(e)
         }
     }
 
-    private fun withAdmin(script: String): Result {
+    private fun failed(e: IOException) = Result.Failed(e.message ?: e.javaClass.simpleName)
+
+    private fun withAdmin(): Result {
         val tmp = Files.createTempFile(ShellCommand.NAME, ".sh")
         return try {
             Files.writeString(tmp, script)
@@ -63,40 +70,15 @@ class CommandInstaller(
     }
 
     /** Next to [target] first, then moved over it: a half-written command never runs. */
-    private fun writeExecutable(target: Path, text: String) {
+    private fun writeExecutable() {
         Files.createDirectories(target.parent)
         val tmp = Files.createTempFile(target.parent, ".${ShellCommand.NAME}", ".tmp")
         try {
-            Files.writeString(tmp, text)
+            Files.writeString(tmp, script)
             Files.setPosixFilePermissions(tmp, PosixFilePermissions.fromString("rwxr-xr-x"))
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
         } finally {
             Files.deleteIfExists(tmp)
-        }
-    }
-
-    companion object {
-        private const val TRANSLOCATED = "/AppTranslocation/"
-
-        /**
-         * macOS: `install` run through `osascript … with administrator privileges`. The paths go in
-         * as arguments and AppleScript quotes them, so nothing from a path is read as a command.
-         */
-        fun macAdmin(script: Path, target: Path): AdminResult {
-            val p = ProcessBuilder(
-                "osascript",
-                "-e", "on run argv",
-                "-e", "do shell script \"mkdir -p \" & quoted form of (item 1 of argv) & \" && install -m 755 \" & " +
-                    "quoted form of (item 2 of argv) & \" \" & quoted form of (item 3 of argv) with administrator privileges",
-                "-e", "end run",
-                target.parent.toString(), script.toString(), target.toString(),
-            ).redirectErrorStream(true).start()
-            val out = p.inputStream.bufferedReader().readText()
-            return when {
-                p.waitFor() == 0 -> AdminResult.DONE
-                "-128" in out -> AdminResult.CANCELLED // "User canceled."
-                else -> AdminResult.FAILED
-            }
         }
     }
 }

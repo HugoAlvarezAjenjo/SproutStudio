@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import es.hugoalvarezajenjo.sproutstudio.platform.CommandInstaller
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -29,8 +30,17 @@ class InstallCommand(
         if (running) return null
         running = true
         return scope.launch {
-            val r = withContext(io) { installer.install() }
-            running = false
+            val r = try {
+                withContext(io) { installer.install() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Anything installer.install() didn't expect is still only a failed install: it must
+                // not take the window's scope down with it.
+                CommandInstaller.Result.Failed(e.message ?: e.javaClass.simpleName)
+            } finally {
+                running = false
+            }
             // Cancelling the password dialog is the user's answer: nothing to report.
             result = r.takeUnless { it == CommandInstaller.Result.Cancelled }
         }

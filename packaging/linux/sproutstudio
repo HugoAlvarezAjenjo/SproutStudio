@@ -1,3 +1,0 @@
-#!/bin/sh
-# Installed by the SproutStudio package: the `sproutstudio` command. See `sproutstudio --help`.
-exec /opt/sproutstudio/bin/SproutStudio "$@"

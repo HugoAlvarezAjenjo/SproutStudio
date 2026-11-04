@@ -66,4 +66,10 @@ class ShellCommandTest {
         assertNull(MacPlatform.appBundle("/usr/bin/java")) // gradlew run: no bundle, no command
         assertNull(MacPlatform.appBundle(null))
     }
+
+    @Test
+    fun `an app opened from Downloads runs translocated, and gets no command`() {
+        assertTrue(MacPlatform.isTranslocated(Path.of("/private/var/folders/x/AppTranslocation/1234/d/SproutStudio.app")))
+        assertFalse(MacPlatform.isTranslocated(Path.of("/Applications/SproutStudio.app")))
+    }
 }
