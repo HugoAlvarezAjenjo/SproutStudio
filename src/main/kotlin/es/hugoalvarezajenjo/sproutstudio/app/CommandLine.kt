@@ -12,29 +12,32 @@ sealed interface CommandLine {
     /** Open the app, with these files or folders (they may not exist: main skips those). */
     data class Gui(val paths: List<File>) : CommandLine
 
+    /** Runs in the terminal with no window, and ends with an [ExitCode]. */
+    sealed interface Terminal : CommandLine
+
     /** `--export`: write every diagram in [inputs] as [format], next to it or under [out]. */
-    data class Export(val inputs: List<File>, val format: ExportFormat, val out: File?) : CommandLine
+    data class Export(val inputs: List<File>, val format: ExportFormat, val out: File?) : Terminal
 
     /** `--check`: validate every diagram in [inputs] and write nothing (pre-commit, CI). */
-    data class Check(val inputs: List<File>) : CommandLine
+    data class Check(val inputs: List<File>) : Terminal
 
-    data object Help : CommandLine
+    data object Help : Terminal
 
     /** Arguments that don't make sense; [message] says why, for the terminal. */
-    data class Invalid(val message: String) : CommandLine
+    data class Invalid(val message: String) : Terminal
 
     companion object {
-        const val USAGE = """Usage:
+        val USAGE = """Usage:
   sproutstudio [file or folder]...
       Open the app.
   sproutstudio --export <file or folder>... [--format svg|png|pdf] [--out <folder>]
       Export every diagram, without opening a window.
       --format   svg (default), png or pdf
       --out      write here instead of next to each diagram; subfolders are kept
-      Exit code: 0 all exported, 1 a diagram failed or none was found, 2 wrong arguments.
+      Exit code: ${ExitCode.OK.code} all exported, ${ExitCode.FAILED.code} a diagram failed or none was found, ${ExitCode.USAGE.code} wrong arguments.
   sproutstudio --check <file or folder>...
       Report every diagram with errors, without writing anything.
-      Exit code: 0 all valid, 1 a diagram has errors or none was found, 2 wrong arguments.
+      Exit code: ${ExitCode.OK.code} all valid, ${ExitCode.FAILED.code} a diagram has errors or none was found, ${ExitCode.USAGE.code} wrong arguments.
   sproutstudio --help"""
 
         fun parse(args: List<String>): CommandLine {
@@ -80,4 +83,13 @@ sealed interface CommandLine {
             return Export(inputs, format, out)
         }
     }
+}
+
+/** What a terminal command tells whoever ran it (a script, a pre-commit hook, CI). */
+enum class ExitCode(val code: Int) {
+    OK(0),
+    /** A diagram failed, or there was none to go through. */
+    FAILED(1),
+    /** Wrong arguments, or an input that doesn't exist. */
+    USAGE(2),
 }

@@ -19,7 +19,7 @@ import java.io.PrintStream
  * - Export: one diagram in a file → `name.svg`; several → `name-1.svg`, `name-2.svg`, numbered as
  *   the preview numbers them.
  *
- * Progress goes to [out], problems to [err]. [run] returns the process exit code.
+ * Progress goes to [out], problems to [err]. Each [run] counts on its own and returns the exit code.
  */
 class Batch(
     private val out: PrintStream = System.out,
@@ -33,24 +33,29 @@ class Batch(
     /** A file's diagrams that passed validation, by index, with what [PlantUmlEngine] needs to draw them. */
     private class Valid(val text: String, val count: Int, val indices: List<Int>)
 
-    private var passed = 0
-    private var failed = 0
-
-    fun run(cmd: CommandLine.Export): Int {
-        val jobs = jobsFor(cmd.inputs, cmd.out) ?: return EXIT_USAGE
-        jobs.forEach { job -> validate(job)?.let { export(job, it, cmd.format) } }
-        return finish(if (failed > 0) "Exported $passed, failed $failed." else "Exported $passed.")
+    /** Diagrams that went through (exported, or valid) and diagrams that didn't, in one run. */
+    private class Tally {
+        var passed = 0
+        var failed = 0
     }
 
-    fun run(cmd: CommandLine.Check): Int {
-        val jobs = jobsFor(cmd.inputs, out = null) ?: return EXIT_USAGE
-        jobs.forEach { validate(it)?.let { v -> passed += v.indices.size } }
-        return finish(if (failed > 0) "$passed OK, $failed with errors." else "$passed OK.")
+    fun run(cmd: CommandLine.Export): ExitCode {
+        val jobs = jobsFor(cmd.inputs, cmd.out) ?: return ExitCode.USAGE
+        val t = Tally()
+        jobs.forEach { job -> validate(job, t)?.let { export(job, it, cmd.format, t) } }
+        return finish(t, if (t.failed > 0) "Exported ${t.passed}, failed ${t.failed}." else "Exported ${t.passed}.")
     }
 
-    private fun finish(summary: String): Int {
-        if (passed == 0 && failed == 0) err.println("No diagrams found.") else out.println(summary)
-        return if (failed > 0 || passed == 0) EXIT_FAILED else EXIT_OK
+    fun run(cmd: CommandLine.Check): ExitCode {
+        val jobs = jobsFor(cmd.inputs, out = null) ?: return ExitCode.USAGE
+        val t = Tally()
+        jobs.forEach { validate(it, t)?.let { v -> t.passed += v.indices.size } }
+        return finish(t, if (t.failed > 0) "${t.passed} OK, ${t.failed} with errors." else "${t.passed} OK.")
+    }
+
+    private fun finish(t: Tally, summary: String): ExitCode {
+        if (t.passed == 0 && t.failed == 0) err.println("No diagrams found.") else out.println(summary)
+        return if (t.failed > 0 || t.passed == 0) ExitCode.FAILED else ExitCode.OK
     }
 
     private fun jobsFor(inputs: List<File>, out: File?): List<Job>? {
@@ -70,32 +75,32 @@ class Batch(
         }
     }
 
-    /** Reports every broken diagram of [job]'s file (counted in [failed]); null when none is left. */
-    private fun validate(job: Job): Valid? {
+    /** Reports every broken diagram of [job]'s file (counted in [t]); null when none is left. */
+    private fun validate(job: Job, t: Tally): Valid? {
         val f = job.file
         val text = f.readText()
         val blocks = DiagramBlocks.of(text)
         if (blocks.isEmpty()) {
-            if (job.explicit) fail("${shown(f)}: no @start… @end… diagram")
+            if (job.explicit) fail(t, "${shown(f)}: no @start… @end… diagram")
             return null
         }
         val problems = PlantUmlEngine.collectProblemsBlocking(text, f.parentFile)
         // A remote include stops the whole file: one message, every diagram in it failed.
         problems.firstOrNull { it.kind == RenderError.Kind.OFFLINE_INCLUDE }?.let {
             err.println("${shown(f)}:${it.line}: ${messageOf(it)}")
-            failed += blocks.size
+            t.failed += blocks.size
             return null
         }
         val valid = blocks.indices.filter { i ->
             val broken = problems.filter { it.diagramIndex == i }
             broken.forEach { err.println("${shown(f)}:${it.line ?: blocks[i].startLine + 1}: ${messageOf(it)}") }
-            if (broken.isNotEmpty()) failed++ // one diagram, however many errors it has
+            if (broken.isNotEmpty()) t.failed++ // one diagram, however many errors it has
             broken.isEmpty()
         }
         return Valid(text, blocks.size, valid).takeIf { valid.isNotEmpty() }
     }
 
-    private fun export(job: Job, valid: Valid, format: ExportFormat) {
+    private fun export(job: Job, valid: Valid, format: ExportFormat, t: Tally) {
         val f = job.file
         valid.indices.forEach { i ->
             val name = if (valid.count == 1) f.nameWithoutExtension else "${f.nameWithoutExtension}-${i + 1}"
@@ -104,17 +109,17 @@ class Batch(
                 job.outDir.mkdirs()
                 PlantUmlEngine.export(valid.text, f.parentFile, i, format, target)
             }.onSuccess {
-                passed++
+                t.passed++
                 out.println("${shown(f)} → ${shown(target)}")
             }.onFailure {
-                fail("${shown(f)}: diagram ${i + 1}: ${it.message ?: it.javaClass.simpleName}")
+                fail(t, "${shown(f)}: diagram ${i + 1}: ${it.message ?: it.javaClass.simpleName}")
             }
         }
     }
 
     /** A diagram that didn't pass, with why. */
-    private fun fail(message: String) {
-        failed++
+    private fun fail(t: Tally, message: String) {
+        t.failed++
         err.println(message)
     }
 
@@ -130,10 +135,4 @@ class Batch(
 
     /** The project tree's own search: skips hidden, build and dependency folders. */
     private fun diagramsUnder(dir: File): List<File> = ProjectFiles(trash = { false }).allDiagrams(dir, limit = Int.MAX_VALUE)
-
-    companion object {
-        const val EXIT_OK = 0
-        const val EXIT_FAILED = 1
-        const val EXIT_USAGE = 2
-    }
 }

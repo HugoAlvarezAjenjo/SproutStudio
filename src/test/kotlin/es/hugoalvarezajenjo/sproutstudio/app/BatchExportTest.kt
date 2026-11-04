@@ -1,43 +1,22 @@
 package es.hugoalvarezajenjo.sproutstudio.app
 
 import es.hugoalvarezajenjo.sproutstudio.services.render.ExportFormat
-import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.PrintStream
-import java.nio.file.Files
-import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** `--export` with real PlantUML, in a temporary folder. */
-class BatchExportTest {
+class BatchExportTest : BatchTest() {
 
-    private val dir: File = Files.createTempDirectory("export").toFile()
-    private val out = ByteArrayOutputStream()
-    private val err = ByteArrayOutputStream()
-
-    @AfterTest
-    fun cleanUp() { dir.deleteRecursively() }
-
-    private fun write(path: String, text: String) = dir.resolve(path).apply { parentFile.mkdirs(); writeText(text) }
-
-    private fun export(vararg inputs: File, format: ExportFormat = ExportFormat.SVG, to: File? = null): Int =
-        Batch(PrintStream(out, true), PrintStream(err, true), workingDir = dir)
-            .run(CommandLine.Export(inputs.toList(), format, to))
-
-    private val stdout get() = out.toString()
-    private val stderr get() = err.toString()
-
-    private fun diagram(body: String = "A -> B: hi") = "@startuml\n$body\n@enduml\n"
-
-    private fun files(root: File = dir) = root.walkTopDown().filter { it.isFile }.map { it.relativeTo(root).invariantSeparatorsPath }.toSet()
+    private fun export(vararg inputs: File, format: ExportFormat = ExportFormat.SVG, to: File? = null): ExitCode =
+        batch.run(CommandLine.Export(inputs.toList(), format, to))
 
     @Test
     fun `one diagram becomes one image next to it`() {
         val a = write("a.puml", diagram())
-        assertEquals(Batch.EXIT_OK, export(a))
+        assertEquals(ExitCode.OK, export(a))
         assertTrue(dir.resolve("a.svg").readText().startsWith("<svg"))
         assertTrue("a.puml → a.svg" in stdout, stdout)
         assertTrue("Exported 1." in stdout, stdout)
@@ -46,7 +25,7 @@ class BatchExportTest {
     @Test
     fun `several diagrams in a file are numbered as in the preview`() {
         val a = write("a.puml", diagram() + "\n" + diagram("class Pizza"))
-        assertEquals(Batch.EXIT_OK, export(a, format = ExportFormat.PNG))
+        assertEquals(ExitCode.OK, export(a, format = ExportFormat.PNG))
         assertEquals(setOf("a.puml", "a-1.png", "a-2.png"), files())
     }
 
@@ -56,7 +35,7 @@ class BatchExportTest {
         write("common/style.iuml", "skinparam shadowing false\n") // no @startuml: an include
         write("build/old.puml", diagram())
         write(".hidden/x.puml", diagram())
-        assertEquals(Batch.EXIT_OK, export(dir))
+        assertEquals(ExitCode.OK, export(dir))
         assertTrue(dir.resolve("a.svg").exists())
         assertFalse(dir.resolve("common/style.svg").exists())
         assertFalse(dir.resolve("build/old.svg").exists())
@@ -69,14 +48,14 @@ class BatchExportTest {
         write("src/a.puml", diagram())
         write("src/billing/a.puml", diagram())
         val target = dir.resolve("out")
-        assertEquals(Batch.EXIT_OK, export(src, to = target))
+        assertEquals(ExitCode.OK, export(src, to = target))
         assertEquals(setOf("a.svg", "billing/a.svg"), files(target))
     }
 
     @Test
     fun `a broken diagram is reported like a compiler error, once, and the others still export`() {
         val a = write("a.puml", diagram() + "\n" + diagram("class {\ncla sad"))
-        assertEquals(Batch.EXIT_FAILED, export(a))
+        assertEquals(ExitCode.FAILED, export(a))
         assertTrue(dir.resolve("a-1.svg").exists())
         assertFalse(dir.resolve("a-2.svg").exists())
         assertTrue(Regex("""a\.puml:\d+: """).containsMatchIn(stderr), stderr)
@@ -86,7 +65,7 @@ class BatchExportTest {
     @Test
     fun `a remote include is refused once for the whole file`() {
         val a = write("a.puml", "!include https://example.com/x.puml\n" + diagram() + diagram())
-        assertEquals(Batch.EXIT_FAILED, export(a))
+        assertEquals(ExitCode.FAILED, export(a))
         assertEquals(1, stderr.lines().count { "remote !include refused" in it }, stderr)
         assertTrue("Exported 0, failed 2." in stdout, stdout)
         assertEquals(setOf("a.puml"), files())
@@ -95,21 +74,21 @@ class BatchExportTest {
     @Test
     fun `a file named on the command line without a diagram is an error`() {
         val a = write("notes.puml", "just text\n")
-        assertEquals(Batch.EXIT_FAILED, export(a))
+        assertEquals(ExitCode.FAILED, export(a))
         assertTrue("notes.puml: no @start… @end… diagram" in stderr, stderr)
     }
 
     @Test
     fun `a missing input stops before exporting anything`() {
         val a = write("a.puml", diagram())
-        assertEquals(Batch.EXIT_USAGE, export(a, dir.resolve("nope.puml")))
+        assertEquals(ExitCode.USAGE, export(a, dir.resolve("nope.puml")))
         assertTrue("Not found:" in stderr, stderr)
         assertFalse(dir.resolve("a.svg").exists())
     }
 
     @Test
     fun `a folder with no diagrams says so`() {
-        assertEquals(Batch.EXIT_FAILED, export(dir))
+        assertEquals(ExitCode.FAILED, export(dir))
         assertTrue("No diagrams found." in stderr, stderr)
     }
 
@@ -117,7 +96,7 @@ class BatchExportTest {
     fun `local includes resolve next to the diagram`() {
         write("common/style.iuml", "skinparam shadowing false\n")
         val a = write("a.puml", diagram("!include common/style.iuml\nA -> B"))
-        assertEquals(Batch.EXIT_OK, export(a, format = ExportFormat.PDF))
+        assertEquals(ExitCode.OK, export(a, format = ExportFormat.PDF))
         assertTrue(dir.resolve("a.pdf").readBytes().decodeToString(0, 4) == "%PDF")
     }
 }

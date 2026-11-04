@@ -19,9 +19,11 @@ import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
-    val cmd = CommandLine.parse(args.toList())
     // From a terminal (--export, --check, --help): no window, no running instance, just an exit code.
-    if (cmd !is CommandLine.Gui) exitProcess(runInTerminal(cmd))
+    val cmd = when (val c = CommandLine.parse(args.toList())) {
+        is CommandLine.Terminal -> exitProcess(runInTerminal(c).code)
+        is CommandLine.Gui -> c
+    }
 
     // Offline lockdown before any PlantUML class reads its configuration.
     PlantUmlEngine.configureOffline()
@@ -88,16 +90,15 @@ fun main(args: Array<String>) {
     }
 }
 
-/** `--export`, `--check` and `--help`: runs with no AWT window (no Dock icon on macOS) and returns the exit code. */
-private fun runInTerminal(cmd: CommandLine): Int {
+/** `--export`, `--check` and `--help`: runs with no AWT window (no Dock icon on macOS). */
+private fun runInTerminal(cmd: CommandLine.Terminal): ExitCode {
     System.setProperty("java.awt.headless", "true") // before configureOffline, which keeps a set value
     PlantUmlEngine.configureOffline()
     return when (cmd) {
         is CommandLine.Export -> Batch().run(cmd)
         is CommandLine.Check -> Batch().run(cmd)
-        CommandLine.Help -> { println(CommandLine.USAGE); Batch.EXIT_OK }
-        is CommandLine.Invalid -> { System.err.println("sproutstudio: ${cmd.message}\n\n${CommandLine.USAGE}"); Batch.EXIT_USAGE }
-        is CommandLine.Gui -> error("the app is not started from here")
+        CommandLine.Help -> { println(CommandLine.USAGE); ExitCode.OK }
+        is CommandLine.Invalid -> { System.err.println("sproutstudio: ${cmd.message}\n\n${CommandLine.USAGE}"); ExitCode.USAGE }
     }
 }
 
