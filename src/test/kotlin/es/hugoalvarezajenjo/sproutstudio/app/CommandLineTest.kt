@@ -32,6 +32,16 @@ class CommandLineTest {
     }
 
     @Test
+    fun `check takes files and folders only`() {
+        assertEquals(CommandLine.Check(listOf(File("a.puml"), File("docs"))), parse("--check", "a.puml", "docs"))
+        assertEquals("--check needs at least one file or folder", assertIs<CommandLine.Invalid>(parse("--check")).message)
+        assertEquals(
+            "unknown option for --check: --format",
+            assertIs<CommandLine.Invalid>(parse("--check", "docs", "--format", "png")).message,
+        )
+    }
+
+    @Test
     fun `help wins over anything else`() {
         assertEquals(CommandLine.Help, parse("--help"))
         assertEquals(CommandLine.Help, parse("--export", "docs", "-h"))
@@ -51,7 +61,7 @@ class CommandLineTest {
 
     @Test
     fun `the usage text names every option`() {
-        listOf("--export", "--format", "--out", "--help", "svg", "png", "pdf").forEach {
+        listOf("--export", "--check", "--format", "--out", "--help", "svg", "png", "pdf").forEach {
             assertTrue(it in CommandLine.USAGE, "usage lacks $it")
         }
     }

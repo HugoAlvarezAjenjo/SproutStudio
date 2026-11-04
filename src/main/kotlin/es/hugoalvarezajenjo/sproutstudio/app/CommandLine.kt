@@ -5,7 +5,7 @@ import java.io.File
 
 /**
  * What the program arguments ask for. Plain file and folder paths open the app, as a double-click
- * does; an option (`--export`, `--help`) runs from the terminal instead, with no window.
+ * does; an option (`--export`, `--check`, `--help`) runs from the terminal instead, with no window.
  */
 sealed interface CommandLine {
 
@@ -14,6 +14,9 @@ sealed interface CommandLine {
 
     /** `--export`: write every diagram in [inputs] as [format], next to it or under [out]. */
     data class Export(val inputs: List<File>, val format: ExportFormat, val out: File?) : CommandLine
+
+    /** `--check`: validate every diagram in [inputs] and write nothing (pre-commit, CI). */
+    data class Check(val inputs: List<File>) : CommandLine
 
     data object Help : CommandLine
 
@@ -29,13 +32,25 @@ sealed interface CommandLine {
       --format   svg (default), png or pdf
       --out      write here instead of next to each diagram; subfolders are kept
       Exit code: 0 all exported, 1 a diagram failed or none was found, 2 wrong arguments.
+  sproutstudio --check <file or folder>...
+      Report every diagram with errors, without writing anything.
+      Exit code: 0 all valid, 1 a diagram has errors or none was found, 2 wrong arguments.
   sproutstudio --help"""
 
         fun parse(args: List<String>): CommandLine {
             if (args.none { it.startsWith("--") }) return Gui(args.map(::File))
             if ("--help" in args || "-h" in args) return Help
-            if (args.first() != "--export") return Invalid("unknown option: ${args.first { it.startsWith("--") }}")
-            return parseExport(args.drop(1))
+            return when (args.first()) {
+                "--export" -> parseExport(args.drop(1))
+                "--check" -> parseCheck(args.drop(1))
+                else -> Invalid("unknown option: ${args.first { it.startsWith("--") }}")
+            }
+        }
+
+        private fun parseCheck(args: List<String>): CommandLine {
+            args.firstOrNull { it.startsWith("--") }?.let { return Invalid("unknown option for --check: $it") }
+            if (args.isEmpty()) return Invalid("--check needs at least one file or folder")
+            return Check(args.map(::File))
         }
 
         private fun parseExport(args: List<String>): CommandLine {
