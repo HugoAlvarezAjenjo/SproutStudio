@@ -124,6 +124,9 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         commitFocus.trySend(Unit)
     }
 
+    /** Help > Install 'sproutstudio' Command; null where the app doesn't install it (see [Platform.commandInstaller]). */
+    val installCommand = deps.platform.commandInstaller?.let { InstallCommand(it, scope, deps.dispatchers.io) }
+
     /** Git status of the project folder; opened by the window when [root] changes. */
     val git = GitViewModel(deps.git, deps.dispatchers, parent = scope.coroutineContext[Job])
 

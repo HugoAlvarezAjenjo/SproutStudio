@@ -46,3 +46,17 @@ jobs:
           name: test-report-${{ matrix.os }}
           path: build/reports/tests/test
           retention-days: 7
+
+      # The .deb puts the `sproutstudio` command on the PATH: install it for real and run it from
+      # there, then check that uninstalling takes the command away too.
+      - name: Install the .deb and run sproutstudio
+        if: runner.os == 'Linux'
+        run: |
+          ./gradlew packageDeb --no-daemon
+          sudo apt-get install -y ./build/compose/binaries/main/deb/*.deb
+          test "$(command -v sproutstudio)" = /usr/bin/sproutstudio
+          sproutstudio --help
+          sproutstudio --check samples
+          if sproutstudio --check no-such-folder; then echo "a missing folder must fail"; exit 1; fi
+          sudo apt-get remove -y sproutstudio
+          test ! -e /usr/bin/sproutstudio

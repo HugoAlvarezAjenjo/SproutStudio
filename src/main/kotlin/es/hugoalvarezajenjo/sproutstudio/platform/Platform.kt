@@ -51,6 +51,12 @@ interface Platform {
      */
     fun instanceDir(): Path? = null
 
+    /**
+     * Installs the `sproutstudio` terminal command from the app (macOS), or null where the
+     * installer already does it (the Linux package) or the app isn't packaged (`gradlew run`).
+     */
+    val commandInstaller: CommandInstaller? get() = null
+
     /** Brings the app's frontmost window forward, when another launch handed us its files. */
     fun bringToFront() {}
 

@@ -12,6 +12,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_code
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_commit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_install_command
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_soft_wrap
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_theme
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_edit
@@ -227,6 +228,7 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
             }
             Menu(tr(Res.string.menu_help)) {
                 Item(tr(Res.string.menu_find_action), shortcut = shortcut(Key.P, shift = true)) { paletteOpen = true }
+                p.installCommand?.let { ic -> Item(tr(Res.string.menu_install_command), enabled = !ic.running) { ic.install() } }
             }
         }
 
@@ -274,6 +276,8 @@ fun ProjectWindow(p: WorkspaceViewModel, revealed: Boolean, onClose: () -> Unit)
                 TemplateGallery(p.deps.thumbnails, onDismiss = { galleryOpen = false; p.active?.requestFocus() }, onPick = { pickTemplate(it) })
             }
             }
+
+            p.installCommand?.let { InstallCommandDialog(it) }
 
             p.pendingClose?.let { pc ->
                 AlertDialog(

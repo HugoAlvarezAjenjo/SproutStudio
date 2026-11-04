@@ -4,6 +4,7 @@ import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import java.nio.file.Path
 import javax.swing.SwingUtilities
 
 /** macOS: native folder picker, Finder selection, and the app-level events of AppKit. */
@@ -18,6 +19,13 @@ class MacPlatform : AwtPlatform() {
             return d.file?.let { File(d.directory, it) }
         } finally {
             System.setProperty("apple.awt.fileDialogForDirectories", "false")
+        }
+    }
+
+    /** Only from the packaged app: the script calls the .app bundle this process runs from. */
+    override val commandInstaller: CommandInstaller? by lazy {
+        appBundle(ProcessHandle.current().info().command().orElse(null))?.let {
+            CommandInstaller(it, Path.of("/usr/local/bin", ShellCommand.NAME), CommandInstaller::macAdmin)
         }
     }
 
@@ -68,8 +76,14 @@ class MacPlatform : AwtPlatform() {
         }
     }
 
-    private companion object {
+    internal companion object {
         /** Height of the macOS menu bar on a screen without a notch, in points. */
         const val MENU_BAR_HEIGHT = 24
+
+        /** `X.app/Contents/MacOS/SproutStudio` -> `X.app`; null when not run from a bundle. */
+        fun appBundle(launcher: String?): Path? {
+            val bundle = launcher?.let { Path.of(it).parent?.parent?.parent } ?: return null
+            return bundle.takeIf { it.fileName?.toString()?.endsWith(".app") == true }
+        }
     }
 }

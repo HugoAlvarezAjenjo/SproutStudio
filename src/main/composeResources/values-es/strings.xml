@@ -103,6 +103,14 @@
     <string name="menu_refresh_git_status">Actualizar estado de Git</string>
     <string name="menu_help">Ayuda</string>
     <string name="menu_find_action">Buscar acción…</string>
+    <string name="menu_install_command">Instalar el comando 'sproutstudio'…</string>
+    <string name="dialog_ok">Aceptar</string>
+    <string name="install_command_done_title">Comando instalado</string>
+    <string name="install_command_done">Abre una terminal nueva y ejecuta sproutstudio. Llama a la app donde está ahora: si la mueves, vuelve a instalar el comando.</string>
+    <string name="install_command_failed_title">Comando no instalado</string>
+    <string name="install_command_not_ours">%1$s ya existe y no lo escribió SproutStudio. Bórralo y vuelve a intentarlo.</string>
+    <string name="install_command_app_not_installed">Mueve SproutStudio a Aplicaciones y ábrela desde ahí primero.</string>
+    <string name="install_command_failed">No se pudo instalar el comando: %1$s</string>
     <string name="dialog_save_changes">¿Guardar los cambios?</string>
     <string name="dialog_unsaved_changes">%1$s tiene cambios sin guardar.</string>
     <string name="dialog_cancel">Cancelar</string>

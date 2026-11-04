@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.security.MessageDigest
 import javax.imageio.ImageIO
 
 plugins {
@@ -171,6 +172,35 @@ val generateWindowsIcon = tasks.register("generateWindowsIcon") {
         }
         out.parentFile.mkdirs()
         out.outputStream().use { o -> o.write(header.array()); pngs.forEach(o::write) }
+    }
+}
+
+// ---- `sproutstudio` command on Linux ---------------------------------------------------------
+// jpackage can't add files outside the app folder, so once it has built the .deb we add
+// /usr/bin/sproutstudio (packaging/linux/sproutstudio, which calls the app's launcher) and pack it
+// again. Inside the package, dpkg also removes it on uninstall. Needs dpkg-deb, which jpackage
+// needs anyway to build the .deb. (macOS installs its command from the app: Help menu.)
+val linuxCommand = layout.projectDirectory.file("packaging/linux/sproutstudio")
+tasks.matching { it.name == "packageDeb" || it.name == "packageReleaseDeb" }.configureEach {
+    inputs.file(linuxCommand)
+    doLast {
+        fun run(vararg cmd: String) {
+            val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+            val log = p.inputStream.bufferedReader().readText()
+            check(p.waitFor() == 0) { "${cmd.joinToString(" ")} failed:\n$log" }
+        }
+        outputs.files.asFileTree.matching { include("**/*.deb") }.forEach { deb ->
+            val root = File(temporaryDir, "deb").apply { deleteRecursively() }
+            run("dpkg-deb", "-R", deb.absolutePath, root.absolutePath)
+            val bin = File(root, "usr/bin").apply { mkdirs() }
+            linuxCommand.asFile.copyTo(File(bin, linuxPackageName), overwrite = true).setExecutable(true, false)
+            // Every installed file is listed in md5sums, when the package has one.
+            File(root, "DEBIAN/md5sums").takeIf { it.exists() }?.appendText(
+                MessageDigest.getInstance("MD5").digest(linuxCommand.asFile.readBytes())
+                    .joinToString("") { "%02x".format(it) } + "  usr/bin/$linuxPackageName\n",
+            )
+            run("dpkg-deb", "--root-owner-group", "-b", root.absolutePath, deb.absolutePath)
+        }
     }
 }
 

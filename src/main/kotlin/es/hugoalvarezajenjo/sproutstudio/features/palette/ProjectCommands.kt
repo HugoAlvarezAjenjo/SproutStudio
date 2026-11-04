@@ -41,6 +41,7 @@ import es.hugoalvarezajenjo.sproutstudio.resources.menu_code
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_commit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_create_git_repo
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_dark_diagram_preview
+import es.hugoalvarezajenjo.sproutstudio.resources.menu_install_command
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_soft_wrap
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_edit
 import es.hugoalvarezajenjo.sproutstudio.resources.menu_file
@@ -204,6 +205,9 @@ internal fun projectCommands(
         }
     }
     cmd("view.theme", if (p.deps.theme.dark.value) text(Res.string.cmd_light_theme) else text(Res.string.cmd_dark_theme), text(Res.string.menu_view)) { p.deps.theme.toggle() }
+    p.installCommand?.let { ic ->
+        cmd("app.installCommand", text(Res.string.menu_install_command), "SproutStudio", enabled = !ic.running, restoresFocus = false) { ic.install() }
+    }
     cmd("app.settings", text(Res.string.menu_settings), "SproutStudio", shortcutHint(","), restoresFocus = false) { p.deps.windows.openSettings() }
     val editor = p.deps.editor
     cmd("view.fontBigger", text(Res.string.cmd_font_bigger), text(Res.string.menu_view), enabled = editor.currentFontSize < EditorSettings.MAX_FONT_SIZE) { editor.changeFontSize(1f) }

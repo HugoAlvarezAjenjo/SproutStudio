@@ -102,6 +102,14 @@
     <string name="menu_refresh_git_status">Refresh Git Status</string>
     <string name="menu_help">Help</string>
     <string name="menu_find_action">Find Action…</string>
+    <string name="menu_install_command">Install 'sproutstudio' Command…</string>
+    <string name="dialog_ok">OK</string>
+    <string name="install_command_done_title">Command installed</string>
+    <string name="install_command_done">Open a new terminal and run sproutstudio. It calls the app where it is now: if you move the app, install the command again.</string>
+    <string name="install_command_failed_title">Command not installed</string>
+    <string name="install_command_not_ours">%1$s already exists and SproutStudio didn't write it. Remove it and try again.</string>
+    <string name="install_command_app_not_installed">Move SproutStudio to Applications and open it from there first.</string>
+    <string name="install_command_failed">Could not install the command: %1$s</string>
     <string name="dialog_save_changes">Save changes?</string>
     <string name="dialog_unsaved_changes">%1$s has unsaved changes.</string>
     <string name="dialog_cancel">Cancel</string>
