@@ -29,6 +29,17 @@ version = appVersion
 val appName = "SproutStudio"
 val linuxPackageName = "sproutstudio" // Debian package names are lowercase
 val linuxDesktopId = "$linuxPackageName-$appName"
+// Where the .deb installs the app: jpackage puts it in <install root>/<package name>, and the
+// `sproutstudio` command below calls its launcher there.
+val linuxInstallRoot = "/opt"
+val linuxAppDir = "$linuxInstallRoot/$linuxPackageName"
+
+/** Runs a build tool (sips, iconutil, dpkg-deb) and fails the build with its output if it fails. */
+fun runTool(vararg cmd: String) {
+    val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+    val log = p.inputStream.bufferedReader().readText()
+    check(p.waitFor() == 0) { "${cmd.joinToString(" ")} failed:\n$log" }
+}
 
 kotlin {
     jvmToolchain(21)
@@ -122,21 +133,16 @@ val generateMacIcon = tasks.register("generateMacIcon") {
     outputs.file(out)
     onlyIf { src.exists() && onMac }
     doLast {
-        fun run(vararg cmd: String) {
-            val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
-            val log = p.inputStream.bufferedReader().readText()
-            check(p.waitFor() == 0) { "${cmd.first()} failed:\n$log" }
-        }
         val set = File(temporaryDir, "SproutStudio.iconset").apply { deleteRecursively(); mkdirs() }
         for (size in listOf(16, 32, 128, 256, 512)) {
             for (scale in listOf(1, 2)) {
                 val px = size * scale
                 val name = if (scale == 1) "icon_${size}x${size}.png" else "icon_${size}x${size}@2x.png"
-                run("sips", "-s", "format", "png", "-z", "$px", "$px", src.absolutePath, "--out", File(set, name).absolutePath)
+                runTool("sips", "-s", "format", "png", "-z", "$px", "$px", src.absolutePath, "--out", File(set, name).absolutePath)
             }
         }
         out.parentFile.mkdirs()
-        run("iconutil", "-c", "icns", set.absolutePath, "-o", out.absolutePath)
+        runTool("iconutil", "-c", "icns", set.absolutePath, "-o", out.absolutePath)
     }
 }
 
@@ -177,29 +183,29 @@ val generateWindowsIcon = tasks.register("generateWindowsIcon") {
 
 // ---- `sproutstudio` command on Linux ---------------------------------------------------------
 // jpackage can't add files outside the app folder, so once it has built the .deb we add
-// /usr/bin/sproutstudio (packaging/linux/sproutstudio, which calls the app's launcher) and pack it
-// again. Inside the package, dpkg also removes it on uninstall. Needs dpkg-deb, which jpackage
-// needs anyway to build the .deb. (macOS installs its command from the app: Help menu.)
-val linuxCommand = layout.projectDirectory.file("packaging/linux/sproutstudio")
+// /usr/bin/sproutstudio, a script that calls the app's launcher, and pack it again. Inside the
+// package, dpkg also removes it on uninstall. Needs dpkg-deb, which jpackage needs anyway to build
+// the .deb. (macOS installs its command from the app: Help menu.)
+val linuxCommand = """
+    |#!/bin/sh
+    |# Installed by the SproutStudio package: the `sproutstudio` command. See `sproutstudio --help`.
+    |exec $linuxAppDir/bin/$appName "$@"
+    |""".trimMargin()
 tasks.matching { it.name == "packageDeb" || it.name == "packageReleaseDeb" }.configureEach {
-    inputs.file(linuxCommand)
+    inputs.property("linuxCommand", linuxCommand)
     doLast {
-        fun run(vararg cmd: String) {
-            val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
-            val log = p.inputStream.bufferedReader().readText()
-            check(p.waitFor() == 0) { "${cmd.joinToString(" ")} failed:\n$log" }
-        }
         outputs.files.asFileTree.matching { include("**/*.deb") }.forEach { deb ->
             val root = File(temporaryDir, "deb").apply { deleteRecursively() }
-            run("dpkg-deb", "-R", deb.absolutePath, root.absolutePath)
-            val bin = File(root, "usr/bin").apply { mkdirs() }
-            linuxCommand.asFile.copyTo(File(bin, linuxPackageName), overwrite = true).setExecutable(true, false)
+            runTool("dpkg-deb", "-R", deb.absolutePath, root.absolutePath)
+            val command = File(root, "usr/bin/$linuxPackageName").apply { parentFile.mkdirs() }
+            command.writeText(linuxCommand)
+            command.setExecutable(true, false)
             // Every installed file is listed in md5sums, when the package has one.
             File(root, "DEBIAN/md5sums").takeIf { it.exists() }?.appendText(
-                MessageDigest.getInstance("MD5").digest(linuxCommand.asFile.readBytes())
+                MessageDigest.getInstance("MD5").digest(command.readBytes())
                     .joinToString("") { "%02x".format(it) } + "  usr/bin/$linuxPackageName\n",
             )
-            run("dpkg-deb", "--root-owner-group", "-b", root.absolutePath, deb.absolutePath)
+            runTool("dpkg-deb", "--root-owner-group", "-b", root.absolutePath, deb.absolutePath)
         }
     }
 }
@@ -278,6 +284,7 @@ compose.desktop {
             linux {
                 // Debian package names are lowercase; the app and its menu entry keep "SproutStudio".
                 packageName = linuxPackageName
+                installationPath = linuxInstallRoot // set, not left to jpackage's default: the command relies on it
                 debMaintainer = "Hugo Alvarez Ajenjo <hugo.alvarezajenjo@gmail.com>"
                 appCategory = "devel" // Debian section
                 menuGroup = "Development" // freedesktop menu category
