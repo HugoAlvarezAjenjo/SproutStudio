@@ -32,8 +32,9 @@ class InstallCommandTest {
 
     /** Install through [admin], with the folder made read-only so the admin step runs. */
     private fun TestScope.install(admin: ((Path, Path) -> AdminResult)? = null): InstallCommand {
+        // The command is a shell script for macOS: it needs POSIX permissions, which Windows lacks.
+        assumeTrue("posix" in dir.toPath().fileSystem.supportedFileAttributeViews(), "POSIX file permissions")
         if (admin != null) {
-            assumeTrue("posix" in dir.toPath().fileSystem.supportedFileAttributeViews(), "POSIX file permissions")
             Files.createDirectories(target.parent)
             target.parent.toFile().setWritable(false)
         }

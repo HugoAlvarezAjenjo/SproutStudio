@@ -98,7 +98,7 @@ class MacPlatform : AwtPlatform() {
          * An app opened from where it was downloaded runs from a random read-only copy (App
          * Translocation) that is gone after it quits: a command pointing there would break.
          */
-        fun isTranslocated(app: Path): Boolean = "/AppTranslocation/" in app.toString()
+        fun isTranslocated(app: Path): Boolean = app.any { it.toString() == "AppTranslocation" }
 
         /**
          * `install` run through `osascript … with administrator privileges` (the system password

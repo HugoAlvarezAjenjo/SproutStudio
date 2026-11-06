@@ -53,6 +53,7 @@ class CommandInstallerTest {
 
     @Test
     fun `our own earlier command is replaced, for an app that moved`() {
+        assumePosix()
         installer(Path.of("/Users/me/Old/SproutStudio.app")).install()
         assertEquals(Result.Installed(target), installer().install())
         assertEquals(ShellCommand.macScript(app), Files.readString(target))
