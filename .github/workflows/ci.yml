@@ -53,6 +53,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           ./gradlew packageDeb --no-daemon
+          # The package's own install script (jpackage's) adds the menu entry with xdg-desktop-menu,
+          # which fails without the menu folders every desktop has. The runner has no desktop.
+          sudo mkdir -p /etc/xdg/menus /usr/share/applications /usr/share/desktop-directories
           sudo apt-get install -y ./build/compose/binaries/main/deb/*.deb
           test "$(command -v sproutstudio)" = /usr/bin/sproutstudio
           sproutstudio --help
