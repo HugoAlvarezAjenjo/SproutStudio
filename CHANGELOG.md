@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.5.0
+
+Diagrams as code from the terminal: export and check them from a shell, a pre-commit hook or CI,
+with a `sproutstudio` command on macOS, Windows and Linux.
+
+### Command line
+- **`sproutstudio --export <file or folder>...`** writes every diagram without opening a window.
+  `--format svg|png|pdf` (SVG by default) and `--out <folder>`, which keeps the subfolders so two
+  `a.puml` don't collide. A file with one diagram gives `name.svg`; with several, `name-1.svg`,
+  `name-2.svg`, numbered as the preview numbers them.
+- **`sproutstudio --check <file or folder>...`** reports every diagram with errors and writes nothing,
+  for pre-commit hooks and CI.
+- Errors are printed as `path:line: message`, like a compiler, and the run goes on with the other
+  diagrams. Folders are searched like the project tree (no hidden or build folders), and include
+  files without a diagram are skipped.
+- Exit code: 0 when everything passed, 1 when a diagram failed or none was found, 2 for wrong
+  arguments or a file that doesn't exist. `sproutstudio --help` lists it all.
+- Remote `!include`s are refused, as in the app: SproutStudio works offline.
+
+### The `sproutstudio` command
+- **macOS:** Help → Install 'sproutstudio' Command… puts it in `/usr/local/bin`, asking for the
+  password when needed. Install it again if you move the app.
+- **Windows:** the `.msi` adds SproutStudio to the user's PATH, and uninstalling removes it. In cmd
+  and PowerShell `sproutstudio` runs `SproutStudio.com`, a console version of the app that prints
+  the output and returns the exit code. Open a new terminal after installing. In Git Bash, type
+  `sproutstudio.com`.
+- **Linux:** the `.deb` installs `/usr/bin/sproutstudio`, and removing the package removes it. With
+  the `.tar.gz`, run `bin/SproutStudio` from the unpacked folder.
+- CI installs the `.deb` and the `.msi` on GitHub Actions, runs `sproutstudio --check` from the
+  PATH, and checks that uninstalling removes the command.
+
 ## 1.4.0
 
 An Outline panel, menus that match the app and do more, and one window on Windows and Linux.
