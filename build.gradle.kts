@@ -219,8 +219,8 @@ tasks.matching { it.name == "packageDeb" || it.name == "packageReleaseDeb" }.con
 // wait for its exit code, so --export and --check are useless there. Next to it we put
 // SproutStudio.com, the same launcher marked as a console program. cmd and PowerShell try .COM
 // before .EXE (PATHEXT), so `sproutstudio` runs this one, as with Visual Studio's devenv.com.
-// The launcher reads app\<its own name>.cfg, so both share SproutStudio.cfg. The .msi packs the
-// folder createDistributable builds, so it ships the .com too.
+// The launcher reads app\<its own name>.cfg, so both share SproutStudio.cfg. The .msi is built
+// from this folder (see below), so it ships the .com too.
 /** Marks a Windows program (PE file) as a console one: its Subsystem field, GUI (2) -> console (3). */
 fun markAsConsoleProgram(exe: File) {
     val bytes = exe.readBytes()
@@ -249,7 +249,8 @@ tasks.matching { it.name == "createDistributable" || it.name == "createReleaseDi
 // .deb's /usr/bin/sproutstudio. jpackage builds the .msi from its own WiX source, main.wxs, and
 // only reads a replacement from --resource-dir. Compose empties that folder right before it runs
 // jpackage and gives no way to add files to it, so once Compose has built the .msi we build it
-// again with the same arguments and our own resource folder. Our main.wxs is the one of the
+// again with its installer arguments, our resource folder, and createDistributable's app folder
+// (Compose's .msi is built from the jars and lacks SproutStudio.com). Our main.wxs is the one of the
 // jpackage that builds it, plus one component that sets PATH, and the build fails if that
 // jpackage's main.wxs no longer has the places we add it to.
 val msiPathComponent = """
@@ -274,8 +275,19 @@ fun withPathComponent(mainWxs: String): String {
         .replaceOnce("\n  </Product>", "\n" + msiPathComponent + "  </Product>")
 }
 
+/** What Compose passes only to build the app itself (see AbstractJPackageTask.makeArgs), with a value. */
+val appImageOptions = setOf(
+    "--input", "--runtime-image", "--main-jar", "--main-class", "--icon", "--arguments", "--java-options",
+)
+
 tasks.matching { it.name == "packageMsi" || it.name == "packageReleaseMsi" }.configureEach {
     inputs.property("msiPathComponent", msiPathComponent)
+    // On Windows Compose builds the .msi from the jars, not from createDistributable's folder.
+    val distributable = tasks.named<AbstractJPackageTask>(
+        if (name == "packageMsi") "createDistributable" else "createReleaseDistributable",
+    )
+    dependsOn(distributable)
+    val appImage = distributable.flatMap { it.destinationDir }.map { it.asFile.resolve(appName) }
     doLast {
         val task = this as AbstractJPackageTask
         val javaHome = task.javaHome.get()
@@ -286,12 +298,22 @@ tasks.matching { it.name == "packageMsi" || it.name == "packageReleaseMsi" }.con
         val resources = File(temporaryDir, "resources").apply { deleteRecursively(); mkdirs() }
         File(resources, "main.wxs").writeText(withPathComponent(mainWxs))
 
-        // Compose's arguments: one per line, values in quotes (see its cliArgUtils).
+        // Compose's arguments, one per line with values in quotes (see its cliArgUtils), minus the
+        // ones that build the app: like Compose does on macOS, the .msi packs the app folder that
+        // createDistributable built, so it has SproutStudio.com.
         val argsFile = layout.buildDirectory.file("compose/tmp/${task.name}.args.txt").get().asFile
-        val args = argsFile.readLines().toMutableList()
-        val at = args.indexOf("--resource-dir")
-        check(at >= 0 && args.lastIndexOf("--resource-dir") == at) { "expected one --resource-dir in $argsFile" }
-        args[at + 1] = "\"${resources.absolutePath.replace('\\', '/')}\""
+        val compose = argsFile.readLines()
+        val args = ArrayList<String>()
+        var i = 0
+        while (i < compose.size) {
+            when (val a = compose[i]) {
+                in appImageOptions, "--resource-dir" -> i += 2 // the option and its value
+                "--win-console" -> i++ // a flag, without a value
+                else -> { args += a; i++ }
+            }
+        }
+        fun quoted(f: File) = "\"${f.absolutePath.replace('\\', '/')}\""
+        args += listOf("--app-image", quoted(appImage.get()), "--resource-dir", quoted(resources))
         val ourArgs = File(temporaryDir, "args.txt").apply { writeText(args.joinToString("\n")) }
 
         task.destinationDir.get().asFile.listFiles { f -> f.extension == "msi" }?.forEach { it.delete() }
