@@ -210,6 +210,38 @@ tasks.matching { it.name == "packageDeb" || it.name == "packageReleaseDeb" }.con
     }
 }
 
+// ---- `sproutstudio` command on Windows ------------------------------------------------------
+// jpackage's SproutStudio.exe is a GUI program: run from cmd, it shows no output and cmd doesn't
+// wait for its exit code, so --export and --check are useless there. Next to it we put
+// SproutStudio.com, the same launcher marked as a console program. cmd and PowerShell try .COM
+// before .EXE (PATHEXT), so `sproutstudio` runs this one, as with Visual Studio's devenv.com.
+// The launcher reads app\<its own name>.cfg, so both share SproutStudio.cfg. The .msi packs the
+// folder createDistributable builds, so it ships the .com too.
+/** Marks a Windows program (PE file) as a console one: its Subsystem field, GUI (2) -> console (3). */
+fun markAsConsoleProgram(exe: File) {
+    val bytes = exe.readBytes()
+    val buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+    val pe = buf.getInt(0x3C) // where the PE header starts
+    check(bytes[0] == 'M'.code.toByte() && bytes[1] == 'Z'.code.toByte() && buf.getInt(pe) == 0x00004550) {
+        "${exe.name} is not a Windows program"
+    }
+    val subsystem = pe + 4 + 20 + 68 // after the signature, the file header, and 68 bytes of the optional header
+    val current = buf.getShort(subsystem).toInt()
+    check(current == 2 || current == 3) { "${exe.name}: unexpected subsystem $current" }
+    buf.putShort(subsystem, 3)
+    exe.writeBytes(bytes)
+}
+tasks.matching { it.name == "createDistributable" || it.name == "createReleaseDistributable" }.configureEach {
+    if (!onWindows) return@configureEach
+    doLast {
+        val appImage = (this as org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask)
+            .destinationDir.get().asFile.resolve(appName)
+        val console = appImage.resolve("$appName.com")
+        appImage.resolve("$appName.exe").copyTo(console, overwrite = true)
+        markAsConsoleProgram(console)
+    }
+}
+
 // Every native packaging task needs the icon for its OS first.
 tasks.matching { it.name.startsWith("createDistributable") || it.name.startsWith("package") }
     .configureEach { dependsOn(generateMacIcon, generateWindowsIcon) }

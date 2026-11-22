@@ -47,6 +47,26 @@ jobs:
           path: build/reports/tests/test
           retention-days: 7
 
+      # On Windows `sproutstudio` must run the console launcher (SproutStudio.com), not the GUI
+      # .exe next to it: with the app folder on the PATH, PowerShell must pick the .com, print the
+      # output and hand back the exit code.
+      - name: Run sproutstudio from PowerShell
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./gradlew createDistributable --no-daemon
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:Path = "$PWD\build\compose\binaries\main\app\SproutStudio;$env:Path"
+          $found = (Get-Command sproutstudio).Source
+          if (-not $found.EndsWith('SproutStudio.com')) { throw "sproutstudio runs $found" }
+          $usage = sproutstudio --help | Out-String
+          if ($LASTEXITCODE -ne 0 -or $usage -notmatch '--check') { throw "--help printed: $usage" }
+          sproutstudio --check samples
+          if ($LASTEXITCODE -ne 0) { throw "--check samples exited with $LASTEXITCODE" }
+          sproutstudio --check no-such-folder
+          if ($LASTEXITCODE -ne 2) { throw "a missing folder exited with $LASTEXITCODE, not 2" }
+          $global:LASTEXITCODE = 0
+
       # The .deb puts the `sproutstudio` command on the PATH: install it for real and run it from
       # there, then check that uninstalling takes the command away too.
       - name: Install the .deb and run sproutstudio
