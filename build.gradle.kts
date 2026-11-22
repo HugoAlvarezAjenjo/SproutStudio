@@ -1,9 +1,13 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
+import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.security.MessageDigest
 import javax.imageio.ImageIO
 
@@ -35,8 +39,8 @@ val linuxInstallRoot = "/opt"
 val linuxAppDir = "$linuxInstallRoot/$linuxPackageName"
 
 /** Runs a build tool (sips, iconutil, dpkg-deb) and fails the build with its output if it fails. */
-fun runTool(vararg cmd: String) {
-    val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+fun runTool(vararg cmd: String, env: Map<String, String> = emptyMap()) {
+    val p = ProcessBuilder(*cmd).redirectErrorStream(true).apply { environment().putAll(env) }.start()
     val log = p.inputStream.bufferedReader().readText()
     check(p.waitFor() == 0) { "${cmd.joinToString(" ")} failed:\n$log" }
 }
@@ -234,11 +238,68 @@ fun markAsConsoleProgram(exe: File) {
 tasks.matching { it.name == "createDistributable" || it.name == "createReleaseDistributable" }.configureEach {
     if (!onWindows) return@configureEach
     doLast {
-        val appImage = (this as org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask)
-            .destinationDir.get().asFile.resolve(appName)
+        val appImage = (this as AbstractJPackageTask).destinationDir.get().asFile.resolve(appName)
         val console = appImage.resolve("$appName.com")
         appImage.resolve("$appName.exe").copyTo(console, overwrite = true)
         markAsConsoleProgram(console)
+    }
+}
+
+// The .msi adds the install folder to the user's PATH, and uninstalling takes it away, like the
+// .deb's /usr/bin/sproutstudio. jpackage builds the .msi from its own WiX source, main.wxs, and
+// only reads a replacement from --resource-dir. Compose empties that folder right before it runs
+// jpackage and gives no way to add files to it, so once Compose has built the .msi we build it
+// again with the same arguments and our own resource folder. Our main.wxs is the one of the
+// jpackage that builds it, plus one component that sets PATH, and the build fails if that
+// jpackage's main.wxs no longer has the places we add it to.
+val msiPathComponent = """
+    |    <DirectoryRef Id="INSTALLDIR">
+    |      <!-- Per-user component: its key path has to be a registry value under HKCU. -->
+    |      <Component Id="SproutStudioCommandPath" Guid="{e3218ba5-2f39-4d34-bb7e-a86cc0a5ec14}">
+    |        <RegistryValue Root="HKCU" Key="Software\$appName" Name="CommandOnPath" Type="integer" Value="1" KeyPath="yes"/>
+    |        <Environment Id="SproutStudioCommandPath" Name="PATH" Value="[INSTALLDIR]" Part="last" Action="set" System="no" Permanent="no"/>
+    |      </Component>
+    |    </DirectoryRef>
+    |""".trimMargin()
+
+/** [mainWxs] (jpackage's) with [msiPathComponent] in the app's feature. */
+fun withPathComponent(mainWxs: String): String {
+    fun String.replaceOnce(anchor: String, with: String): String {
+        check(split(anchor).size == 2) { "jpackage's main.wxs changed: '$anchor' isn't there exactly once" }
+        return replace(anchor, with)
+    }
+    return mainWxs
+        .replaceOnce("""<ComponentGroupRef Id="FileAssociations"/>""",
+            """<ComponentGroupRef Id="FileAssociations"/>""" + "\n      <ComponentRef Id=\"SproutStudioCommandPath\"/>")
+        .replaceOnce("\n  </Product>", "\n" + msiPathComponent + "  </Product>")
+}
+
+tasks.matching { it.name == "packageMsi" || it.name == "packageReleaseMsi" }.configureEach {
+    inputs.property("msiPathComponent", msiPathComponent)
+    doLast {
+        val task = this as AbstractJPackageTask
+        val javaHome = task.javaHome.get()
+        // main.wxs as the jpackage that builds the .msi has it, read from its JDK's modules.
+        val mainWxs = FileSystems.newFileSystem(URI.create("jrt:/"), mapOf("java.home" to javaHome)).use {
+            Files.readString(it.getPath("/modules/jdk.jpackage/jdk/jpackage/internal/resources/main.wxs"))
+        }
+        val resources = File(temporaryDir, "resources").apply { deleteRecursively(); mkdirs() }
+        File(resources, "main.wxs").writeText(withPathComponent(mainWxs))
+
+        // Compose's arguments: one per line, values in quotes (see its cliArgUtils).
+        val argsFile = layout.buildDirectory.file("compose/tmp/${task.name}.args.txt").get().asFile
+        val args = argsFile.readLines().toMutableList()
+        val at = args.indexOf("--resource-dir")
+        check(at >= 0 && args.lastIndexOf("--resource-dir") == at) { "expected one --resource-dir in $argsFile" }
+        args[at + 1] = "\"${resources.absolutePath.replace('\\', '/')}\""
+        val ourArgs = File(temporaryDir, "args.txt").apply { writeText(args.joinToString("\n")) }
+
+        task.destinationDir.get().asFile.listFiles { f -> f.extension == "msi" }?.forEach { it.delete() }
+        runTool(
+            File(javaHome, "bin/jpackage.exe").absolutePath, "@${ourArgs.absolutePath}",
+            // Where Compose put WiX, as it does for its own run; without it, WiX must be on the PATH.
+            env = task.wixToolsetDir.orNull?.let { mapOf("PATH" to "${it.asFile.absolutePath};${System.getenv("PATH")}") }.orEmpty(),
+        )
     }
 }
 
