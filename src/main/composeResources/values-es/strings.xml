@@ -325,6 +325,8 @@
     <string name="preview_previous_diagram">Diagrama anterior</string>
     <string name="preview_n_of_m">%1$d de %2$d</string>
     <string name="preview_next_diagram">Diagrama siguiente</string>
+    <string name="preview_pin">Fijar este diagrama (la vista previa sigue al cursor)</string>
+    <string name="preview_unpin">Seguir al cursor (este diagrama está fijado)</string>
     <string name="preview_zoom_out">Alejar (rueda del ratón)</string>
     <string name="preview_zoom_in">Acercar (rueda del ratón)</string>
     <string name="diff_fit_both">Ajustar ambos (doble clic)</string>

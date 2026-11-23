@@ -120,9 +120,9 @@ internal fun Workspace(p: WorkspaceViewModel, onSave: (Document) -> Unit, onClos
                     }
                 } else {
                     key(doc) {
-                        val preview = rememberPreviewViewModel(p.deps, doc.text, doc.dir)
+                        val preview = rememberPreviewViewModel(p.deps, doc.text, doc.dir, pin = doc.previewPin)
                         Box(Modifier.weight(1f).fillMaxWidth()) {
-                            EditorAndPreview(p, doc, preview, onCaret = { l, col -> caretLine = l; caretCol = col })
+                            EditorAndPreview(p, doc, preview, onCaret = { l, col -> caretLine = l; caretCol = col; preview.followCaret(l) })
                         }
                         HLine()
                         ProblemsPanel(

@@ -1,5 +1,6 @@
 package es.hugoalvarezajenjo.sproutstudio.features.preview
 
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import es.hugoalvarezajenjo.sproutstudio.core.concurrency.AppDispatchers
@@ -44,9 +45,9 @@ class PreviewViewModelTest {
     private val render = FakeRender()
     private val diagram = DiagramSettings(InMemorySettingsStore())
 
-    private fun TestScope.viewModel(): PreviewViewModel {
+    private fun TestScope.viewModel(pin: MutableState<Int?> = mutableStateOf(null)): PreviewViewModel {
         val d = StandardTestDispatcher(testScheduler)
-        return PreviewViewModel(render, diagram, es.hugoalvarezajenjo.sproutstudio.platform.Platform.current(), AppDispatchers(d, d, d), debounceMs = 300) {
+        return PreviewViewModel(render, diagram, es.hugoalvarezajenjo.sproutstudio.platform.Platform.current(), AppDispatchers(d, d, d), debounceMs = 300, pin = pin) {
             PreviewViewModel.Source(text.value, null)
         }
     }
@@ -126,6 +127,69 @@ class PreviewViewModelTest {
         assertEquals(1, render.previews.last().index, "rendered without waiting")
         change { diagram.toggle() }
         assertEquals(true, render.previews.last().dark)
+        vm.close()
+    }
+
+    /** Lines 1-3 are diagram 1, line 4 is outside both, lines 5-7 are diagram 2. */
+    private val twoDiagrams = "@startuml\nA -> B\n@enduml\n\n@startuml\nC -> D\n@enduml"
+
+    @Test
+    fun previewFollowsTheCaretToItsDiagram() = runTest {
+        text.value = twoDiagrams
+        val vm = viewModel()
+        runCurrent()
+        change { vm.followCaret(6) }
+        assertEquals(1, vm.index)
+        assertEquals(1, render.previews.last().index, "rendered without waiting")
+        change { vm.followCaret(4) } // between the two: the shown one stays
+        assertEquals(1, vm.index)
+        change { vm.followCaret(1) }
+        assertEquals(0, vm.index)
+        vm.close()
+    }
+
+    @Test
+    fun aPinnedDiagramStaysWhereverTheCaretGoes() = runTest {
+        text.value = twoDiagrams
+        val pin = mutableStateOf<Int?>(null)
+        val vm = viewModel(pin)
+        runCurrent()
+        vm.togglePin()
+        assertEquals(true, vm.pinned)
+        assertEquals(0, pin.value)
+        change { vm.followCaret(6) }
+        assertEquals(0, vm.index)
+        // The arrows are asked for on purpose: they move the pin.
+        change { vm.nextDiagram() }
+        assertEquals(1, vm.index)
+        assertEquals(1, pin.value)
+        vm.togglePin()
+        assertEquals(null, pin.value)
+        change { vm.followCaret(1) }
+        assertEquals(0, vm.index)
+        vm.close()
+    }
+
+    @Test
+    fun aNewPreviewStartsOnThePinnedDiagram() = runTest {
+        text.value = twoDiagrams
+        val vm = viewModel(mutableStateOf(1)) // the tab comes back to the front
+        runCurrent()
+        assertEquals(1, vm.index)
+        assertEquals(1, render.previews.single().index)
+        change { vm.followCaret(1) }
+        assertEquals(1, vm.index)
+        vm.close()
+    }
+
+    @Test
+    fun aPinPastTheLastDiagramMovesToIt() = runTest {
+        text.value = twoDiagrams
+        val pin = mutableStateOf<Int?>(5) // its diagram was deleted
+        val vm = viewModel(pin)
+        runCurrent() // the fake has two diagrams and clamps the index to 1
+        assertEquals(1, vm.index)
+        assertEquals(1, pin.value)
         vm.close()
     }
 

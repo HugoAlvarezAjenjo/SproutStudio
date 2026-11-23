@@ -95,6 +95,12 @@ class Document(
     var savedText by mutableStateOf(initialText)
         private set
 
+    /**
+     * The diagram the preview's lock keeps on screen, null while it follows the caret. Here and
+     * not in the preview, which is made again each time the tab comes back to the front.
+     */
+    val previewPin = mutableStateOf<Int?>(null)
+
     // One-shot requests to this document's editor and preview. Channels, not state: a request
     // is delivered exactly once, even if the editor isn't on screen yet (preview-only layout),
     // and two requests in a row are never merged into one.

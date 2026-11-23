@@ -2,8 +2,10 @@ package es.hugoalvarezajenjo.sproutstudio.features.preview
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CancellationException
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.DiagramBlocks
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.DiagramTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +45,12 @@ class PreviewViewModel(
     private val dispatchers: AppDispatchers,
     parent: Job? = null,
     private val debounceMs: Long = 300,
+    /**
+     * The pinned diagram, null while the preview follows the caret. Held by the caller (a
+     * document tab keeps it in [es.hugoalvarezajenjo.sproutstudio.features.document.Document]),
+     * so it outlives this ViewModel when the user switches tabs.
+     */
+    private val pin: MutableState<Int?> = mutableStateOf(null),
     private val source: () -> Source,
 ) : ViewModel(dispatchers.main, parent) {
 
@@ -60,8 +68,8 @@ class PreviewViewModel(
         private set
     var diagramCount by mutableStateOf(0)
         private set
-    /** Which diagram block of the file is shown. */
-    var index by mutableStateOf(0)
+    /** Which diagram block of the file is shown: the pinned one, if there is one. */
+    var index by mutableStateOf(pin.value ?: 0)
         private set
     var rendering by mutableStateOf(false)
         private set
@@ -77,9 +85,33 @@ class PreviewViewModel(
      */
     val theme: String? by derivedStateOf { DiagramTheme.current(text, index) }
 
-    /** Out-of-range indices are clamped by the next render (which knows how many there are). */
+    /**
+     * Out-of-range indices are clamped by the next render (which knows how many there are).
+     * Asked for on purpose (the arrows, the Problems panel), so it moves the pin too.
+     */
     fun showDiagram(i: Int) {
         index = i.coerceAtLeast(0)
+        if (pinned) pin.value = index
+    }
+
+    /** True while the preview stays on its diagram instead of following the caret. */
+    val pinned: Boolean get() = pin.value != null
+
+    /** The lock button: pins the shown diagram, or lets the preview follow the caret again. */
+    fun togglePin() {
+        pin.value = if (pinned) null else index
+    }
+
+    private val blocks by derivedStateOf { DiagramBlocks.of(text) }
+
+    /**
+     * The caret is on 1-based [line]: shows the diagram around it, unless the preview is pinned.
+     * Outside every diagram (between two, an include file) the shown one stays.
+     */
+    fun followCaret(line: Int) {
+        if (pinned) return
+        val i = blocks.indexOfFirst { line - 1 in it.startLine..it.endLine }
+        if (i >= 0 && i != index) index = i
     }
 
     fun previousDiagram() = showDiagram(index - 1)
@@ -165,7 +197,10 @@ class PreviewViewModel(
 
     private fun show(r: RenderResult, parsed: DiagramImage?) {
         diagramCount = r.diagramCount
-        if (r.index != index) index = r.index
+        if (r.index != index) {
+            index = r.index
+            if (pinned) pin.value = index // the pinned diagram was deleted: stay on the last one
+        }
         error = r.error
         when {
             r.error == null && parsed != null -> { image = parsed; stale = false }

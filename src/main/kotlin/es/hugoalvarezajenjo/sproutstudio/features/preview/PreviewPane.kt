@@ -21,6 +21,8 @@ import es.hugoalvarezajenjo.sproutstudio.resources.preview_no_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_nothing
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_nothing_to_export
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_on_its_way
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_pin
+import es.hugoalvarezajenjo.sproutstudio.resources.preview_unpin
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_previous_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_rendering
 import es.hugoalvarezajenjo.sproutstudio.resources.preview_saved
@@ -62,6 +64,8 @@ import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FitScreen
 import androidx.compose.material.icons.outlined.ImageSearch
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Draw
@@ -157,6 +161,11 @@ fun PreviewPane(
                     color = c.textMuted,
                 )
                 ToolButton(Icons.Outlined.ChevronRight, tr(Res.string.preview_next_diagram), enabled = preview.index < preview.diagramCount - 1) { preview.nextDiagram() }
+                ToolButton(
+                    if (preview.pinned) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
+                    tr(if (preview.pinned) Res.string.preview_unpin else Res.string.preview_pin),
+                    selected = preview.pinned,
+                ) { preview.togglePin() }
             }
             Spacer(Modifier.weight(1f))
             if (preview.rendering && preview.firstDone) {
