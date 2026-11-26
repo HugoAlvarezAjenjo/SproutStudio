@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.DiagramBlocks
 import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.Template
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.services.files.FileError
@@ -193,17 +194,29 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
     fun canMove(target: File, destDir: File): Boolean = files.canMove(target, destDir)
 
     /**
-     * Writes the first diagram of [f] to [target], as the preview's Export does. An open tab's
+     * Writes diagram [index] of [f] to [target], as the preview's Export does. An open tab's
      * text is used (unsaved edits included), so the file needn't be open or saved.
      */
-    suspend fun exportDiagram(f: File, format: ExportFormat, target: File): Result<File> = runCatching {
-        ws.deps.render.export(sourceOf(f), f.absoluteFile.parentFile, 0, format, target)
+    suspend fun exportDiagram(f: File, format: ExportFormat, target: File, index: Int = 0): Result<File> = runCatching {
+        ws.deps.render.export(sourceOf(f), f.absoluteFile.parentFile, index, format, target)
         target
     }
 
-    /** Copies the first diagram of [f] to the clipboard as an image. */
-    suspend fun copyDiagramImage(f: File): Result<Unit> = runCatching {
-        ws.deps.platform.copyImageToClipboard(ws.deps.render.png(sourceOf(f), f.absoluteFile.parentFile, 0))
+    /** Copies diagram [index] of [f] to the clipboard as an image. */
+    suspend fun copyDiagramImage(f: File, index: Int = 0): Result<Unit> = runCatching {
+        ws.deps.platform.copyImageToClipboard(ws.deps.render.png(sourceOf(f), f.absoluteFile.parentFile, index))
+    }
+
+    /**
+     * The `title` of each diagram in [f] (null: untitled), numbered as the preview numbers them;
+     * empty when it can't be read. For the tree's Export menu, so it reads the file right away:
+     * a diagram file is small, and opening a tab reads it the same way (`readNow`).
+     */
+    fun diagramTitles(f: File): List<String?> {
+        val text = ws.docs.firstOrNull { it.file?.absoluteFile == f.absoluteFile }?.text
+            ?: runCatching { store.readNow(f) }.getOrNull()
+            ?: return emptyList()
+        return DiagramBlocks.titles(text)
     }
 
     private suspend fun sourceOf(f: File): String =

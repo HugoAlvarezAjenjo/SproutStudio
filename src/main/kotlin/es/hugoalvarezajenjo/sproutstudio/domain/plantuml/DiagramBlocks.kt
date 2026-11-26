@@ -17,6 +17,14 @@ object DiagramBlocks {
     /** The closed blocks of [text], in order. */
     fun of(text: String): List<Block> = scan(text).blocks
 
+    /** Each closed block's `title` line, in order; null for a block without one. */
+    fun titles(text: String): List<String?> {
+        val lines = text.split('\n')
+        return of(text).map { b ->
+            (b.startLine + 1 until b.endLine).firstNotNullOfOrNull { titleLine.find(lines[it])?.groupValues?.get(1) }
+        }
+    }
+
     /** The kind of the block still open at the end of [text] (it needs an `@end…`), or null. */
     fun unclosed(text: String): String? = scan(text).open?.first
 
@@ -24,6 +32,7 @@ object DiagramBlocks {
 
     private val start = Regex("""^\s*@start(\w+)""")
     private val end = Regex("""^\s*@end\w+""")
+    private val titleLine = Regex("""^\s*title\s+(.+?)\s*$""", RegexOption.IGNORE_CASE)
 
     private fun scan(text: String): Scan {
         val starts = TextLines.starts(text)

@@ -290,6 +290,30 @@ class ProjectTreeTest {
         assertEquals(0, count("menu-item:Export", this)) // folders have no diagram to export
     }
 
+    @Test fun exportOffersEachDiagramOfAMultiDiagramFile() = runComposeUiTest {
+        File(dir, "two.puml").writeText("@startuml\ntitle Login\nA -> B\n@enduml\n@startuml\nC -> D\n@enduml\n")
+        val p = TestGraph.workspace().apply { openRoot(dir) }
+        setContent { PumlTheme(dark = true) { Surface(Modifier.size(1000.dp, 600.dp), color = ide.panel) { Workspace(p, {}, {}) } } }
+        rightClick("tree-row-two.puml")
+        onNodeWithTag("menu-item:Export").performMouseInput { moveTo(center) }
+        waitForIdle()
+        assertEquals(1, count("menu-item:Diagram 1 · Login", this))
+        assertEquals(0, count("menu-item:SVG (vector)", this), "the formats are one level down")
+        onNodeWithTag("menu-item:Diagram 2").performMouseInput { moveTo(center) }
+        waitForIdle()
+        listOf("Copy Diagram Image", "SVG (vector)", "PNG (image)", "PDF (vector)").forEach { assertEquals(1, count("menu-item:$it", this), it) }
+    }
+
+    @Test fun exportWritesTheDiagramAskedFor() = kotlinx.coroutines.runBlocking {
+        val two = File(dir, "two.puml").apply { writeText("@startuml\nFirst -> One\n@enduml\n@startuml\nSecond -> Two\n@enduml\n") }
+        val p = TestGraph.workspace().apply { openRoot(dir) }
+        assertEquals(listOf(null, null), p.explorer.diagramTitles(two))
+        val out = File(dir, "two-2.svg")
+        p.explorer.exportDiagram(two, ExportFormat.SVG, out, index = 1).getOrThrow()
+        assertTrue(out.readText().contains("Second"))
+        assertFalse(out.readText().contains("First"))
+    }
+
     @Test fun exportWritesTheFileThatIsNotOpen() = kotlinx.coroutines.runBlocking {
         val p = TestGraph.workspace().apply { openRoot(dir) }
         val out = File(dir, "out.svg")

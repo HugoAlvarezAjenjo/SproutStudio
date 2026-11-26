@@ -30,4 +30,9 @@ class DiagramBlocksTest {
         assertEquals("gantt", DiagramBlocks.unclosed(text))
         assertNull(DiagramBlocks.unclosed("@startuml\n@enduml\n"))
     }
+
+    @Test fun `titles are each block's own title line`() {
+        val text = "title Outside\n@startuml\n  Title  Login flow \nA -> B\n@enduml\n@startuml\nA -> B\n@enduml\n@startuml\ntitle Last\n@enduml\n"
+        assertEquals(listOf("Login flow", null, "Last"), DiagramBlocks.titles(text))
+    }
 }

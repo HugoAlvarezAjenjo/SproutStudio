@@ -26,6 +26,7 @@ import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
 import es.hugoalvarezajenjo.sproutstudio.features.workspace.WorkspaceViewModel
 import es.hugoalvarezajenjo.sproutstudio.resources.Res
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_copy_image
+import es.hugoalvarezajenjo.sproutstudio.resources.outline_diagram
 import es.hugoalvarezajenjo.sproutstudio.resources.cmd_new_folder
 import es.hugoalvarezajenjo.sproutstudio.resources.git_open
 import es.hugoalvarezajenjo.sproutstudio.resources.git_rollback_menu
@@ -145,25 +146,36 @@ internal class TreeMenus(
         p.scope.launch { explorer.duplicate(f).exceptionOrNull()?.let { onMessage(TreeMessage(it.fileError.describe())) } }
     }
 
-    /** Copy and export of the file's first diagram, as the preview toolbar does for the open one. */
-    private fun export(f: File) = MenuItem(
-        text(Res.string.tree_export), Icons.Outlined.FileDownload,
-        children = listOf(
-            MenuItem(text(Res.string.cmd_copy_image), Icons.Outlined.Image) {
-                p.scope.launch {
-                    val r = explorer.copyDiagramImage(f)
-                    onMessage(r.exceptionOrNull()?.let { TreeMessage(text(Res.string.preview_copy_failed, exportFailure(it))) } ?: TreeMessage(text(Res.string.preview_copied), error = false))
-                }
-            },
-        ) + ExportFormat.entries.map { format -> MenuItem(format.label()) { exportAs(f, format) } },
-    )
+    /**
+     * Copy and export, as the preview toolbar does for the open file. A file with several
+     * diagrams gets one submenu per diagram, named as the Outline names them, and each export
+     * is suggested the name the preview gives it (`pizza-2.svg`).
+     */
+    private fun export(f: File): MenuItem {
+        val titles = explorer.diagramTitles(f)
+        val children = if (titles.size <= 1) exportItems(f, 0, f.nameWithoutExtension)
+        else titles.mapIndexed { i, title ->
+            val name = text(Res.string.outline_diagram, i + 1) + (title?.let { " · $it" } ?: "")
+            MenuItem(name, children = exportItems(f, i, "${f.nameWithoutExtension}-${i + 1}"))
+        }
+        return MenuItem(text(Res.string.tree_export), Icons.Outlined.FileDownload, children = children)
+    }
 
-    private fun exportAs(f: File, format: ExportFormat) {
+    private fun exportItems(f: File, index: Int, baseName: String): List<ContextMenuItem> = listOf(
+        MenuItem(text(Res.string.cmd_copy_image), Icons.Outlined.Image) {
+            p.scope.launch {
+                val r = explorer.copyDiagramImage(f, index)
+                onMessage(r.exceptionOrNull()?.let { TreeMessage(text(Res.string.preview_copy_failed, exportFailure(it))) } ?: TreeMessage(text(Res.string.preview_copied), error = false))
+            }
+        },
+    ) + ExportFormat.entries.map { format -> MenuItem(format.label()) { exportAs(f, format, index, baseName) } }
+
+    private fun exportAs(f: File, format: ExportFormat, index: Int, baseName: String) {
         val dir = f.absoluteFile.parentFile
-        val chosen = platform.chooseSaveTarget(text(Res.string.preview_export_title, format.label()), "${f.nameWithoutExtension}.${format.extension}", dir) ?: return
+        val chosen = platform.chooseSaveTarget(text(Res.string.preview_export_title, format.label()), "$baseName.${format.extension}", dir) ?: return
         val target = format.withExtension(chosen)
         p.scope.launch {
-            val r = explorer.exportDiagram(f, format, target)
+            val r = explorer.exportDiagram(f, format, target, index)
             onMessage(r.exceptionOrNull()?.let { TreeMessage(text(Res.string.preview_export_failed, exportFailure(it))) } ?: TreeMessage(text(Res.string.preview_saved, target.name), error = false))
         }
     }
