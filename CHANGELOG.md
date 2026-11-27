@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.6.0
+
+A preview that keeps up with the code, and every diagram of a file one right-click away.
+
+### Preview
+- **The preview follows the caret:** in a file with several diagrams it shows the one you are
+  editing, at once, without waiting for the typing pause. Clicking an Outline entry moves the
+  caret, so the preview follows it too. Between two diagrams, the shown one stays.
+- **A lock next to "2 of 3"** keeps the shown diagram on screen while you edit another one. It is
+  still redrawn as you type. The arrows and the Problems panel move it to another diagram. Each
+  tab keeps its own lock until the app closes.
+
+### Project tree
+- **Export any diagram of a file:** in a file with several diagrams, Export has one submenu per
+  diagram, named as in the Outline ("Diagram 1 · Login"), each with Copy Diagram Image, SVG, PNG
+  and PDF. The save dialog suggests the name the preview and `sproutstudio --export` use
+  (`pizza-2.svg`).
+
+### Fixes
+- A file opened through a path with `..` (as an `!include` gives it) is recognised as the open tab:
+  exporting it from the tree and comparing it with HEAD use the unsaved text in the editor.
+
 ## 1.5.0
 
 Diagrams as code from the terminal: export and check them from a shell, a pre-commit hook or CI,
