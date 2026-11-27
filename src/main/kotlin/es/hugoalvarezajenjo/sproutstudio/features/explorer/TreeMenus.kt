@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.UnfoldLess
 import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material.icons.outlined.VisibilityOff
 import es.hugoalvarezajenjo.sproutstudio.core.os.shortcutHint
+import es.hugoalvarezajenjo.sproutstudio.domain.plantuml.DiagramBlocks
 import es.hugoalvarezajenjo.sproutstudio.features.git.canCompareWithHead
 import es.hugoalvarezajenjo.sproutstudio.features.git.canRollback
 import es.hugoalvarezajenjo.sproutstudio.features.git.hasCommittedChanges
@@ -153,10 +154,11 @@ internal class TreeMenus(
      */
     private fun export(f: File): MenuItem {
         val titles = explorer.diagramTitles(f)
-        val children = if (titles.size <= 1) exportItems(f, 0, f.nameWithoutExtension)
+        fun items(i: Int) = exportItems(f, i, DiagramBlocks.exportName(f.nameWithoutExtension, i, titles.size))
+        val children = if (titles.size <= 1) items(0)
         else titles.mapIndexed { i, title ->
             val name = text(Res.string.outline_diagram, i + 1) + (title?.let { " · $it" } ?: "")
-            MenuItem(name, children = exportItems(f, i, "${f.nameWithoutExtension}-${i + 1}"))
+            MenuItem(name, children = items(i))
         }
         return MenuItem(text(Res.string.tree_export), Icons.Outlined.FileDownload, children = children)
     }

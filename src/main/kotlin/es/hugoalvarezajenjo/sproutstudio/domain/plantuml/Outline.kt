@@ -56,7 +56,6 @@ class Outline private constructor(private val text: String, val sections: List<O
 
     companion object {
         private val startLine = Regex("""^@start(\w*)""")
-        private val titleLine = Regex("""^\s*title\s+(.+?)\s*$""", RegexOption.IGNORE_CASE)
 
         fun of(text: String): Outline {
             val symbols = SymbolIndex.of(text).definitions
@@ -76,7 +75,7 @@ class Outline private constructor(private val text: String, val sections: List<O
                 OutlineSection(
                     block = blocks.indexOfFirst { it.startLine == start }.takeIf { it >= 0 },
                     kind = startLine.find(lines[start].trim())!!.groupValues[1],
-                    title = (start + 1 until end).firstNotNullOfOrNull { titleLine.find(lines[it])?.groupValues?.get(1) },
+                    title = DiagramBlocks.titleIn(lines, start + 1 until end),
                     line = start + 1,
                     nodes = nodes,
                 )

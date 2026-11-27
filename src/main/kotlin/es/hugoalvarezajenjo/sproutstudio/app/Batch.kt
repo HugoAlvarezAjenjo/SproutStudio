@@ -103,7 +103,7 @@ class Batch(
     private fun export(job: Job, valid: Valid, format: ExportFormat, t: Tally) {
         val f = job.file
         valid.indices.forEach { i ->
-            val name = if (valid.count == 1) f.nameWithoutExtension else "${f.nameWithoutExtension}-${i + 1}"
+            val name = DiagramBlocks.exportName(f.nameWithoutExtension, i, valid.count)
             val target = job.outDir.resolve("$name.${format.extension}")
             runCatching {
                 job.outDir.mkdirs()

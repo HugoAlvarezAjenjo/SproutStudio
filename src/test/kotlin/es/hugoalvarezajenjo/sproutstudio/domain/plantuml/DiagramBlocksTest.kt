@@ -31,6 +31,13 @@ class DiagramBlocksTest {
         assertNull(DiagramBlocks.unclosed("@startuml\n@enduml\n"))
     }
 
+    @Test fun `an export is numbered only when the file has several diagrams`() {
+        assertEquals("pizza", DiagramBlocks.exportName("pizza", 0, 1))
+        assertEquals("pizza", DiagramBlocks.exportName("pizza", 0, 0)) // not rendered yet
+        assertEquals("pizza-1", DiagramBlocks.exportName("pizza", 0, 3))
+        assertEquals("pizza-3", DiagramBlocks.exportName("pizza", 2, 3))
+    }
+
     @Test fun `titles are each block's own title line`() {
         val text = "title Outside\n@startuml\n  Title  Login flow \nA -> B\n@enduml\n@startuml\nA -> B\n@enduml\n@startuml\ntitle Last\n@enduml\n"
         assertEquals(listOf("Login flow", null, "Last"), DiagramBlocks.titles(text))

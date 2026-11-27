@@ -20,10 +20,19 @@ object DiagramBlocks {
     /** Each closed block's `title` line, in order; null for a block without one. */
     fun titles(text: String): List<String?> {
         val lines = text.split('\n')
-        return of(text).map { b ->
-            (b.startLine + 1 until b.endLine).firstNotNullOfOrNull { titleLine.find(lines[it])?.groupValues?.get(1) }
-        }
+        return of(text).map { b -> titleIn(lines, b.startLine + 1 until b.endLine) }
     }
+
+    /** The first `title` line among [lines] at [range] (0-based), or null. The Outline uses it too. */
+    fun titleIn(lines: List<String>, range: IntRange): String? =
+        range.firstNotNullOfOrNull { titleLine.find(lines[it])?.groupValues?.get(1) }
+
+    /**
+     * The file name, without extension, for diagram [index] of a file called [base] that has
+     * [count] diagrams: `pizza` when it is the only one, else `pizza-2`, numbered as the preview
+     * numbers them. The app and `sproutstudio --export` name their exports this way.
+     */
+    fun exportName(base: String, index: Int, count: Int): String = if (count <= 1) base else "$base-${index + 1}"
 
     /** The kind of the block still open at the end of [text] (it needs an `@end…`), or null. */
     fun unclosed(text: String): String? = scan(text).open?.first

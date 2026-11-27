@@ -123,7 +123,7 @@ class PreviewViewModel(
     fun clearNotice() { notice = null }
 
     /** File name for an export of the shown diagram: `pizza`, or `pizza-2` in a multi-diagram file. */
-    fun exportName(baseName: String) = if (diagramCount > 1) "$baseName-${index + 1}" else baseName
+    fun exportName(baseName: String) = DiagramBlocks.exportName(baseName, index, diagramCount)
 
     /**
      * Copy and export run in this ViewModel's scope (closing a menu or a panel mid-export
