@@ -327,8 +327,18 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
         jump.range?.let { r -> active?.reveal(r) }
     }
 
+    /**
+     * The open tab showing [file], or null. Paths are compared normalized, so `docs/../a.puml`
+     * (a path an `!include` can give) finds the tab of `a.puml`. Everything that wants an open
+     * tab's text over the disk's (unsaved edits included) goes through here.
+     */
+    fun openDocument(file: File): Document? {
+        val f = file.absoluteFile.normalize()
+        return docs.firstOrNull { it.file?.absoluteFile?.normalize() == f }
+    }
+
     /** `!include`d files for navigation, read from the open tab when there is one. */
-    val includes = IncludeFiles { f -> docs.firstOrNull { it.file?.absoluteFile?.normalize() == f }?.text }
+    val includes = IncludeFiles { f -> openDocument(f)?.text }
 
     /** ⌥⌘L: reformat the active tab, or only its selected lines. */
     fun reformatCode() { active?.let { revealEditor(); it.value = PlantUmlFormatter.format(it.value) } }
@@ -395,9 +405,8 @@ class WorkspaceViewModel(val deps: WorkspaceDeps) : ViewModel(deps.dispatchers.m
 
     /** The tab showing [file], opened behind the active one when there's none yet. */
     private fun tabFor(file: File): Document {
-        val f = file.absoluteFile.normalize()
-        docs.firstOrNull { it.file?.absoluteFile?.normalize() == f }?.let { return it }
-        return Document.open(f, deps.documents).also { docs += it }
+        openDocument(file)?.let { return it }
+        return Document.open(file.absoluteFile.normalize(), deps.documents).also { docs += it }
     }
 
     fun newDocument(): Document {

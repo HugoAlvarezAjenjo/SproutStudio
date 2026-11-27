@@ -213,14 +213,14 @@ class ExplorerViewModel(private val ws: WorkspaceViewModel) {
      * a diagram file is small, and opening a tab reads it the same way (`readNow`).
      */
     fun diagramTitles(f: File): List<String?> {
-        val text = ws.docs.firstOrNull { it.file?.absoluteFile == f.absoluteFile }?.text
+        val text = ws.openDocument(f)?.text
             ?: runCatching { store.readNow(f) }.getOrNull()
             ?: return emptyList()
         return DiagramBlocks.titles(text)
     }
 
     private suspend fun sourceOf(f: File): String =
-        ws.docs.firstOrNull { it.file?.absoluteFile == f.absoluteFile }?.text ?: store.read(f)
+        ws.openDocument(f)?.text ?: store.read(f)
 
     /** A copy of the diagram [target] next to it, opened in a tab. */
     suspend fun duplicate(target: File): Result<File> = runCatching {

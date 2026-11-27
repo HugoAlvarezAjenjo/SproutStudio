@@ -330,4 +330,15 @@ class ProjectTreeTest {
         assertTrue(out.readText().contains("Unsaved"))
         assertFalse(a.readText().contains("Unsaved")) // nothing was saved
     }
+
+    @Test fun anOpenTabIsFoundByAPathWithDotDot() = kotlinx.coroutines.runBlocking {
+        val a = File(dir, "a.puml")
+        val p = TestGraph.workspace().apply { openRoot(dir); open(a) }
+        p.active!!.value = p.active!!.value.copy(text = "@startuml\nUnsaved -> Edit\n@enduml\n")
+        val viaDotDot = File(dir, "docs/../a.puml") // as an `!include "../a.puml"` from docs/ gives it
+        assertTrue(p.openDocument(viaDotDot) === p.active)
+        val out = File(dir, "out.svg")
+        p.explorer.exportDiagram(viaDotDot, ExportFormat.SVG, out).getOrThrow()
+        assertTrue(out.readText().contains("Unsaved"), "the tab's text, not the disk's")
+    }
 }

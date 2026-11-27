@@ -156,7 +156,7 @@ internal fun sideTitle(s: DiffSide) = when (s) {
 @Composable
 private fun rememberSideText(p: WorkspaceViewModel, file: File, side: DiffSide): Pair<String?, Boolean> {
     val git = p.git
-    val doc = p.docs.firstOrNull { it.file?.absoluteFile == file.absoluteFile }
+    val doc = p.openDocument(file)
     var text by remember(side) { mutableStateOf<String?>(null) }
     var loaded by remember(side) { mutableStateOf(false) }
     when (side) {
@@ -194,7 +194,7 @@ internal fun DiffView(
     var textMode by remember { mutableStateOf(textFirst || !isDiagram) }
     val (leftText, leftLoaded) = rememberSideText(p, file, left)
     val (rightText, rightLoaded) = rememberSideText(p, file, right)
-    val doc = p.docs.firstOrNull { it.file?.absoluteFile == file.absoluteFile }
+    val doc = p.openDocument(file)
 
     Column(Modifier.fillMaxSize().testTag("diagram-diff")) {
         Row(
